@@ -2765,14 +2765,19 @@ void GEplayDisplayList(pGEDevDesc dd)
 	    SEXP theOperation = CAR(theList);
 	    SEXP op = CAR(theOperation);
 	    SEXP args = CADR(theOperation);
-	    IF_TRACING(emit_primitive_function(theOperation, BLTIN_ID|NO_PROLOGUE, 1, 0));  /* Trace Instrumentation */
-	    PRIMFUN(op) (R_NilValue, op, args, R_NilValue);
-	    IF_TRACING(emit_function_return(theOperation, NULL)); /* Trace Instrumentation */
-	    /* Check with each graphics system that the plotting went ok
-	     */
-	    if (!GEcheckState(dd)) {
-		plotok = 0;
-		warning(_("display list redraw incomplete"));
+	    if (TYPEOF(op) == BUILTINSXP || TYPEOF(op) == SPECIALSXP) {
+		IF_TRACING(emit_primitive_function(theOperation, BLTIN_ID|NO_PROLOGUE, 1, 0));  /* Trace Instrumentation */
+	    	PRIMFUN(op) (R_NilValue, op, args, R_NilValue);
+		IF_TRACING(emit_function_return(theOperation, NULL)); /* Trace Instrumentation */
+		/* Check with each graphics system that the plotting went ok
+		 */
+		if (!GEcheckState(dd)) {
+		    warning(_("display list redraw incomplete"));
+		    plotok = 0;
+		}
+	    } else {
+	    	warning(_("invalid display list"));
+	    	plotok = 0;
 	    }
 	    theList = CDR(theList);
 	}
