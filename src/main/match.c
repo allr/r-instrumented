@@ -181,6 +181,10 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
 /* MULTIPLE_MATCHES was added by RI in Jan 2005 but never activated:
    code in R-2-8-branch */
 
+// Couple of counters to describe what's append here
+int by_keywords, by_position, more_args;
+long nb_keywords, nb_position, nb_more_args, nb_missing;
+
 SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 {
     int i, seendots, arg_i = 0;
@@ -213,6 +217,7 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
     f = formals;
     a = actuals;
     arg_i = 0;
+    by_keywords = 0;
     while (f != R_NilValue) {
 	if (TAG(f) != R_DotsSymbol) {
 	    i = 1;
@@ -227,6 +232,7 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 		    if(CAR(b) != R_MissingArg) SET_MISSING(a, 0);
 		    SET_ARGUSED(b, 2);
 		    fargused[arg_i] = 2;
+                    by_keywords++;
 		}
 		i++;
 	    }
@@ -271,6 +277,7 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 			if (CAR(b) != R_MissingArg) SET_MISSING(a, 0);
 			SET_ARGUSED(b, 1);
 			fargused[arg_i] = 1;
+                        by_keywords++;
 		    }
 		    i++;
 		}
@@ -292,6 +299,7 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
     a = actuals;
     b = supplied;
     seendots = 0;
+    by_position = 0;
 
     while (f != R_NilValue && b != R_NilValue && !seendots) {
 	if (TAG(f) == R_DotsSymbol) {
@@ -319,9 +327,11 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 	    b = CDR(b);
 	    f = CDR(f);
 	    a = CDR(a);
+            by_position++;
 	}
     }
 
+    more_args = 0;
     if (dots != R_NilValue) {
 	/* Gobble up all unused actuals */
 	SET_MISSING(dots, 0);
@@ -337,6 +347,7 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 		    SETCAR(f, CAR(b));
 		    SET_TAG(f, TAG(b));
 		    f = CDR(f);
+		    more_args++;
 		}
 	    SETCAR(dots, a);
 	}

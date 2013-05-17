@@ -27,6 +27,7 @@
 #define R_EXT_RSTARTUP_H_
 
 #include <R_ext/Boolean.h>	/* TRUE/FALSE */
+#include <trace.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,6 +66,9 @@ typedef struct
     Rboolean LoadSiteFile;
     Rboolean LoadInitFile;
     Rboolean DebugInitFile;
+    TR_TYPE Trace;
+    char *TraceDir;
+    char *InputFileName;
     SA_TYPE RestoreAction;
     SA_TYPE SaveAction;
     size_t vsize;

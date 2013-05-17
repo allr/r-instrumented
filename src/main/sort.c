@@ -1455,10 +1455,14 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if(DispatchOrEval(call, op, "xtfrm", args, rho, &ans, 0, 1)) return ans;
     /* otherwise dispatch the default method */
+    IF_TRACING(emit_prologue_start()); /* Trace instrumentation */
     PROTECT(fn = findFun(install("xtfrm.default"), rho));
+    IF_TRACING(emit_prologue_end(fn)); /* Trace instrumentation */
     PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
+    IF_TRACING(emit_unbnd_promise(CAR(prargs))); /* Trace instrumentation */
     SET_PRVALUE(CAR(prargs), CAR(args));
-    ans = applyClosure(call, fn, prargs, rho, R_NilValue);
+    IF_TRACING(emit_unbnd_promise_return(CAR(prargs))); /* Trace instrumentation */
+    ans = applyClosure(call, fn, prargs, rho, R_NilValue, TRUE);
     UNPROTECT(2);
     return ans;
 

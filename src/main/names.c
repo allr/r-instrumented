@@ -80,6 +80,8 @@
  *
  */
 
+SEXP attribute_hidden do_sizeof (SEXP call, SEXP op, SEXP args, SEXP env);
+
 FUNTAB R_FunTab[] =
 {
 
@@ -937,6 +939,8 @@ FUNTAB R_FunTab[] =
 {"La_svd",	do_lapack,     	400,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"La_svd_cmplx",do_lapack,     	401,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
 
+{"sizeof",      do_sizeof,      0,      1,      1,      {PP_FOREIGN, PREC_FN,   0}},
+
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
 };
 
@@ -974,6 +978,11 @@ int StrToInternal(const char *s)
     for (i = 0; R_FunTab[i].name; i++)
 	if (strcmp(s, R_FunTab[i].name) == 0) return i;
     return 0;
+}
+
+FUNTAB* get_entry (int i)
+{
+    return &R_FunTab[i];
 }
 
 static void installFunTab(int i)
@@ -1109,6 +1118,7 @@ SEXP install(const char *name)
 }
 
 
+extern unsigned int bparam, bparam_ldots; // Instrumentation
 /*  do_internal - This is the code for .Internal(). */
 
 SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1162,12 +1172,32 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
     args = CDR(s);
-    if (TYPEOF(INTERNAL(fun)) == BUILTINSXP)
+    if (TYPEOF(INTERNAL(fun)) == BUILTINSXP) {
+	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	args = evalList(args, env, call, 0);
+	IF_TRACING(emit_primitive_function(INTERNAL(fun), BLTIN_ID|NO_PROLOGUE, bparam, bparam_ldots));  /* Trace Instrumentation */
+	bparam = bparam_tmp;
+	bparam_ldots = bparam_ldots_tmp;
+    }
+    else {
+	IF_TRACING_DO
+	unsigned int sparam = 0, sparam_ldots = 0;
+	SEXP targs = args;
+	while (targs != R_NilValue) {
+	    if (CAR(targs) == R_DotsSymbol)
+		sparam_ldots++;
+	    else
+		sparam++;
+	    targs = CDR(targs);
+	}
+	emit_primitive_function(INTERNAL(fun), SPEC_ID|NO_PROLOGUE, sparam, sparam_ldots); /* Trace Instrumentation */
+	IF_TRACING_END
+    }
     PROTECT(args);
     flag = PRIMPRINT(INTERNAL(fun));
     R_Visible = flag != 1;
     ans = PRIMFUN(INTERNAL(fun)) (s, INTERNAL(fun), args, env);
+    IF_TRACING(emit_function_return(INTERNAL(fun), ans)); /* Trace Instrumentation */
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;
@@ -1186,6 +1216,48 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     vmaxset(vmax);
     return (ans);
 }
+
+int count_obj(SEXP s) {
+    int size = 0;
+    if (ATTRIB(s) && ATTRIB(s) != R_NilValue) {
+	size += count_obj(ATTRIB(s));
+    }
+    int eltsize = 0;
+    switch (TYPEOF(s)) {
+    case LISTSXP:
+	while (TYPEOF(s) == LISTSXP) {
+	    size += sizeof(SEXPREC) + count_obj(CAR(s));
+	    s = CDR(s);
+	}
+	break;
+    case CPLXSXP:
+	eltsize += sizeof(double);
+    case REALSXP:
+	eltsize += sizeof(int);
+    case LGLSXP:
+    case INTSXP:
+	eltsize += sizeof(int);
+	size += LENGTH(s) * eltsize + sizeof(struct VECTOR_SEXPREC);
+	break;
+    case VECSXP:
+	size += LENGTH(s) * sizeof(void*) + sizeof(struct VECTOR_SEXPREC);
+	for (int i = 0 ; i < LENGTH(s); i++)
+	    size += count_obj(VECTOR_ELT(s, i));
+	break;
+    case STRSXP:
+	size += LENGTH(s) * sizeof(void*) + sizeof(struct VECTOR_SEXPREC);
+	for (int i = 0 ; i < LENGTH(s); i++)
+	    size += strlen(CHAR(STRING_ELT(s, i)));
+    }
+    return size;
+}
+
+SEXP attribute_hidden do_sizeof(SEXP call, SEXP op, SEXP args, SEXP env) {
+    SEXP rv = allocVector(INTSXP, 1);
+    INTEGER(rv)[0] = count_obj(CAR(args));
+    return rv;
+}
+
 #undef __R_Names__
 
 	/* Internal code for the ~ operator */

@@ -111,6 +111,8 @@
 #include <Defn.h>
 #include <Internal.h>
 
+unsigned long context_opened;
+
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that
@@ -243,6 +245,9 @@ void begincontext(RCNTXT * cptr, int flags,
 #endif
     cptr->srcref = R_Srcref;
     R_GlobalContext = cptr;
+
+    IF_TRACING(trace_context_add()); /* Trace Instrumentation */
+    context_opened++;
 }
 
 
@@ -262,6 +267,8 @@ void endcontext(RCNTXT * cptr)
 	R_Visible = savevis;
     }
     R_GlobalContext = cptr->nextcontext;
+
+    IF_TRACING(trace_context_drop()); /* Trace Instrumentation */
 }
 
 
@@ -274,17 +281,21 @@ void attribute_hidden findcontext(int mask, SEXP env, SEXP val)
     if (mask & CTXT_LOOP) {		/* break/next */
 	for (cptr = R_GlobalContext;
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	     cptr = cptr->nextcontext)
+	     cptr = cptr->nextcontext) {
 	    if (cptr->callflag & CTXT_LOOP && cptr->cloenv == env )
 		jumpfun(cptr, mask, val);
+	    IF_TRACING(trace_context_drop()); /* Trace Instrumentation */
+        }
 	error(_("no loop for break/next, jumping to top level"));
     }
     else {				/* return; or browser */
 	for (cptr = R_GlobalContext;
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	     cptr = cptr->nextcontext)
+	     cptr = cptr->nextcontext) {
 	    if ((cptr->callflag & mask) && cptr->cloenv == env)
 		jumpfun(cptr, mask, val);
+	    IF_TRACING(trace_context_drop()); /* Trace Instrumentation */
+	}
 	error(_("no function to return from, jumping to top level"));
     }
 }
@@ -294,9 +305,11 @@ void attribute_hidden R_JumpToContext(RCNTXT *target, int mask, SEXP val)
     RCNTXT *cptr;
     for (cptr = R_GlobalContext;
 	 cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	 cptr = cptr->nextcontext)
+	 cptr = cptr->nextcontext) {
 	if (cptr == target)
 	    jumpfun(cptr, mask, val);
+	IF_TRACING(trace_context_drop()); /* Trace Instrumentation */
+    }
     error(_("target context is not on the stack"));
 }
 

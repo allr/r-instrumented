@@ -206,6 +206,13 @@ else
 fi],
 [want_R_profiling=yes])
 
+AC_ARG_ENABLE(mmap,
+  AS_HELP_STRING(--enable-mmap,[Build with memory map mode (default is NO)]),,enableval=no)
+
+if test ${enableval} = "yes" ; then
+  AC_DEFINE([MEMORY_PROFILE], [1], [mmap mode])
+fi
+
 ## Allow the user to specify support for memory profiling.
 AC_ARG_ENABLE([memory-profiling],
 [AS_HELP_STRING([--enable-memory-profiling],[attempt to compile support for Rprofmem(), tracemem() @<:@no@:>@])],
@@ -2645,6 +2652,7 @@ AC_CONFIG_FILES(
   src/modules/vfonts/Makefile
   src/nmath/Makefile
   src/nmath/standalone/Makefile
+  src/instrumentation/Makefile
   src/scripts/Makefile
   src/scripts/R.sh
   src/scripts/Rcmd

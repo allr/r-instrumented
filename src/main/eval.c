@@ -45,6 +45,9 @@ static Rboolean bc_profiling = FALSE;
 
 static int R_Profiling = 0;
 
+unsigned long evalscount = 0;
+unsigned long clos_call, spec_call, builtin_call;
+
 #ifdef R_PROFILING
 
 /* BDR 2000-07-15
@@ -432,7 +435,9 @@ static SEXP forcePromise(SEXP e)
 	prstack.next = R_PendingPromises;
 	R_PendingPromises = &prstack;
 
+	IF_TRACING(emit_unbnd_promise(e)); /* Trace instrumentation */
 	val = eval(PRCODE(e), PRENV(e));
+	IF_TRACING(emit_unbnd_promise_return(e)); /* Trace instrumentation */
 
 	/* Pop the stack, unmark the promise and set its value field.
 	   Also set the environment to R_NilValue to allow GC to
@@ -442,9 +447,13 @@ static SEXP forcePromise(SEXP e)
 	SET_PRSEEN(e, 0);
 	SET_PRVALUE(e, val);
 	SET_PRENV(e, R_NilValue);
+    } else {
+	IF_TRACING(emit_bnd_promise(e)); /* Trace Instrumentation */
     }
     return PRVALUE(e);
 }
+
+unsigned int bparam, bparam_ldots; // Instrumentation
 
 /* Return value of "e" evaluated in "rho". */
 
@@ -452,6 +461,7 @@ SEXP eval(SEXP e, SEXP rho)
 {
     SEXP op, tmp;
     static int evalcount = 0;
+    evalscount++;
     
     /* Save the current srcref context. */
     
@@ -510,6 +520,7 @@ SEXP eval(SEXP e, SEXP rho)
 	   to replacement functions won't modify constants in
 	   expressions.  */
 	if (NAMED(tmp) != 2) SET_NAMED(tmp, 2);
+	IF_TRACING(emit_simple_type(e)); /* Trace Instrumentation */
 	break;
     case BCODESXP:
 	tmp = bcEval(e, rho, TRUE);
@@ -521,11 +532,14 @@ SEXP eval(SEXP e, SEXP rho)
 		tmp = ddfindVar(e,rho);
 	else
 		tmp = findVar(e, rho);
-	if (tmp == R_UnboundValue)
+	if (tmp == R_UnboundValue) {
+	    IF_TRACING(emit_error_type(R_ERROR_SEEN)); /* Trace Instrumentation */
 	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
+	}
 	/* if ..d is missing then ddfindVar will signal */
 	else if (tmp == R_MissingArg && !DDVAL(e) ) {
 	    const char *n = CHAR(PRINTNAME(e));
+	    IF_TRACING(emit_error_type(R_ERROR_SEEN)); /* Trace Instrumentation */
 	    if(*n) error(_("argument \"%s\" is missing, with no default"),
 			 CHAR(PRINTNAME(e)));
 	    else error(_("argument is missing, with no default"));
@@ -538,19 +552,29 @@ SEXP eval(SEXP e, SEXP rho)
 		tmp = forcePromise(tmp);
 		UNPROTECT(1);
 	    }
-	    else tmp = PRVALUE(tmp);
+	    else {
+		IF_TRACING(emit_bnd_promise(tmp)); /* Trace Instrumentation */
+		tmp = PRVALUE(tmp);
+	    }
 	    SET_NAMED(tmp, 2);
 	}
-	else if (!isNull(tmp) && NAMED(tmp) < 1)
-	    SET_NAMED(tmp, 1);
+	else if (!isNull(tmp)) {
+	    if (NAMED(tmp) < 1)
+		SET_NAMED(tmp, 1);
+	    IF_TRACING(emit_simple_type(e)); /* Trace Instrumentation */
+	}
 	break;
     case PROMSXP:
-	if (PRVALUE(e) == R_UnboundValue)
+	if (PRVALUE(e) == R_UnboundValue) {
 	    /* We could just unconditionally use the return value from
 	       forcePromise; the test avoids the function call if the
 	       promise is already evaluated. */
 	    forcePromise(e);
-	tmp = PRVALUE(e);
+	    tmp = PRVALUE(e);
+	} else {
+	    tmp = PRVALUE(e);
+	    IF_TRACING(emit_bnd_promise(e)); /* Trace Instrumentation */
+	}
 	/* This does _not_ change the value of NAMED on the value tmp,
 	   in contrast to the handling of promises bound to symbols in
 	   the SYMSXP case above.  The reason is that one (typically
@@ -566,22 +590,42 @@ SEXP eval(SEXP e, SEXP rho)
 	   end up getting duplicated if NAMED = 2.) LT */
 	break;
     case LANGSXP:
+	IF_TRACING(emit_prologue_start()); /* Trace Instrumentation */
+
 	if (TYPEOF(CAR(e)) == SYMSXP)
 	    /* This will throw an error if the function is not found */
 	    PROTECT(op = findFun(CAR(e), rho));
 	else
 	    PROTECT(op = eval(CAR(e), rho));
 
+	IF_TRACING(emit_prologue_end(op)); /* Trace Instrumentation */
+
 	if(RTRACE(op) && R_current_trace_state()) {
 	    Rprintf("trace: ");
 	    PrintValue(e);
 	}
 	if (TYPEOF(op) == SPECIALSXP) {
+	    spec_call++;
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    PROTECT(CDR(e));
 	    R_Visible = flag != 1;
+
+	    IF_TRACING_DO
+	    unsigned int sparam = 0, sparam_ldots = 0;
+	    SEXP targs = CDR(e);
+	    while (targs != R_NilValue) {
+		if(CAR(targs) == R_DotsSymbol)
+		    sparam_ldots++;
+		else
+		    sparam++;
+		targs = CDR(targs);
+	    }
+	    emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots); /* Trace Instrumentation */
+	    IF_TRACING_END
+
 	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
+	    IF_TRACING(emit_function_return(op, tmp)); /* Trace Instrumentation */
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
 		char *nm = PRIMNAME(op);
@@ -597,10 +641,15 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
+	    builtin_call++;
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    RCNTXT cntxt;
+	    unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	    PROTECT(tmp = evalList(CDR(e), rho, e, 0));
+	    IF_TRACING(emit_primitive_function(op, BLTIN_ID, bparam, bparam_ldots)); /* Trace Instrumentation */
+	    bparam = bparam_tmp;
+	    bparam_ldots = bparam_ldots_tmp;
 	    if (flag < 2) R_Visible = flag != 1;
 	    /* We used to insert a context only if profiling,
 	       but helps for tracebacks on .C etc. */
@@ -615,6 +664,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    } else {
 		tmp = PRIMFUN(op) (e, op, tmp, rho);
 	    }
+	    IF_TRACING(emit_function_return(op, tmp)); /* Trace Instrumentation */
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
 		char *nm = PRIMNAME(op);
@@ -627,17 +677,22 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 	}
 	else if (TYPEOF(op) == CLOSXP) {
+	    clos_call++;
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
-	    tmp = applyClosure(e, op, tmp, rho, R_BaseEnv);
+	    tmp = applyClosure(e, op, tmp, rho, R_BaseEnv, TRUE);
 	    UNPROTECT(1);
 	}
-	else
+	else {
+	    IF_TRACING(emit_error_type(R_ERROR_SEEN)); /* Trace Instrumentation */
 	    error(_("attempt to apply non-function"));
+	}
 	UNPROTECT(1);
 	break;
     case DOTSXP:
+	IF_TRACING(emit_error_type(R_ERROR_SEEN)); /* Trace Instrumentation */
 	error(_("'...' used in an incorrect context"));
     default:
+	IF_TRACING(emit_error_type(UNIMPL_TYPE)); /* Trace Instrumentation */
 	UNIMPLEMENTED_TYPE("eval", e);
     }
     R_EvalDepth = depthsave;
@@ -813,7 +868,7 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 	return R_NilValue;
 }
 
-SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
+SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, Rboolean normalclos)
 {
     SEXP formals, actuals, savedrho;
     volatile SEXP body, newrho;
@@ -891,6 +946,14 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	correct environment. */
 
     endcontext(&cntxt);
+
+    if (normalclos) {// Need to be done after matchArgs, since it's compute arguments
+	// But must not interleave with a context ... maybe it's not so bad since we can grab
+	// the suppliedenv list;
+	IF_TRACING(emit_closure(op, CLOS_ID, 0));
+    } else {
+	IF_TRACING(emit_closure(op, CLOS_ID|NO_PROLOGUE, 0));
+    }
 
     /*  If we have a generic function we need to use the sysparent of
 	the generic as the sysparent of the method because the method
@@ -987,6 +1050,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	PrintValueRec(call, rho);
     }
     UNPROTECT(3);
+    IF_TRACING(emit_function_return(op, tmp)); /* Trace instrumentation */
     return (tmp);
 }
 
@@ -1174,11 +1238,13 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     if ((vl = findVarInFrame3(rho, symbol, TRUE)) != R_UnboundValue) {
 	vl = eval(symbol, rho);	/* for promises */
 	if(NAMED(vl) == 2) {
+	    need_dup++;
 	    PROTECT(vl = duplicate(vl));
 	    defineVar(symbol, vl, rho);
 	    UNPROTECT(1);
 	    SET_NAMED(vl, 1);
-	}
+	} else
+	    avoided_dup++;
 	return vl;
     }
 
@@ -1573,6 +1639,8 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
     rval = mkCLOSXP(CAR(args), CADR(args), rho);
     srcref = CADDR(args);
     if (!isNull(srcref)) setAttrib(rval, R_SrcrefSymbol, srcref);
+    setAttrib (rval, R_SrcrefSymbol, getAttrib(call, R_SrcrefSymbol)); /* Trace instrumentation */
+    print_src_addr(rval);
     return rval;
 }
 
@@ -1646,10 +1714,11 @@ static void tmp_cleanup(void *data)
 	SEXP __lhs__ = (lhs); \
 	SEXP __v__ = CAR(__lhs__); \
 	if (NAMED(__v__) == 2) { \
+	    need_dup++; \
 	    __v__ = duplicate(__v__); \
 	    SET_NAMED(__v__, 1); \
 	    SETCAR(__lhs__, __v__); \
-	} \
+	} else avoided_dup++; \
 	R_SetVarLocValue(loc, __v__); \
     } while(0)
 
@@ -1750,7 +1819,9 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(lhs);
     PROTECT(rhsprom = mkPROMISE(CADR(args), rho));
+    IF_TRACING(emit_unbnd_promise(rhsprom)); /* Trace instrumentation */
     SET_PRVALUE(rhsprom, rhs);
+    IF_TRACING(emit_unbnd_promise_return(rhsprom)); /* Trace instrumentation */
 
     while (isLanguage(CADR(expr))) {
 	nprot = 1; /* the PROTECT of rhs below from this iteration */
@@ -1774,7 +1845,9 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
 	rhs = eval(rhs, rho);
+	IF_TRACING(emit_unbnd_promise(rhsprom)); /* Trace instrumentation */
 	SET_PRVALUE(rhsprom, rhs);
+	IF_TRACING(emit_unbnd_promise_return(rhsprom)); /* Trace instrumentation */
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
 	UNPROTECT(nprot);
 	lhs = CDR(lhs);
@@ -1826,6 +1899,13 @@ SEXP attribute_hidden do_alias(SEXP call, SEXP op, SEXP args, SEXP rho)
 */
 
 /*  Assignment in its various forms  */
+unsigned long apply_define, super_apply_define;
+unsigned long do_set_unique, do_set_allways;
+unsigned long do_super_set_unique, do_super_set_allways;
+unsigned long err_count_assign;
+extern int need_count_assign;
+unsigned long dispatchFailed;
+unsigned long dispatchs;
 
 SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1845,7 +1925,9 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
     switch (PRIMVAL(op)) {
     case 1: case 3:					/* <-, = */
 	if (isSymbol(CAR(args))) {
+	    do_set_allways++;
 	    s = eval(CADR(args), rho);
+	    do_set_unique++;
 #ifdef CONSERVATIVE_COPYING /* not default */
 	    if (NAMED(s))
 	    {
@@ -1854,9 +1936,16 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 		t = duplicate(s);
 		UNPROTECT(1);
 		s = t;
-	    }
+		need_dup++;
+	    } else
+		avoided_dup++;
 	    PROTECT(s);
+	    need_count_assign = 1;
 	    defineVar(CAR(args), s, rho);
+	    if (need_count_assign) {
+		err_count_assign++;
+		need_count_assign = 0;
+	    }
 	    UNPROTECT(1);
 	    SET_NAMED(s, 1);
 #else
@@ -1864,34 +1953,59 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    case 0: SET_NAMED(s, 1); break;
 	    case 1: SET_NAMED(s, 2); break;
 	    }
+	    need_count_assign = 1;
 	    defineVar(CAR(args), s, rho);
+	    if (need_count_assign) {
+		err_count_assign++;
+		need_count_assign = 0;
+	    }
 #endif
 	    R_Visible = FALSE;
 	    return (s);
 	}
 	else if (isLanguage(CAR(args))) {
 	    R_Visible = FALSE;
+	    apply_define++;
 	    return applydefine(call, op, args, rho);
 	}
-	else errorcall(call,
-		       _("invalid (do_set) left-hand side to assignment"));
+	else {
+	    err_count_assign++;
+	    errorcall(call,
+		      _("invalid (do_set) left-hand side to assignment"));
+	}
     case 2:						/* <<- */
 	if (isSymbol(CAR(args))) {
+	    do_super_set_allways++;
 	    s = eval(CADR(args), rho);
-	    if (NAMED(s))
+	    do_super_set_unique++;
+	    if (NAMED(s)) {
+		need_dup++;
 		s = duplicate(s);
+	    } else
+		avoided_dup++;
 	    PROTECT(s);
+	    need_count_assign = 1;
 	    setVar(CAR(args), s, ENCLOS(rho));
+	    if (need_count_assign) {
+		err_count_assign++;
+		need_count_assign = 0;
+	    }
 	    UNPROTECT(1);
 	    SET_NAMED(s, 1);
 	    R_Visible = FALSE;
 	    return s;
 	}
-	else if (isLanguage(CAR(args)))
+	else if (isLanguage(CAR(args))) {
+	    super_apply_define++;
 	    return applydefine(call, op, args, rho);
-	else error(_("invalid assignment left-hand side"));
+	}
+	else {
+	    err_count_assign++;
+	    error(_("invalid assignment left-hand side"));
+	}
 
     default:
+	err_count_assign++;
 	UNIMPLEMENTED("do_set");
 
     }
@@ -1920,6 +2034,7 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 {
     SEXP head, tail, ev, h;
+    bparam = bparam_ldots = 0; // counters
 
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
@@ -1936,6 +2051,7 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	     *	the list of resulting values into the return value.
 	     * Anything else bound to a ... symbol is an error
 	     */
+            bparam_ldots++;
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
@@ -1959,6 +2075,7 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	    /* It was missing */
 	    errorcall(call, _("'%s' is missing"), CHAR(PRINTNAME(CAR(el)))); 
 	} else {
+	    bparam++;
             ev = CONS(eval(CAR(el), rho), R_NilValue);
             if (head==R_NilValue)
                 PROTECT(head = ev);
@@ -2277,6 +2394,7 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
     RCNTXT *cptr;
     SEXP s, ans ;
     cptr = R_GlobalContext;
+    Rboolean hasprologue = FALSE;  /* Trace instrumentation */
     /* get the args supplied */
     while (cptr != NULL) {
 	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == rho)
@@ -2302,13 +2420,21 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
     */
     if (cptr->callfun != R_NilValue)
 	PROTECT(s = cptr->callfun);
-    else if( TYPEOF(CAR(cptr->call)) == SYMSXP)
+    else if( TYPEOF(CAR(cptr->call)) == SYMSXP) {
+	IF_TRACING(emit_prologue_start()); /* Trace instrumentation */
 	PROTECT(s = findFun(CAR(cptr->call), cptr->sysparent));
-    else
+	IF_TRACING(emit_prologue_end(s)); /* Trace instrumentation */
+	hasprologue = TRUE;
+    }
+    else {
+	IF_TRACING(emit_prologue_start()); /* Trace instrumentation */
 	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
+	IF_TRACING(emit_prologue_end(s)); /* Trace instrumentation */
+	hasprologue = TRUE;
+    }
     if (TYPEOF(s) != CLOSXP) 
     	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure(cptr->call, s, args, cptr->sysparent, R_BaseEnv);
+    ans = applyClosure(cptr->call, s, args, cptr->sysparent, R_BaseEnv, hasprologue);
     UNPROTECT(1);
     return ans;
 }
@@ -2381,6 +2507,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
    be evaluated.  The complicating factor is that the first argument
    might come in with a "..." and that there might be other arguments
    in the "..." as well.  LT */
+    dispatchs ++;
 
     SEXP x = R_NilValue;
     int dots = FALSE, nprotect = 0;;
@@ -2426,7 +2553,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    /* create a promise to pass down to applyClosure  */
 	    if(!argsevald) {
 		argValue = promiseArgs(args, rho);
+		IF_TRACING(emit_unbnd_promise(CAR(argValue))); /* Trace instrumentation */
 		SET_PRVALUE(CAR(argValue), x);
+		IF_TRACING(emit_unbnd_promise_return(CAR(argValue))); /* Trace instrumentation */
 	    } else argValue = args;
 	    PROTECT(argValue); nprotect++;
 	    /* This means S4 dispatch */
@@ -2482,7 +2611,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       Hence here and in the other usemethod() uses below a
 	       new environment rho1 is created and used.  LT */
 	    PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
+	    IF_TRACING(emit_unbnd_promise(CAR(pargs))); /* Trace instrumentation */
 	    SET_PRVALUE(CAR(pargs), x);
+	    IF_TRACING(emit_unbnd_promise_return(CAR(pargs))); /* Trace instrumentation */
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
 	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, ans))
 	    {
@@ -2507,6 +2638,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     }
     else *ans = args;
     UNPROTECT(nprotect);
+    dispatchFailed++;
     return 0;
 }
 
@@ -2739,12 +2871,14 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if (length(s) != length(args))
 	error(_("dispatch error in group dispatch"));
     for (m = s ; m != R_NilValue ; m = CDR(m), args = CDR(args) ) {
+	IF_TRACING(emit_unbnd_promise(CAR(m))); /* Trace instrumentation */
 	SET_PRVALUE(CAR(m), CAR(args));
+	IF_TRACING(emit_unbnd_promise_return(CAR(m))); /* Trace instrumentation */
 	/* ensure positional matching for operators */
 	if(isOps) SET_TAG(m, R_NilValue);
     }
 
-    *ans = applyClosure(t, lsxp, s, rho, newrho);
+    *ans = applyClosure(t, lsxp, s, rho, newrho, FALSE);
     UNPROTECT(5);
     return 1;
 }
@@ -3602,7 +3736,9 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   SEXP op = SYMVALUE(install(generic)); /**** avoid this */
 
   PROTECT(pargs = promiseArgs(CDR(call), rho));
+  IF_TRACING(emit_unbnd_promise(CAR(pargs))); /* Trace instrumentation */
   SET_PRVALUE(CAR(pargs), x);
+  IF_TRACING(emit_unbnd_promise_return(CAR(pargs))); /* Trace instrumentation */
 
   /**** Minimal hack to try to handle the S4 case.  If we do the check
 	and do not dispatch then some arguments beyond the first might
@@ -3683,10 +3819,11 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   SEXP lhs = GETSTACK(-2); \
   SEXP rhs = GETSTACK(-1); \
   if (NAMED(lhs) == 2) { \
+    need_dup++; \
     lhs = duplicate(lhs); \
     SETSTACK(-2, lhs); \
     SET_NAMED(lhs, 1); \
-  } \
+  } else avoided_dup++; \
   if (isObject(lhs) && \
       tryAssignDispatch(generic, call, lhs, rhs, rho, &value)) { \
     R_BCNodeStackTop--;	\
@@ -3742,10 +3879,11 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 	SEXP call = VECTOR_ELT(constants, callidx); \
 	SEXP rhs = GETSTACK(-1); \
 	if (NAMED(lhs) == 2) { \
+	    need_dup++; \
 	    lhs = duplicate(lhs); \
 	    SETSTACK(-2, lhs); \
 	    SET_NAMED(lhs, 1); \
-	} \
+	} else avoided_dup++; \
 	if (tryAssignDispatch(generic, call, lhs, rhs, rho, &value)) { \
 	    R_BCNodeStackTop--; \
 	    SETSTACK(-1, value); \
@@ -3956,11 +4094,15 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     SEXP vec = GETSTACK_PTR(sx);
 
     if (NAMED(vec) == 2) {
+        need_dup++;
 	vec = duplicate(vec);
 	SETSTACK_PTR(sx, vec);
     }
-    else if (NAMED(vec) == 1)
-	SET_NAMED(vec, 0);
+    else {
+	avoided_dup++;
+	if (NAMED(vec) == 1)
+	    SET_NAMED(vec, 0);
+    }
 
     if (ATTRIB(vec) == R_NilValue) {
 	int i = bcStackIndex(si);
@@ -4000,11 +4142,15 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
     SEXP mat = GETSTACK(-4);
 
     if (NAMED(mat) > 1) {
+	need_dup++;
 	mat = duplicate(mat);
 	SETSTACK(-4, mat);
     }
-    else if (NAMED(mat) == 1)
-	SET_NAMED(mat, 0);
+    else {
+	avoided_dup++;
+	if (NAMED(mat) == 1)
+	    SET_NAMED(mat, 0);
+    }
 
     dim = getMatrixDim(mat);
 
@@ -4541,7 +4687,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	    value = applyClosure(call, fun, args, rho, R_BaseEnv, FALSE);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -4689,10 +4835,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP x = GETSTACK(-2);
 	SEXP rhs = GETSTACK(-1);
 	if (NAMED(x) == 2) {
+	    need_dup++;
 	    x = duplicate(x);
 	    SETSTACK(-2, x);
 	    SET_NAMED(x, 1);
-	}
+	} else avoided_dup++;
 	if (isObject(x)) {
 	    SEXP ncall, prom;
 	    PROTECT(ncall = duplicate(call));
@@ -4780,9 +4927,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = GETSTACK(-1);
 	if (NAMED(value)) {
+	    need_dup++;
 	    value = duplicate(value);
 	    SETSTACK(-1, value);
-	}
+	} else avoided_dup++;
 	setVar(symbol, value, ENCLOS(rho));
 	NEXT();
       }
@@ -4820,10 +4968,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP vexpr = VECTOR_ELT(constants, GETOP());
 	SEXP args, prom, last;
 	if (NAMED(lhs) == 2) {
+	  need_dup++;
 	  lhs = duplicate(lhs);
 	  SETSTACK(-5, lhs);
 	  SET_NAMED(lhs, 1);
-	}
+	} else avoided_dup++;
 	switch (ftype) {
 	case BUILTINSXP:
 	  /* push RHS value onto arguments with 'value' tag */
@@ -4866,7 +5015,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  value = applyClosure(call, fun, args, rho, R_BaseEnv, TRUE);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -4908,7 +5057,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  value = applyClosure(call, fun, args, rho, R_BaseEnv, TRUE);
 	  break;
 	default: error(_("bad function"));
 	}

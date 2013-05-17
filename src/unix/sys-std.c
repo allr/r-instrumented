@@ -1104,7 +1104,7 @@ void attribute_hidden Rstd_CleanUp(SA_TYPE saveact, int status, int runLast)
     if(ifp) fclose(ifp);        /* input file from -f or --file= */
     fpu_setup(FALSE);
 
-    exit(status);
+    //exit(status);
 }
 
 /*

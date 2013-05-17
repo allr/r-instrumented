@@ -77,7 +77,7 @@ extern void InitDynload(void);
 
 	/* Read-Eval-Print Loop [ =: REPL = repl ] with input from a file */
 
-static void R_ReplFile(FILE *fp, SEXP rho)
+static void R_ReplFile(FILE *fp, SEXP rho, const char* filename)
 {
     ParseStatus status;
     int count=0;
@@ -85,6 +85,18 @@ static void R_ReplFile(FILE *fp, SEXP rho)
     int savestack;
     
     R_InitSrcRefState(&ParseState);
+
+    /* Trace instrumentation */
+    ParseState.keepSrcRefs = TRUE;
+    PROTECT_WITH_INDEX(ParseState.SrcFile = NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv), &(ParseState.SrcFileProt));
+    if (filename != NULL) {
+	defineVar(install("filename"), mkString(filename), ParseState.SrcFile);
+    } else {
+	error("ReplFile() on file with no name!\n");
+    }
+    setAttrib(ParseState.SrcFile, R_ClassSymbol, mkString("srcfile"));
+    /* Trace instrumentation  */
+
     savestack = R_PPStackTop;    
     for(;;) {
 	R_PPStackTop = savestack;
@@ -198,7 +210,8 @@ typedef struct {
  point, i.e. the end of the first line or after the first ;.
  */
 int
-Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
+Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state,
+		 SrcRefState *ParseState)
 {
     int c, browsevalue;
     SEXP value, thisExpr;
@@ -226,6 +239,12 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
     R_PPStackTop = savestack;
     R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status);
     
+    /* Trace Instrumentation */
+    if (R_Trace == TR_REPL)
+	start_tracing();
+    else if (R_Trace == TR_BOOTSTRAP)
+	terminate_tracing();
+
     switch(state->status) {
 
     case PARSE_NULL:
@@ -295,16 +314,34 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 {
     int status;
     R_ReplState state = { PARSE_NULL, 1, 0, "", NULL};
+    SrcRefState ParseState; /* Trace instrumentation */
 
+    R_InitSrcRefState (&ParseState); /* Trace instrumentation */
     R_IoBufferWriteReset(&R_ConsoleIob);
     state.buf[0] = '\0';
     state.buf[CONSOLE_BUFFER_SIZE] = '\0';
     /* stopgap measure if line > CONSOLE_BUFFER_SIZE chars */
     state.bufp = state.buf;
+
+    /* Trace instrumentation */
+    ParseState.keepSrcRefs = TRUE;
+    PROTECT(ParseState.SrcFile = NewEnvironment(R_NilValue, R_NilValue, rho));
+    if (R_Interactive) {
+	defineVar(install("filename"), mkString("Console"), ParseState.SrcFile);
+    } else {
+	if (R_InputFileName != NULL) {
+	    defineVar(install("filename"), mkString(R_InputFileName), ParseState.SrcFile);
+	} else {
+	    defineVar(install("filename"), mkString("stdin"), ParseState.SrcFile);
+	}
+    }
+    setAttrib(ParseState.SrcFile, R_ClassSymbol, mkString("srcfile"));
+    /* Trace instrumentation  */
+
     if(R_Verbose)
 	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
     for(;;) {
-	status = Rf_ReplIteration(rho, savestack, browselevel, &state);
+	status = Rf_ReplIteration(rho, savestack, browselevel, &state, &ParseState); /* Trace instrumentation */
 	if(status < 0)
 	  return;
     }
@@ -318,6 +355,7 @@ void R_ReplDLLinit(void)
     R_IoBufferInit(&R_ConsoleIob);
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
     R_IoBufferWriteReset(&R_ConsoleIob);
     prompt_type = 1;
     DLLbuf[0] = DLLbuf[CONSOLE_BUFFER_SIZE] = '\0';
@@ -592,6 +630,8 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	}
     }
     REprintf("aborting ...\n");
+    IF_TRACING(trace_cnt_fatal_err()); /* Trace instrumentation */
+    IF_TRACING(terminate_tracing()); /* Trace instrumentation */
     R_CleanTempDir();
     /* now do normal behaviour, e.g. core dump */
     signal(signum, SIG_DFL);
@@ -660,7 +700,8 @@ static void R_LoadProfile(FILE *fparg, SEXP env)
     if (fp != NULL) {
 	if (! SETJMP(R_Toplevel.cjmpbuf)) {
 	    R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
-	    R_ReplFile(fp, env);
+	    IF_TRACING(change_top_context()); /* Trace instrumentation */
+	    R_ReplFile(fp, env, "Rprofile");
 	}
 	fclose(fp);
     }
@@ -698,6 +739,8 @@ void setup_Rmainloop(void)
     FILE *fp;
     char deferred_warnings[11][250];
     volatile int ndeferred_warnings = 0;
+    char path[PATH_MAX + 1];
+    char base_path[PATH_MAX + 1];
 
     InitConnections(); /* needed to get any output at all */
 
@@ -813,6 +856,7 @@ void setup_Rmainloop(void)
     R_Toplevel.restartstack = R_RestartStack;
     R_Toplevel.srcref = R_NilValue;
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
 
     R_Warnings = R_NilValue;
 
@@ -836,10 +880,12 @@ void setup_Rmainloop(void)
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
     if (R_SignalHandlers) init_signal_handlers();
     if (!doneit) {
 	doneit = 1;
-	R_ReplFile(fp, baseEnv);
+	snprintf(base_path, PATH_MAX, "%s/library/base/R/base", R_Home); /* Trace instrumentation */
+	R_ReplFile(fp, baseEnv, base_path);
     }
     fclose(fp);
 
@@ -864,6 +910,7 @@ void setup_Rmainloop(void)
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
     if (!doneit) {
 	doneit = 1;
 	PROTECT(cmd = install(".OptRequireMethods"));
@@ -902,6 +949,7 @@ void setup_Rmainloop(void)
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
     if (!doneit) {
 	doneit = 1;
 	R_InitialData();
@@ -919,6 +967,7 @@ void setup_Rmainloop(void)
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
     if (!doneit) {
 	doneit = 1;
 	PROTECT(cmd = install(".First"));
@@ -937,6 +986,7 @@ void setup_Rmainloop(void)
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
     if (!doneit) {
 	doneit = 1;
 	PROTECT(cmd = install(".First.sys"));
@@ -983,6 +1033,7 @@ void run_Rmainloop(void)
     R_IoBufferInit(&R_ConsoleIob);
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
     R_ReplConsole(R_GlobalEnv, 0, 0);
     end_Rmainloop(); /* must go here */
 }
@@ -1159,6 +1210,7 @@ void R_dot_Last(void)
     /* Errors here should kick us back into the repl. */
 
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    IF_TRACING(change_top_context()); /* Trace instrumentation */
     PROTECT(cmd = install(".Last"));
     R_CurrentExpr = findVar(cmd, R_GlobalEnv);
     if (R_CurrentExpr != R_UnboundValue && TYPEOF(R_CurrentExpr) == CLOSXP) {

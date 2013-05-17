@@ -73,8 +73,10 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (realIndx) REAL(ind)[0] = (double)(i + 1);
 	    else INTEGER(ind)[0] = (int)(i + 1);
 	    tmp = eval(R_fcall, rho);
-	    if (NAMED(tmp))
+	    if (NAMED(tmp)) {
+		need_dup++;
 		tmp = duplicate(tmp);
+	    } else avoided_dup++;
 	    SET_VECTOR_ELT(ans, i, tmp);
 	}
 	UNPROTECT(3);
@@ -158,8 +160,10 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (realIndx) REAL(ind)[0] = (double)(i + 1);
 	    else INTEGER(ind)[0] = (int)(i + 1);
 	    val = eval(R_fcall, rho);
-	    if (NAMED(val))
+	    if (NAMED(val)) {
+		need_dup++;
 		val = duplicate(val);
+	    } else avoided_dup++;
 	    PROTECT_WITH_INDEX(val, &indx);
 	    if (length(val) != commonLen)
 	    	error(_("values must be length %d,\n but FUN(X[[%d]]) result is length %d"),
@@ -276,8 +280,10 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
 	/* PROTECT(R_fcall = lang2(FUN, X)); */
 	PROTECT(R_fcall = lang3(FUN, X, R_DotsSymbol));
 	ans = eval(R_fcall, rho);
-	if (NAMED(ans))
+	if (NAMED(ans)) {
+	    need_dup++;
 	    ans = duplicate(ans);
+	} else avoided_dup++;
 	UNPROTECT(1);
 	return(ans);
     } else if(replace) return duplicate(X);

@@ -2270,6 +2270,10 @@ static void raw_init(Rconnection con, SEXP raw)
 {
     Rrawconn this = con->private;
 
+    if (NAMED(raw))
+	need_dup++;
+    else
+	avoided_dup++;
     this->data = NAMED(raw) ? duplicate(raw) : raw;
     R_PreserveObject(this->data);
     this->nbytes = XLENGTH(this->data);

@@ -377,7 +377,9 @@ SEXP PairToVectorList(SEXP x)
 	}
 	setAttrib(xnew, R_NamesSymbol, xnames);
 	UNPROTECT(1);
-    }
+	need_dup++;
+    } else
+	avoided_dup++;
     copyMostAttrib(x, xnew);
     UNPROTECT(2);
     return xnew;
@@ -1046,12 +1048,20 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
     /* expression -> list, new in R 2.4.0 */
     if (type == VECSXP && TYPEOF(v) == EXPRSXP) {
 	/* This is sneaky but saves us rewriting a lot of the duplicate code */
+	if (NAMED(v))
+	    need_dup++;
+	else
+	    avoided_dup++;
 	rval = NAMED(v) ? duplicate(v) : v;
 	SET_TYPEOF(rval, VECSXP);
 	return rval;
     }
 
     if (type == EXPRSXP && TYPEOF(v) == VECSXP) {
+	if (NAMED(v))
+	    need_dup++;
+	else
+	    avoided_dup++;
 	rval = NAMED(v) ? duplicate(v) : v;
 	SET_TYPEOF(rval, EXPRSXP);
 	return rval;
@@ -1295,8 +1305,13 @@ static SEXP asFunction(SEXP x)
     if (isFunction(x)) return x;
     PROTECT(f = allocSExp(CLOSXP));
     SET_CLOENV(f, R_GlobalEnv);
-    if (NAMED(x)) PROTECT(x = duplicate(x));
-    else PROTECT(x);
+    if (NAMED(x)) {
+	need_dup++;
+	PROTECT(x = duplicate(x));
+    } else {
+	avoided_dup++;
+	PROTECT(x);
+    }
 
     if (isNull(x) || !isList(x)) {
 	SET_FORMALS(f, R_NilValue);
@@ -1343,7 +1358,11 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
 	   Generally coerceVector will copy over attributes.
 	*/
 	if (type != ANYSXP && TYPEOF(u) != type) v = coerceVector(u, type);
-	else if (NAMED(u)) v = duplicate(u);
+	else if (NAMED(u)) {
+	    need_dup++;
+	    v = duplicate(u);
+	} else
+	    avoided_dup++;
 
 	/* drop attributes() and class() in some cases for as.pairlist:
 	   But why?  (And who actually coerces to pairlists?)
@@ -1425,6 +1444,10 @@ SEXP attribute_hidden do_ascharacter(SEXP call, SEXP op, SEXP args, SEXP rho)
     x = CAR(args);
     if(TYPEOF(x) == type) {
 	if(ATTRIB(x) == R_NilValue) return x;
+	if (NAMED(x))
+	    need_dup++;
+	else
+	    avoided_dup++;
 	ans = NAMED(x) ? duplicate(x) : x;
 	CLEAR_ATTRIB(ans);
 	return ans;
@@ -1467,6 +1490,10 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case STRSXP:
 	case RAWSXP:
 	    if(ATTRIB(x) == R_NilValue) return x;
+	    if (NAMED(x))
+		need_dup++;
+	    else
+		avoided_dup++;
 	    ans  = NAMED(x) ? duplicate(x) : x;
 	    CLEAR_ATTRIB(ans);
 	    return ans;
@@ -2290,7 +2317,11 @@ SEXP attribute_hidden do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(evargs = duplicate(CDR(args)));
     for (rest = evargs; rest != R_NilValue; rest = CDR(rest)) {
         PROTECT(tmp = eval(CAR(rest), rho));
-        if (NAMED(tmp)) tmp = duplicate(tmp);
+        if (NAMED(tmp)) {
+	    need_dup++;
+	    tmp = duplicate(tmp);
+	} else
+	    avoided_dup++;
 	SETCAR(rest, tmp);
 	UNPROTECT(1);
     }
@@ -2344,7 +2375,9 @@ SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SETCAR(c, VECTOR_ELT(args, i));
 #else
 	SETCAR(c, mkPROMISE(VECTOR_ELT(args, i), rho));
+	IF_TRACING(emit_unbnd_promise(CAR(c))); /* Trace instrumentation */
 	SET_PRVALUE(CAR(c), VECTOR_ELT(args, i));
+	IF_TRACING(emit_unbnd_promise_return(CAR(c))); /* Trace instrumentation */
 #endif
 	if (ItemName(names, (int)i) != R_NilValue)
 	    SET_TAG(c, install(translateChar(ItemName(names, i))));

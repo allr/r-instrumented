@@ -78,8 +78,24 @@ void R_FlushConsole(void) { ptr_R_FlushConsole(); }
 #endif
 void R_ClearerrConsole(void) { ptr_R_ClearerrConsole(); }
 void R_Busy(int which) { ptr_R_Busy(which); }
-void R_CleanUp(SA_TYPE saveact, int status, int runLast)
-{ ptr_R_CleanUp(saveact, status, runLast); }
+
+extern void flush_gc();
+extern void display_unused(FILE *);
+extern void write_trace_summary(FILE *);
+void R_CleanUp(SA_TYPE saveact, int status, int runLast) {
+    ptr_R_CleanUp(saveact, status, runLast);
+    flush_gc();
+    /* Trace instrumentation */
+    IF_TRACING_DO
+    goto_abs_top_context();
+    terminate_tracing();
+    ELSE_NOT_TRACING
+    if (R_Trace == TR_SUMMARY) {
+	write_trace_summary(stderr);
+    }
+    NOT_TRACING_END
+    exit(0);
+}
 
 attribute_hidden
 int R_ShowFiles(int nfile, const char **file, const char **headers,
@@ -317,6 +333,9 @@ int Rf_initialize_R(int ac, char **av)
 				 path, strerror(errno));
 			R_Suicide(msg);
 		    }
+		    /* Trace instrumentation */
+		    Rp->InputFileName = (char*) malloc(strlen(*av)+1);
+		    strcpy(Rp->InputFileName, *av);
 		}
 	    } else if(!strncmp(*av, "--file=", 7)) {
 		Rp->R_Interactive = FALSE;
@@ -337,6 +356,9 @@ int Rf_initialize_R(int ac, char **av)
 				 path, strerror(errno));
 			R_Suicide(msg);
 		    }
+		    /* Trace instrumentation */
+		    Rp->InputFileName = (char*) malloc(strlen(*av)+1);
+		    strcpy(Rp->InputFileName, *av);
 		}
 	    } else if(!strcmp(*av, "-e")) {
 		ac--; av++;
@@ -387,6 +409,12 @@ int Rf_initialize_R(int ac, char **av)
     if (ifp && Rp->SaveAction != SA_SAVE) Rp->SaveAction = SA_NOSAVE;
 
     R_SetParams(Rp);
+
+    /* Trace Instrumentation  - init logging system */
+    initialize_trace_defaults (R_Trace);
+
+    if (R_Trace == TR_ALL || R_Trace == TR_BOOTSTRAP)
+	start_tracing();
 
     if(!Rp->NoRenviron) {
 	process_site_Renviron();

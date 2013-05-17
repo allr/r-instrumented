@@ -1352,6 +1352,10 @@ static int file_getc(void)
 attribute_hidden
 SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state)
 {
+    if (state) {
+	PROTECT_WITH_INDEX(SrcRefs = NewList(), &srindex);
+    }
+
     int savestack;
     UseSrcRefState(state);
     savestack = R_PPStackTop;    

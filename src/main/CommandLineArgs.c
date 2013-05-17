@@ -81,6 +81,20 @@ do_commandArgs(SEXP call, SEXP op, SEXP args, SEXP env)
     return vals;
 }
 
+void write_commandArgs(FILE* out) { /* Trace instrumentation */
+    int i;
+    Rboolean args_seen = FALSE;
+
+    for (i = 0; i < NumCommandLineArgs; i++) {
+        if (args_seen)
+            fprintf(out, "%s ", CommandLineArgs[i]);
+
+        if (!strcmp (CommandLineArgs[i], "--args"))
+            args_seen = TRUE;
+    }
+    fprintf(out, "\n");
+}
+
 #ifdef Win32
 extern Rboolean R_LoadRconsole;
 #endif
@@ -91,6 +105,7 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
     int ac = *pac, newac = 1;	/* argv[0] is process name */
     long lval; /* this is only used for ppval, so 32-bit long is fine */
     char *p, **av = argv, msg[1024];
+    char tmp_name[1024];
     Rboolean processing = TRUE;
 
     R_RestoreHistory = 1;
@@ -161,6 +176,62 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 	    }
 	    else if (!strcmp(*av, "--debug-init")) {
 		Rp->DebugInitFile = TRUE;
+	    }
+	    else if (!strcmp(*av, "--tracedir")) {
+		if (ac > 1) {
+		    // handle stdin
+		    if (!strcmp(*(av+1), "-")) {
+			ac--;
+			av++;
+			if (scanf("%s", tmp_name)) {
+			    Rp->TraceDir = (char *)malloc(sizeof(char)*(strlen(tmp_name)+1));
+			    strcpy(Rp->TraceDir, tmp_name);
+			} else { // nothing in stdin
+			    R_ShowMessage(_("WARNING: no tracedir supplied, using default\n"));
+			}
+		    } else { // handle name from command-line
+			char **tmp = av+1;
+			if (**tmp != '-') {
+			    ac--;
+			    av++;
+			    Rp->TraceDir = (char *)malloc(sizeof(char)*(strlen(*tmp)+1));
+			    strcpy(Rp->TraceDir, *tmp);
+			} else { // next item is another flag
+			    R_ShowMessage(_("WARNING: no tracedir supplied, using default\n"));
+			}
+		    }
+		} else {
+		    R_ShowMessage (_("WARNING: no tracedir supplied, using default\n"));
+		}
+	    }
+	    else if (!strcmp (*av, "--trace")) {
+		if (ac > 1) {
+		    char **tmp = av+1;
+		    if (!strcmp(*tmp, "all")){
+			Rp->Trace = TR_ALL;
+			ac--;
+			av++;
+		    } else if (!strcmp(*tmp, "repl")) {
+			Rp->Trace = TR_REPL;
+			ac--;
+			av++;
+		    } else if (!strcmp(*tmp, "bootstrap")) {
+			Rp->Trace = TR_BOOTSTRAP;
+			ac--;
+			av++;
+		    } else if (!strcmp(*tmp, "summary")) {
+			Rp->Trace = TR_SUMMARY;
+			ac--;
+			av++;
+		    } else if (**tmp == '-') {
+			/* no options */
+			Rp->Trace = TR_REPL;
+		    } else { /* error */
+			Rp->Trace = TR_REPL;
+			R_ShowMessage (_("WARNING: unknown tracing type requested, using 'repl'\n"));
+		    }
+		} else /* default */
+		    Rp->Trace = TR_REPL;
 	    }
 	    else if (!strncmp(*av, "--encoding", 10)) {
 		if(strlen(*av) < 12) {

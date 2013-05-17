@@ -47,6 +47,7 @@
   R_xlen_t __n__ = XLENGTH(from); \
   PROTECT(from); \
   PROTECT(to = allocVector(TYPEOF(from), __n__)); \
+  duplicate_elts += __n__; \
   if (__n__ == 1) fun(to)[0] = fun(from)[0]; \
   else memcpy(fun(to), fun(from), __n__ * sizeof(type)); \
   DUPLICATE_ATTRIB(to, from); \
@@ -85,6 +86,8 @@
 */
 static SEXP duplicate1(SEXP);
 
+unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
+
 #ifdef R_PROFILING
 static unsigned long duplicate_counter = (unsigned long)-1;
 
@@ -104,6 +107,7 @@ void attribute_hidden reset_duplicate_counter(void)
 SEXP duplicate(SEXP s){
     SEXP t;
 
+    duplicate_object++;
 #ifdef R_PROFILING
     duplicate_counter++;
 #endif
@@ -125,6 +129,9 @@ static SEXP duplicate1(SEXP s)
 {
     SEXP h, t,  sp;
     R_xlen_t i, n;
+
+    duplicate1_elts++;
+    duplicate_elts++;
 
     switch (TYPEOF(s)) {
     case NILSXP:

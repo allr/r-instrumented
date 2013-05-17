@@ -229,10 +229,22 @@ struct promsxp_struct {
 /* Every node must start with a set of sxpinfo flags and an attribute
    field. Under the generational collector these are followed by the
    fields used to maintain the collector's linked list structures. */
-#define SEXPREC_HEADER \
+#ifdef MEMORY_PROFILE
+    struct memory_profile {
+	unsigned long int creation_date;
+	unsigned creation_gc;
+    };
+# define SEXPREC_HEADER				        \
+    struct sxpinfo_struct sxpinfo;			\
+    struct SEXPREC *attrib;				\
+    struct SEXPREC *gengc_next_node, *gengc_prev_node;	\
+    struct memory_profile memory_info
+#else
+# define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
     struct SEXPREC *attrib; \
     struct SEXPREC *gengc_next_node, *gengc_prev_node
+#endif
 
 /* The standard node structure consists of a header followed by the
    node data. */
@@ -273,9 +285,24 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define LEVELS(x)	((x)->sxpinfo.gp)
 #define SET_OBJECT(x,v)	(((x)->sxpinfo.obj)=(v))
 #define SET_TYPEOF(x,v)	(((x)->sxpinfo.type)=(v))
-#define SET_NAMED(x,v)	(((x)->sxpinfo.named)=(v))
+#define SET_NAMED(x,v)				\
+    do {					\
+	if (((x)->sxpinfo.named) != v) {	\
+	    named_elts++;			\
+	    if ((x)->sxpinfo.named < v)		\
+		named_promoted++;		\
+	    else if ((x)->sxpinfo.named > v)	\
+		named_downgraded++;		\
+	} else					\
+	    named_keeped ++;			\
+	(((x)->sxpinfo.named) = (v));		\
+    } while (0)
 #define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
 #define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=((unsigned short)v))
+
+#ifdef MEMORY_PROFILE
+#   define MEMPROF(x)	((x)->memory_info)
+#endif
 
 /* S4 object bit, set by R_do_new_object for all new() calls */
 #define S4_OBJECT_MASK ((unsigned short)(1<<4))
@@ -643,7 +670,7 @@ SEXP Rf_allocSExp(SEXPTYPE);
 SEXP Rf_allocVector(SEXPTYPE, R_xlen_t);
 int  Rf_any_duplicated(SEXP x, Rboolean from_last);
 int  Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
-SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP, Rboolean);
 SEXP Rf_arraySubscript(int, SEXP, SEXP, SEXP (*)(SEXP,SEXP),
                        SEXP (*)(SEXP, int), SEXP);
 SEXP Rf_classgets(SEXP, SEXP);

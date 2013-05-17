@@ -233,7 +233,11 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
-    if (NAMED(val)) val = duplicate(val);
+    if (NAMED(val)) {
+	need_dup++;
+	val = duplicate(val);
+    } else
+	avoided_dup++;
     SET_NAMED(val, NAMED(val) | NAMED(vec));
     UNPROTECT(2);
 
@@ -466,7 +470,11 @@ static SEXP commentgets(SEXP vec, SEXP comment)
 SEXP attribute_hidden do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    if (NAMED(CAR(args)) == 2) SETCAR(args, duplicate(CAR(args)));
+    if (NAMED(CAR(args)) == 2) {
+	need_dup++;
+	SETCAR(args, duplicate(CAR(args)));
+    } else
+	avoided_dup++;
     if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
     setAttrib(CAR(args), R_CommentSymbol, CADR(args));
     SET_NAMED(CAR(args), 0);
@@ -525,7 +533,11 @@ SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1arg(args, call, "x");
 
-    if (NAMED(CAR(args)) == 2) SETCAR(args, duplicate(CAR(args)));
+    if (NAMED(CAR(args)) == 2) {
+	need_dup++;
+	SETCAR(args, duplicate(CAR(args)));
+    } else
+	avoided_dup++;
     if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
     if(IS_S4_OBJECT(CAR(args)))
       UNSET_S4_OBJECT(CAR(args));
@@ -763,8 +775,11 @@ SEXP attribute_hidden do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	getAttrib(CAR(args), R_NamesSymbol) == R_NilValue)
 	return CAR(args);
     PROTECT(args = ans);
-    if (NAMED(CAR(args)) == 2)
+    if (NAMED(CAR(args)) == 2) {
+	need_dup++;
 	SETCAR(args, duplicate(CAR(args)));
+    } else
+	avoided_dup++;
     if(IS_S4_OBJECT(CAR(args))) {
 	const char *klass = CHAR(STRING_ELT(R_data_class(CAR(args), FALSE), 0));
 	if(getAttrib(CAR(args), R_NamesSymbol) == R_NilValue) {
@@ -893,7 +908,11 @@ SEXP attribute_hidden do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
-    if (NAMED(CAR(args)) > 1) SETCAR(args, duplicate(CAR(args)));
+    if (NAMED(CAR(args)) > 1) {
+	need_dup++;
+	SETCAR(args, duplicate(CAR(args)));
+    } else
+	avoided_dup++;
     setAttrib(CAR(args), R_DimNamesSymbol, CADR(args));
     UNPROTECT(1);
     SET_NAMED(CAR(args), 0);
@@ -1028,7 +1047,11 @@ SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (s == R_NilValue) return x;
     }
     PROTECT(args = ans);
-    if (NAMED(x) > 1) SETCAR(args, x = duplicate(x));
+    if (NAMED(x) > 1) {
+	need_dup++;
+	SETCAR(args, x = duplicate(x));
+    } else
+	avoided_dup++;
     setAttrib(x, R_DimSymbol, CADR(args));
     setAttrib(x, R_NamesSymbol, R_NilValue);
     UNPROTECT(1);
@@ -1138,7 +1161,11 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	warningcall(call, "duplicated levels in factors are deprecated");
 /* TODO errorcall(call, _("duplicated levels are not allowed in factors anymore")); */
     PROTECT(args = ans);
-    if (NAMED(CAR(args)) > 1) SETCAR(args, duplicate(CAR(args)));
+    if (NAMED(CAR(args)) > 1) {
+	need_dup++;
+	SETCAR(args, duplicate(CAR(args)));
+    } else
+	avoided_dup++;
     setAttrib(CAR(args), R_LevelsSymbol, CADR(args));
     UNPROTECT(1);
     return CAR(args);
@@ -1189,8 +1216,11 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	   As from R 2.7.0 we don't optimize NAMED == 1 _if_ we are
 	   setting any attributes as an error later on would leave
 	   'obj' changed */
-	if (NAMED(object) > 1 || (NAMED(object) == 1 && nattrs))
+	if (NAMED(object) > 1 || (NAMED(object) == 1 && nattrs)) {
+	    need_dup++;
 	    object = duplicate(object);
+	} else
+	    avoided_dup++;
 	PROTECT(object);
     }
 
@@ -1416,10 +1446,13 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
     obj = CAR(args);
-    if (NAMED(obj) == 2)
+    if (NAMED(obj) == 2) {
+	need_dup++;
 	PROTECT(obj = duplicate(obj));
-    else
+    } else {
+	avoided_dup++;
 	PROTECT(obj);
+    }
 
     /* argument matching */
     PROTECT(ap = list3(R_NilValue, R_NilValue, R_NilValue));
@@ -1643,7 +1676,11 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 	/* simplified version of setAttrib(obj, name, value);
 	   here we do *not* treat "names", "dimnames", "dim", .. specially : */
 	PROTECT(name);
-	if (NAMED(value)) value = duplicate(value);
+	if (NAMED(value)) {
+	    need_dup++;
+	    value = duplicate(value);
+	} else
+	    avoided_dup++;
 	SET_NAMED(value, NAMED(value) | NAMED(obj));
 	UNPROTECT(1);
 	installAttrib(obj, name, value);
@@ -1711,7 +1748,11 @@ R_getS4DataSlot(SEXP obj, SEXPTYPE type)
     if(s3class == R_NilValue && type == S4SXP)
       return R_NilValue;
     PROTECT(s3class);
-    if(NAMED(obj)) obj = duplicate(obj);
+    if(NAMED(obj)) {
+	need_dup++;
+	obj = duplicate(obj);
+    } else
+	avoided_dup++;
     UNPROTECT(1);
     if(s3class != R_NilValue) {/* replace class with S3 class */
       setAttrib(obj, R_ClassSymbol, s3class);

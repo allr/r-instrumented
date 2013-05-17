@@ -32,6 +32,9 @@
 
 #include <R_ext/RS.h> /* for Memzero */
 
+extern int need_count_assign;
+extern unsigned long err_count_assign;
+
 attribute_hidden
 R_xlen_t asVecSize(SEXP x)
 {
@@ -96,7 +99,12 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isEnvironment(aenv))
 	errorcall(call, _("invalid '%s' argument"), "assign.env");
 
+    need_count_assign = 1;
     defineVar(name, mkPROMISE(expr, eenv), aenv);
+    if (need_count_assign) {
+	err_count_assign ++;
+	need_count_assign = 0;
+    }
     return R_NilValue;
 }
 
@@ -291,9 +299,12 @@ SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    isNull(env))) {
 	if (isNull(env))
 	    error(_("use of NULL environment is defunct"));
-	if(NAMED(s) > 1)
+	if(NAMED(s) > 1) {
+	    need_dup++;
 	    /* this copies but does not duplicate args or code */
 	    s = duplicate(s);
+	} else
+	    avoided_dup++;
 	if (TYPEOF(BODY(s)) == BCODESXP)
 	    /* switch to interpreted version if compiled */
 	    SET_BODY(s, R_ClosureExpr(CAR(args)));
@@ -675,10 +686,13 @@ SEXP attribute_hidden do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else {
 	    SET_STRING_ELT(names, i, R_BlankString);
 	}
-	if (NAMED(CAR(args)))
+	if (NAMED(CAR(args))) {
+	    need_dup++;
 	    SET_VECTOR_ELT(list, i, duplicate(CAR(args)));
-	else
+	} else {
+	    avoided_dup++;
 	    SET_VECTOR_ELT(list, i, CAR(args));
+	}
 	args = CDR(args);
     }
     if (havenames) {
@@ -698,10 +712,13 @@ SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(EXPRSXP, n));
     a = args;
     for (i = 0; i < n; i++) {
-	if(NAMED(CAR(a)))
+	if(NAMED(CAR(a))) {
+	    need_dup++;
 	    SET_VECTOR_ELT(ans, i, duplicate(CAR(a)));
-	else
+	} else {
+	    avoided_dup++;
 	    SET_VECTOR_ELT(ans, i, CAR(a));
+	}
 	if (TAG(a) != R_NilValue) named = 1;
 	a = CDR(a);
     }

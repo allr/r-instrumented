@@ -235,7 +235,9 @@ SEXP R_quick_method_check(SEXP args, SEXP mlist, SEXP fdef)
 	    if(PRVALUE(object) == R_UnboundValue) {
 		SEXP tmp = eval(PRCODE(object), PRENV(object));
 		PROTECT(tmp); nprotect++;
+                IF_TRACING(emit_unbnd_promise(object)); /* Trace Instrumentation */
 		SET_PRVALUE(object,  tmp);
+                IF_TRACING(emit_unbnd_promise_return(object)); /* Trace Instrumentation */
 		object = tmp;
 	    }
 	    else

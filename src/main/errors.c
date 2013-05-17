@@ -887,11 +887,19 @@ static void jump_to_top_ex(Rboolean traceback,
 	 /* only bail out if at session top level, not in R_tryEval calls */
 	 && R_ToplevelContext == R_SessionContext ) {
 	REprintf(_("Execution halted\n"));
+
+	/* Trace Instrumentation */
+	trace_cnt_fatal_err();
+	IF_TRACING(goto_top_context());
+
 	R_CleanUp(SA_NOSAVE, 1, 0); /* quit, no save, no .Last, status=1 */
     }
 
     R_GlobalContext = R_ToplevelContext;
     R_restore_globals(R_GlobalContext);
+
+    IF_TRACING(goto_top_context()); /* Trace Instrumentation */
+
     LONGJMP(R_ToplevelContext->cjmpbuf, 0);
     /* not reached
     endcontext(&cntxt);

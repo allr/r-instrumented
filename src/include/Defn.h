@@ -583,6 +583,8 @@ extern0 SEXP	R_NHeap;	    /* Start of the cons cell heap */
 extern0 SEXP	R_FreeSEXP;	    /* Cons cell free list */
 extern0 R_size_t R_Collected;	    /* Number of free cons cells (after gc) */
 extern0 int	R_Is_Running;	    /* for Windows memory manager */
+extern  unsigned long named_elts, named_promoted, named_downgraded, named_keeped;
+extern  unsigned long avoided_dup, need_dup;
 
 /* The Pointer Protection Stack */
 extern0 int	R_PPStackSize	INI_as(R_PPSSIZE); /* The stack size (elements) */
@@ -605,7 +607,7 @@ extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
 
 extern0 int	R_Expressions	INI_as(5000);	/* options(expressions) */
 extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
-extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
+extern0 Rboolean R_KeepSource	INI_as(TRUE);	/* options(keep.source) */
 extern0 Rboolean R_CBoundsCheck	INI_as(FALSE);	/* options(CBoundsCheck) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
@@ -622,6 +624,12 @@ LibExtern Rboolean R_Interactive INI_as(TRUE);	/* TRUE during interactive use*/
 extern0 Rboolean R_Quiet	INI_as(FALSE);	/* Be as quiet as possible */
 extern Rboolean  R_Slave	INI_as(FALSE);	/* Run as a slave process */
 extern0 Rboolean R_Verbose	INI_as(FALSE);	/* Be verbose */
+
+#include <trace.h>
+extern0 TR_TYPE R_Trace INI_as (TR_NONE);    /* Turn on logging */
+extern char* R_TraceDir INI_as (NULL);
+extern char* R_InputFileName INI_as (NULL);
+
 /* extern int	R_Console; */	    /* Console active flag */
 /* IoBuffer R_ConsoleIob; : --> ./IOStuff.h */
 /* R_Consolefile is used in the internet module */
@@ -867,6 +875,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define StringFromReal		Rf_StringFromReal
 # define strIsASCII		Rf_strIsASCII
 # define StrToInternal		Rf_StrToInternal
+# define get_entry		Rf_get_entry
 # define strmat2intmat		Rf_strmat2intmat
 # define substituteList		Rf_substituteList
 # define tsConform		Rf_tsConform
@@ -1067,6 +1076,7 @@ void sortVector(SEXP, Rboolean);
 void SrcrefPrompt(const char *, SEXP);
 void ssort(SEXP*,int);
 int StrToInternal(const char *);
+FUNTAB* get_entry (int i);
 SEXP strmat2intmat(SEXP, SEXP, SEXP);
 SEXP substituteList(SEXP, SEXP);
 Rboolean tsConform(SEXP,SEXP);
@@ -1098,6 +1108,9 @@ void R_restore_globals(RCNTXT *);
 
 /* ../main/bind.c */
 SEXP ItemName(SEXP, R_xlen_t);
+
+/* ../main/CommandLineArgs.c ** Trace instrumentation */
+void write_commandArgs(FILE* out);
 
 /* ../main/errors.c : */
 void ErrorMessage(SEXP, int, ...);
@@ -1245,6 +1258,9 @@ extern void *alloca(size_t);
 #else
 # define LDOUBLE double
 #endif
+
+/* Trace Instrumentation - global pointer for logging */
+TraceInfo *trace_info;
 
 #endif /* DEFN_H_ */
 /*
