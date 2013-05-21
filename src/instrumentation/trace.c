@@ -537,6 +537,8 @@ void goto_abs_top_context() {
 void initialize_trace_defaults (TR_TYPE mode)
 {
     char str[MAX_DNAME];
+    FILE *fd;
+    FUNTAB *func;
 
     if (mode == TR_NONE) return;
 #ifndef MEMORY_PROFILE
@@ -592,6 +594,27 @@ void initialize_trace_defaults (TR_TYPE mode)
 	    ERROR_MSG("Problem copying input file: %s\n", R_InputFileName);
 	// TODO instead of copying grab what's the parser read
     }
+
+    // dump function table into a file
+    sprintf(str, "%s/function_table", trace_info->directory);
+    fd = fopen(str, "wb");
+    if (fd == NULL)
+	ERROR_MSG("Can't open %s for writing: %s", str, strerror(errno));
+    func = R_FunTab;
+    while (func->name != NULL) {
+	unsigned char len        = strlen(func->name);
+	unsigned char is_special = func->eval % 10;
+
+	if (fwrite(&len, 1, 1, fd) != 1)
+	    ERROR_MSG("Can't write to %s: %s", str, strerror(errno));
+	if (fwrite(func->name, len, 1, fd) != 1)
+	    ERROR_MSG("Can't write to %s: %s", str, strerror(errno));
+	if (fwrite(&is_special, 1, 1, fd) != 1)
+	    ERROR_MSG("Can't write to %s: %s", str, strerror(errno));
+
+	func++;
+    }
+    fclose(fd);
 
     //open src map file for writing
     sprintf(str, "%s/%s", trace_info->directory, SRC_MAP_NAME);
