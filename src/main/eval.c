@@ -46,6 +46,7 @@ static Rboolean bc_profiling = FALSE;
 static int R_Profiling = 0;
 
 unsigned long evalscount = 0;
+unsigned long bcodeops_count = 0;
 unsigned long clos_call, spec_call, builtin_call;
 
 #ifdef R_PROFILING
@@ -3441,7 +3442,7 @@ static struct { void *addr; int argc; } opinfo[OPCOUNT];
     goto loop; \
     op_##name
 
-#define BEGIN_MACHINE  NEXT(); init: { loop: switch(which++)
+#define BEGIN_MACHINE  NEXT(); init: { loop: bcodeops_count++; switch(which++)
 #define LASTOP } value = R_NilValue; goto done
 #define INITIALIZE_MACHINE() if (body == NULL) goto init
 
@@ -3717,7 +3718,10 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 			SEXP symbol = VECTOR_ELT(constants, sidx);	\
 			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
 		    }							\
-		    else value = pv;					\
+		    else {						\
+			IF_TRACING(emit_bnd_promise(value));		\
+			value = pv;					\
+                    }							\
 		}							\
 		else if (NAMED(value) == 0)				\
 		    SET_NAMED(value, 1);				\
@@ -4520,7 +4524,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	IF_TRACING(emit_prologue_start()); /* Trace Instrumentation */
 	value = findFun(symbol, rho);
+	IF_TRACING(emit_prologue_end(value)); /* Trace Instrumentation */
 	if(RTRACE(value)) {
 	  Rprintf("trace: ");
 	  PrintValue(symbol);
@@ -4540,7 +4546,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	IF_TRACING(emit_prologue_start()); /* Trace Instrumentation */
 	value = findFun(symbol, R_GlobalEnv);
+	IF_TRACING(emit_prologue_end(value)); /* Trace Instrumentation */
 	if(RTRACE(value)) {
 	  Rprintf("trace: ");
 	  PrintValue(symbol);
@@ -4697,19 +4705,39 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int flag;
 	switch (ftype) {
 	case BUILTINSXP:
+	  builtin_call++;
 	  checkForMissings(args, call);
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
+          IF_TRACING(emit_primitive_function(fun, BLTIN_ID, bparam, bparam_ldots)); /* Trace Instrumentation */
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+          IF_TRACING(emit_function_return(fun, value)); /* Trace Instrumentation */
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:
+	  spec_call++;
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
+
+	  IF_TRACING_DO
+	  unsigned int sparam = 0, sparam_ldots = 0;
+	  SEXP targs = CDR(call);
+	  while (targs != R_NilValue) {
+	      if(CAR(targs) == R_DotsSymbol)
+		  sparam_ldots++;
+	      else
+		  sparam++;
+	      targs = CDR(targs);
+	  }
+	  emit_primitive_function(fun, SPEC_ID, sparam, sparam_ldots); /* Trace Instrumentation */
+	  IF_TRACING_END
+
 	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+	  IF_TRACING(emit_function_return(fun, value)); /* Trace Instrumentation */
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
+	    clos_call++;
 	    value = applyClosure(call, fun, args, rho, R_BaseEnv, FALSE);
 	  break;
 	default: error(_("bad function"));
@@ -4730,7 +4758,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  error(_("not a BUILTIN function"));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
+	IF_TRACING(emit_primitive_function(fun, BLTIN_ID, bparam, bparam_ldots)); /* Trace Instrumentation */
 	value = PRIMFUN(fun) (call, fun, args, rho);
+	IF_TRACING(emit_function_return(fun, value)); /* Trace Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	R_BCNodeStackTop -= 2;
@@ -4751,7 +4781,22 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	BCNPUSH(fun);  /* for GC protection */
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
+
+	IF_TRACING_DO
+	unsigned int sparam = 0, sparam_ldots = 0;
+	SEXP targs = CDR(call);
+	while (targs != R_NilValue) {
+	    if(CAR(targs) == R_DotsSymbol)
+		sparam_ldots++;
+	    else
+		sparam++;
+	    targs = CDR(targs);
+	}
+	emit_primitive_function(fun, SPEC_ID, sparam, sparam_ldots); /* Trace Instrumentation */
+	IF_TRACING_END
+
 	value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+	IF_TRACING(emit_function_return(fun, value)); /* Trace Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	SETSTACK(-1, value); /* replaces fun on stack */
