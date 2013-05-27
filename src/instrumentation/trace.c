@@ -596,22 +596,13 @@ void initialize_trace_defaults (TR_TYPE mode)
     }
 
     // dump function table into a file
-    sprintf(str, "%s/function_table", trace_info->directory);
-    fd = fopen(str, "wb");
+    sprintf(str, "%s/R_function_table.txt", trace_info->directory);
+    fd = fopen(str, "w");
     if (fd == NULL)
 	ERROR_MSG("Can't open %s for writing: %s", str, strerror(errno));
     func = R_FunTab;
     while (func->name != NULL) {
-	unsigned char len        = strlen(func->name);
-	unsigned char is_special = func->eval % 10;
-
-	if (fwrite(&len, 1, 1, fd) != 1)
-	    ERROR_MSG("Can't write to %s: %s", str, strerror(errno));
-	if (fwrite(func->name, len, 1, fd) != 1)
-	    ERROR_MSG("Can't write to %s: %s", str, strerror(errno));
-	if (fwrite(&is_special, 1, 1, fd) != 1)
-	    ERROR_MSG("Can't write to %s: %s", str, strerror(errno));
-
+	fprintf(fd, "%d %s\n", func->eval % 10, func->name);
 	func++;
     }
     fclose(fd);
