@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <stdarg.h>
 
-#define HG_ID "00000000"  // dummy
+#define HG_ID "000000000000+"  // dummy, don't change length
 
 static TRACEFILE bin_trace_file;
 extern TraceInfo *trace_info;

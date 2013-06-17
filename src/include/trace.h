@@ -11,7 +11,7 @@
 
 #include "Rinternals.h"
 
-//#define TRACE_ZIPPED   // needs external zlib, version 1.2.5 or higher
+#define TRACE_ZIPPED   // needs external zlib, version 1.2.5 or higher
 #define TRACER_COMPILED_IN
 
 // Output defines
