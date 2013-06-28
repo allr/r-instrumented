@@ -698,7 +698,15 @@ void write_allocation_summary (FILE *out){
     fprintf(out, "Calls: %lu %lu %lu %lu\n", clos_call, spec_call, builtin_call, clos_call+ spec_call+ builtin_call);
 
 
+    /* seems to be ignored by the Java tool, kept anyway */
     fprintf(out, "Allocated: %lu %lu %lu %lu %lu %lu %lu\n", allocated_cons, allocated_prom, allocated_env, allocated_external, allocated_sexp, allocated_noncons, allocated_cons + allocated_prom + allocated_env + allocated_external + allocated_sexp + allocated_noncons);
+
+    /* this is what the Java tool actually wants to see */
+    fprintf(out, "AllocatedCons: %lu\n", allocated_cons);
+    fprintf(out, "AllocatedEnv:  %lu\n", allocated_env);
+    fprintf(out, "AllocatedPromises: %lu\n", allocated_prom);
+    fprintf(out, "AllocatedSXP: %lu\n", allocated_sexp);
+
 #define T(i) fprintf(out, "Test" #i ": %lu %lu %lu %g\n", allocated_cell[i], free_cell[i], no_attrb[i], ((double)no_attrb[i]) / free_cell[i] * 100)
     T(0);
     T(1);
@@ -719,6 +727,17 @@ void write_allocation_summary (FILE *out){
     REPORT_VECTOR("Null",_null);
     REPORT_VECTOR("Small", _small);
     REPORT_VECTOR("Large", _large);
+
+    /* and now the version that the Java tool expects */
+    fprintf(out, "AllocatedSmallVectors: %lu %lu %lu %lu\n", allocated_vector_small, allocated_vector_elts_small, allocated_vector_size_small, allocated_vector_asize_small);
+    /* WARNING: The next one is a random guess */
+    fprintf(out, "AllocatedAllVectors: %lu %lu %lu %lu\n",
+	    allocated_vector + allocated_vector_small + allocated_vector_null + allocated_vector_large,
+	    allocated_vector_elts + allocated_vector_elts_small + allocated_vector_elts_null + allocated_vector_elts_large,
+	    allocated_vector_size + allocated_vector_size_small + allocated_vector_size_null + allocated_vector_size_large,
+	    allocated_vector_asize + allocated_vector_asize_small + allocated_vector_asize_null + allocated_vector_asize_large
+	    );
+
     fprintf(out, "AllocatedStringBuffer: %lu %lu %lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
 
     fprintf(out, "GC: %d\n", gc_count);
