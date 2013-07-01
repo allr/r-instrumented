@@ -703,7 +703,7 @@ void write_allocation_summary (FILE *out){
 
     /* this is what the Java tool actually wants to see */
     fprintf(out, "AllocatedCons: %lu\n", allocated_cons);
-    fprintf(out, "AllocatedEnv:  %lu\n", allocated_env);
+    fprintf(out, "AllocatedEnv: %lu\n", allocated_env);
     fprintf(out, "AllocatedPromises: %lu\n", allocated_prom);
     fprintf(out, "AllocatedSXP: %lu\n", allocated_sexp);
 
