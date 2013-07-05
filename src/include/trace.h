@@ -61,7 +61,7 @@ typedef struct TraceInfo_ {
 /* Trace Instrumentation - global pointer for logging */
 extern TraceInfo *trace_info;
 
-unsigned int fatal_err_cnt, nonfatal_err_cnt;
+extern unsigned int fatal_err_cnt;
 
 // Trace output codes
 #define NO_PROLOGUE		0x01
@@ -222,7 +222,6 @@ static inline void trcR_goto_top_context(void) {
 }
 
 static inline void trace_cnt_fatal_err() { fatal_err_cnt++; }
-static inline void trace_cnt_nonfatal_err() { nonfatal_err_cnt++; }
 
 static void trace_exit(int ecode);
 

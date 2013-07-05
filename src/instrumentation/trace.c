@@ -36,6 +36,7 @@ extern TRACEFILE memory_map_file;
 #endif
 
 // Trace counters
+unsigned int fatal_err_cnt;
 static unsigned int func_decl_cnt, null_srcref_cnt;
 static unsigned int stack_err_cnt, stack_flush_cnt;
 static unsigned int stack_height, max_stack_height;
@@ -791,7 +792,6 @@ void write_summary() {
     }
     fprintf(summary_fp, "TraceDir: %s\n", trace_info->directory);
     fprintf(summary_fp, "FatalErrors: %u\n", fatal_err_cnt);
-    fprintf(summary_fp, "NonFatalErrors: %u\n", nonfatal_err_cnt);
     fprintf(summary_fp, "TraceStackErrors: %u\n", stack_err_cnt);
     fprintf(summary_fp, "FinalContextStackHeight: %d\n", get_cstack_height());
     fprintf(summary_fp, "FinalContextStackFlushed: %d\n", stack_flush_cnt);
