@@ -58,6 +58,9 @@ typedef struct TraceInfo_ {
     char trace_version[12];
 } TraceInfo;
 
+/* Trace Instrumentation - global pointer for logging */
+extern TraceInfo *trace_info;
+
 unsigned int fatal_err_cnt, nonfatal_err_cnt;
 
 // Trace output codes
@@ -90,11 +93,10 @@ unsigned int fatal_err_cnt, nonfatal_err_cnt;
 
 
 // Utility macros
-#define IF_TRACING_DO if (trace_info && trace_info->tracing) {
-#define IF_TRACING_END }
-#define ELSE_NOT_TRACING } else {
-#define NOT_TRACING_END IF_TRACING_END
-#define IF_TRACING(x) if (trace_info && trace_info->tracing) do {  x ;} while (0)
+// note: traceR_is_active could be implemented as static inline,
+//       but it's less error-prone as a macro
+#define traceR_is_active (trace_info && trace_info->tracing)
+#define IF_TRACING(x) if (traceR_is_active) do {  x ;} while (0)
 #define SEXP2ID(x) ((unsigned long)x)
 #define ID2SEXP(x) ((SEXP) x)
 #define SXPEXISTS(x) (x && (x != R_NilValue))

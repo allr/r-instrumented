@@ -637,18 +637,19 @@ SEXP eval(SEXP e, SEXP rho)
 	    PROTECT(CDR(e));
 	    R_Visible = flag != 1;
 
-	    IF_TRACING_DO
-	    unsigned int sparam = 0, sparam_ldots = 0;
-	    SEXP targs = CDR(e);
-	    while (targs != R_NilValue) {
-		if(CAR(targs) == R_DotsSymbol)
-		    sparam_ldots++;
-		else
-		    sparam++;
-		targs = CDR(targs);
+            if (traceR_is_active) {
+		/* Trace Instrumentation */
+		unsigned int sparam = 0, sparam_ldots = 0;
+		SEXP targs = CDR(e);
+		while (targs != R_NilValue) {
+		    if(CAR(targs) == R_DotsSymbol)
+			sparam_ldots++;
+		    else
+			sparam++;
+		    targs = CDR(targs);
+		}
+		emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots);
 	    }
-	    emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots); /* Trace Instrumentation */
-	    IF_TRACING_END
 
 	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
 	    IF_TRACING(emit_function_return(op, tmp)); /* Trace Instrumentation */
@@ -4720,18 +4721,19 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
 
-	  IF_TRACING_DO
-	  unsigned int sparam = 0, sparam_ldots = 0;
-	  SEXP targs = CDR(call);
-	  while (targs != R_NilValue) {
-	      if(CAR(targs) == R_DotsSymbol)
-		  sparam_ldots++;
-	      else
-		  sparam++;
-	      targs = CDR(targs);
+	  if (traceR_is_active) {
+	      /* Trace Instrumentation */
+	      unsigned int sparam = 0, sparam_ldots = 0;
+	      SEXP targs = CDR(call);
+	      while (targs != R_NilValue) {
+		  if(CAR(targs) == R_DotsSymbol)
+		      sparam_ldots++;
+		  else
+		      sparam++;
+		  targs = CDR(targs);
+	      }
+	      emit_primitive_function(fun, SPEC_ID, sparam, sparam_ldots);
 	  }
-	  emit_primitive_function(fun, SPEC_ID, sparam, sparam_ldots); /* Trace Instrumentation */
-	  IF_TRACING_END
 
 	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
 	  IF_TRACING(emit_function_return(fun, value)); /* Trace Instrumentation */
@@ -4783,18 +4785,19 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
 
-	IF_TRACING_DO
-	unsigned int sparam = 0, sparam_ldots = 0;
-	SEXP targs = CDR(call);
-	while (targs != R_NilValue) {
-	    if(CAR(targs) == R_DotsSymbol)
-		sparam_ldots++;
-	    else
-		sparam++;
-	    targs = CDR(targs);
+	if (traceR_is_active) {
+	    /* Trace Instrumentation */
+	    unsigned int sparam = 0, sparam_ldots = 0;
+	    SEXP targs = CDR(call);
+	    while (targs != R_NilValue) {
+		if(CAR(targs) == R_DotsSymbol)
+		    sparam_ldots++;
+		else
+		    sparam++;
+		targs = CDR(targs);
+	    }
+	    emit_primitive_function(fun, SPEC_ID, sparam, sparam_ldots);
 	}
-	emit_primitive_function(fun, SPEC_ID, sparam, sparam_ldots); /* Trace Instrumentation */
-	IF_TRACING_END
 
 	value = PRIMFUN(fun) (call, fun, CDR(call), rho);
 	IF_TRACING(emit_function_return(fun, value)); /* Trace Instrumentation */

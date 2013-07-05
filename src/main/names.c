@@ -1180,18 +1180,19 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 	bparam_ldots = bparam_ldots_tmp;
     }
     else {
-	IF_TRACING_DO
-	unsigned int sparam = 0, sparam_ldots = 0;
-	SEXP targs = args;
-	while (targs != R_NilValue) {
-	    if (CAR(targs) == R_DotsSymbol)
-		sparam_ldots++;
-	    else
-		sparam++;
-	    targs = CDR(targs);
+	if (traceR_is_active) {
+	    /* Trace Instrumentation */
+	    unsigned int sparam = 0, sparam_ldots = 0;
+	    SEXP targs = args;
+	    while (targs != R_NilValue) {
+		if (CAR(targs) == R_DotsSymbol)
+		    sparam_ldots++;
+		else
+		    sparam++;
+		targs = CDR(targs);
+	    }
+	    emit_primitive_function(INTERNAL(fun), SPEC_ID|NO_PROLOGUE, sparam, sparam_ldots);
 	}
-	emit_primitive_function(INTERNAL(fun), SPEC_ID|NO_PROLOGUE, sparam, sparam_ldots); /* Trace Instrumentation */
-	IF_TRACING_END
     }
     PROTECT(args);
     flag = PRIMPRINT(INTERNAL(fun));

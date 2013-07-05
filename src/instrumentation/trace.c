@@ -30,7 +30,7 @@
 #define HG_ID "000000000000+"  // dummy, don't change length
 
 static TRACEFILE bin_trace_file;
-extern TraceInfo *trace_info;
+TraceInfo *trace_info;
 #ifdef MEMORY_PROFILE
 extern TRACEFILE memory_map_file;
 #endif

@@ -1259,9 +1259,6 @@ extern void *alloca(size_t);
 # define LDOUBLE double
 #endif
 
-/* Trace Instrumentation - global pointer for logging */
-TraceInfo *trace_info;
-
 #endif /* DEFN_H_ */
 /*
  *- Local Variables:

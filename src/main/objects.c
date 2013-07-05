@@ -105,18 +105,19 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 	const void *vmax = vmaxget();
 	R_Visible = flag != 1;
 
-	IF_TRACING_DO
-	unsigned int sparam = 0, sparam_ldots = 0;
-	SEXP targs = args;
-	while (targs != R_NilValue) {
-	    if (CAR(targs) == R_DotsSymbol)
-		sparam_ldots ++;
-	    else
-		sparam ++;
-	    targs = CDR(targs);
-	}
-	emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots); /* Trace Instrumentation */
-	IF_TRACING_END
+        if (traceR_is_active) {
+	    /* Trace Instrumentation */
+	    unsigned int sparam = 0, sparam_ldots = 0;
+	    SEXP targs = args;
+	    while (targs != R_NilValue) {
+		if (CAR(targs) == R_DotsSymbol)
+		    sparam_ldots ++;
+		else
+		    sparam ++;
+		targs = CDR(targs);
+	    }
+	    emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots);
+        }
 
 	ans = PRIMFUN(op) (call, op, args, rho);
 	IF_TRACING(emit_function_return(op, ans)); /* Trace Instrumentation */

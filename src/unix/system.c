@@ -85,15 +85,16 @@ extern void write_trace_summary(FILE *);
 void R_CleanUp(SA_TYPE saveact, int status, int runLast) {
     ptr_R_CleanUp(saveact, status, runLast);
     flush_gc();
-    /* Trace instrumentation */
-    IF_TRACING_DO
-    goto_abs_top_context();
-    terminate_tracing();
-    ELSE_NOT_TRACING
-    if (R_Trace == TR_SUMMARY) {
-	write_trace_summary(stderr);
+    if (traceR_is_active) {
+	/* Trace instrumentation */
+
+	goto_abs_top_context();
+	terminate_tracing();
+    } else {
+	if (R_Trace == TR_SUMMARY) {
+	    write_trace_summary(stderr);
+	}
     }
-    NOT_TRACING_END
     exit(0);
 }
 
