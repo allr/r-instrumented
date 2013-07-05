@@ -98,7 +98,7 @@ typedef enum {
 
 typedef struct ContextStackNode_ {
     StackNodeType type;
-    unsigned long int ID;
+    uintptr_t ID;
     RCNTXT *cptr;
     struct ContextStackNode_ *next;
 } ContextStackNode;
@@ -136,14 +136,14 @@ static inline void WRITE_INT(TRACEFILE file, const int num) {
 }
 
 static char *get_type_name(StackNodeType type) {
-    const int max_type = sizeof(StackNodeTypeName) -1;
-    if(type > max_type)
+    const unsigned int max_type = sizeof(StackNodeTypeName) -1;
+    if (type > max_type)
 	type = max_type;
     return StackNodeTypeName[type];
 }
 
 int get_cstack_height() {
-    int cnt = 0;
+    unsigned int cnt = 0;
     ContextStackNode *cur;
     cur = cstack_top;
     while (cur != cstack_bottom) {
@@ -169,7 +169,7 @@ static void dec_stack_height() { stack_height--; }
 
 // currently unused, inline silences warning
 static inline void print_node(ContextStackNode *cur) {
-    printf("[type:%s\tID:%lu\tCTX:%p]\t", get_type_name(cur->type), cur->ID, cur->cptr);
+    printf("[type:%s\tID:%lu\tCTX:%p]\t", get_type_name(cur->type), (unsigned long)cur->ID, cur->cptr);
 }
 
 static void print_cstack() {
@@ -184,7 +184,7 @@ static void print_cstack() {
 
 static StackNodeType sxp_to_stacknodetype(SEXP sxp) {
     StackNodeType type = CLOSURE; // type uninitialized
-    switch (TYPEOF (sxp)) {
+    switch (TYPEOF(sxp)) {
     case SPECIALSXP:
 	type = SPEC;
 	break;
@@ -209,7 +209,7 @@ static ContextStackNode* alloc_cstack_node(StackNodeType t) {
     return new_node;
 }
 
-static void push_cstack(StackNodeType t, unsigned long int ID) {
+static void push_cstack(StackNodeType t, uintptr_t ID) {
     ContextStackNode *new_node;
 
     new_node = alloc_cstack_node(t);
@@ -223,11 +223,11 @@ inline static int peek_type() {
     return cstack_top->type;
 }
 
-inline static unsigned long int peek_id() {
+inline static uintptr_t peek_id() {
     return cstack_top->ID;
 }
 
-inline static void patch_pc_pair(unsigned long int id) {
+inline static void patch_pc_pair(uintptr_t id) {
     if (peek_type() != PC_PAIR) {
 	ERROR_MSG("Context stack missing a PC_PAIR element\n");
 	stack_err_cnt++;
@@ -237,7 +237,7 @@ inline static void patch_pc_pair(unsigned long int id) {
     cstack_top->ID = id;
 }
 
-static int pop_cstack_node(unsigned long int *id, RCNTXT **cntx) {
+static int pop_cstack_node(uintptr_t *id, RCNTXT **cntx) {
     // Return the type of the top elemennt & set params if provided
     ContextStackNode *popped_node = cstack_top;
     int type = popped_node->type;
@@ -257,8 +257,8 @@ static int pop_cstack_node(unsigned long int *id, RCNTXT **cntx) {
     return type;
 }
 
-static void pop_cstack(StackNodeType type, unsigned long int ID) {
-    unsigned long int node_id;
+static void pop_cstack(StackNodeType type, uintptr_t ID) {
+    uintptr_t node_id;
     StackNodeType node_type = pop_cstack_node(&node_id, NULL);
     if ((node_type == type)) {
 	if (type == PROL) { // close prologue
@@ -269,7 +269,7 @@ static void pop_cstack(StackNodeType type, unsigned long int ID) {
 		&& peek_type() == PC_PAIR && peek_id() == ID)
 		pop_cstack_node(NULL, NULL); // What's this unbalanced pop ?
 	} else {
-	    ERROR_MSG("Context stack is out of alignment, type is: %s but ID's don't match %p != %p\n", get_type_name(type), (SEXP)node_id, (SEXP)ID);
+	    ERROR_MSG("Context stack is out of alignment, type is: %s but ID's don't match %p != %p\n", get_type_name(type), ID2SEXP(node_id), ID2SEXP(ID));
 	    stack_err_cnt++;
 	    print_cstack();
 	    trace_exit(0);
@@ -468,7 +468,7 @@ void trace_context_add() {
 void trace_context_drop() {
     unsigned int delim = 0;
     StackNodeType popped_type;
-    unsigned long int popped_ID = 0;
+    uintptr_t popped_ID = 0;
 
     // close any open delimiters
     while (cstack_top->type != CNTXT) {

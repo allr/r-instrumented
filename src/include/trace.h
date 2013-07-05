@@ -97,7 +97,7 @@ unsigned int fatal_err_cnt, nonfatal_err_cnt;
 //       but it's less error-prone as a macro
 #define traceR_is_active (trace_info && trace_info->tracing)
 #define IF_TRACING(x) if (traceR_is_active) do {  x ;} while (0)
-#define SEXP2ID(x) ((unsigned long)x)
+#define SEXP2ID(x) ((uintptr_t)x)
 #define ID2SEXP(x) ((SEXP) x)
 #define SXPEXISTS(x) (x && (x != R_NilValue))
 
