@@ -100,11 +100,6 @@ unsigned int fatal_err_cnt, nonfatal_err_cnt;
 #define ID2SEXP(x) ((SEXP) x)
 #define SXPEXISTS(x) (x && (x != R_NilValue))
 
-#define PERCENT(x, total) (total == 0) ? (double) 0 : (100 * (double) (x) / (total))
-#define UMAX(x, y) ((x) < (y)) ? (y) : (x)
-#define UMIN(x, y) ((x) < (y)) ? (x) : (y)
-#define UDIV(x, y) ((y) == 0) ? 0 : ((x) / (y))
-
 #ifdef TRACE_ZIPPED
 #  define FOPEN(file) gzopen(file, "w9")
 #  define FCLOSE(hdl) gzclose(hdl)

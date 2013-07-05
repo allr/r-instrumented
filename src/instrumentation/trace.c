@@ -162,7 +162,8 @@ int get_cstack_height() {
 
 static void inc_stack_height() {
     stack_height++;
-    max_stack_height = UMAX(stack_height, max_stack_height);
+    if (stack_height > max_stack_height)
+	max_stack_height = stack_height;
 }
 
 static void dec_stack_height() { stack_height--; }
