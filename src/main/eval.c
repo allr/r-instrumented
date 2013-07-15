@@ -1663,7 +1663,6 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
     rval = mkCLOSXP(CAR(args), CADR(args), rho);
     srcref = CADDR(args);
     if (!isNull(srcref)) setAttrib(rval, R_SrcrefSymbol, srcref);
-    setAttrib (rval, R_SrcrefSymbol, getAttrib(call, R_SrcrefSymbol)); /* Trace instrumentation */
     print_src_addr(rval);
     return rval;
 }
