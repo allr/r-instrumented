@@ -559,13 +559,13 @@ SEXP eval(SEXP e, SEXP rho)
 	else
 		tmp = findVar(e, rho);
 	if (tmp == R_UnboundValue) {
-	    trcR_emit_error_type(R_ERROR_SEEN); /* Trace Instrumentation */
+	    trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
 	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
 	}
 	/* if ..d is missing then ddfindVar will signal */
 	else if (tmp == R_MissingArg && !DDVAL(e) ) {
 	    const char *n = CHAR(PRINTNAME(e));
-	    trcR_emit_error_type(R_ERROR_SEEN); /* Trace Instrumentation */
+	    trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
 	    if(*n) error(_("argument \"%s\" is missing, with no default"),
 			 CHAR(PRINTNAME(e)));
 	    else error(_("argument is missing, with no default"));
@@ -648,7 +648,7 @@ SEXP eval(SEXP e, SEXP rho)
 			sparam++;
 		    targs = CDR(targs);
 		}
-		trcR_emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots);
+		trcR_emit_primitive_function(op, BINTRACE_SPEC_ID, sparam, sparam_ldots);
 	    }
 
 	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
@@ -674,7 +674,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    RCNTXT cntxt;
 	    unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	    PROTECT(tmp = evalList(CDR(e), rho, e, 0));
-	    trcR_emit_primitive_function(op, BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
+	    trcR_emit_primitive_function(op, BINTRACE_BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
 	    bparam = bparam_tmp;
 	    bparam_ldots = bparam_ldots_tmp;
 	    if (flag < 2) R_Visible = flag != 1;
@@ -710,16 +710,16 @@ SEXP eval(SEXP e, SEXP rho)
 	    UNPROTECT(1);
 	}
 	else {
-	    trcR_emit_error_type(R_ERROR_SEEN); /* Trace Instrumentation */
+	    trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
 	    error(_("attempt to apply non-function"));
 	}
 	UNPROTECT(1);
 	break;
     case DOTSXP:
-	trcR_emit_error_type(R_ERROR_SEEN); /* Trace Instrumentation */
+	trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
 	error(_("'...' used in an incorrect context"));
     default:
-	trcR_emit_error_type(UNIMPL_TYPE); /* Trace Instrumentation */
+	trcR_emit_error_type(BINTRACE_UNIMPL_TYPE); /* Trace Instrumentation */
 	UNIMPLEMENTED_TYPE("eval", e);
     }
     R_EvalDepth = depthsave;
@@ -977,9 +977,9 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, 
     if (normalclos) {// Need to be done after matchArgs, since it's compute arguments
 	// But must not interleave with a context ... maybe it's not so bad since we can grab
 	// the suppliedenv list;
-	trcR_emit_closure(op, CLOS_ID, 0);
+	trcR_emit_closure(op, BINTRACE_CLOS_ID, 0);
     } else {
-	trcR_emit_closure(op, CLOS_ID|NO_PROLOGUE, 0);
+	trcR_emit_closure(op, BINTRACE_CLOS_ID | BINTRACE_NO_PROLOGUE, 0);
     }
 
     /*  If we have a generic function we need to use the sysparent of
@@ -4711,7 +4711,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  checkForMissings(args, call);
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
-          trcR_emit_primitive_function(fun, BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
+          trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
 	  value = PRIMFUN(fun) (call, fun, args, rho);
           trcR_emit_function_return(fun, value); /* Trace Instrumentation */
 	  if (flag < 2) R_Visible = flag != 1;
@@ -4732,7 +4732,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 		      sparam++;
 		  targs = CDR(targs);
 	      }
-	      trcR_emit_primitive_function(fun, SPEC_ID, sparam, sparam_ldots);
+	      trcR_emit_primitive_function(fun, BINTRACE_SPEC_ID, sparam, sparam_ldots);
 	  }
 
 	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
@@ -4761,7 +4761,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  error(_("not a BUILTIN function"));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
-	trcR_emit_primitive_function(fun, BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
+	trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
 	value = PRIMFUN(fun) (call, fun, args, rho);
 	trcR_emit_function_return(fun, value); /* Trace Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
@@ -4796,7 +4796,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 		    sparam++;
 		targs = CDR(targs);
 	    }
-	    trcR_emit_primitive_function(fun, SPEC_ID, sparam, sparam_ldots);
+	    trcR_emit_primitive_function(fun, BINTRACE_SPEC_ID, sparam, sparam_ldots);
 	}
 
 	value = PRIMFUN(fun) (call, fun, CDR(call), rho);

@@ -64,25 +64,25 @@ extern TraceInfo *trace_info;
 extern unsigned int fatal_err_cnt;
 
 // Trace output codes
-#define NO_PROLOGUE		0x01
-#define UNIT 			0x20
-#define NEW_PROMISE		0x40
+#define BINTRACE_NO_PROLOGUE		0x01
+#define BINTRACE_UNIT 			0x20 // null
+#define BINTRACE_NEW_PROMISE		0x40
 //this count starts after the basic SEXPTYPES
-#define FUNC_END 		0x86
-#define BND_PROM_START		0x87
-#define UBND_PROM_START		0x88
-#define PROM_END 		0x89
-#define UNIMPL_TYPE		0x8A
+#define BINTRACE_FUNC_END 		0x86
+#define BINTRACE_BND_PROM_START		0x87
+#define BINTRACE_UBND_PROM_START	0x88
+#define BINTRACE_PROM_END 		0x89
+#define BINTRACE_UNIMPL_TYPE		0x8A
 /* 0x8B is unused */
-#define R_ERROR_SEEN		0x8C
+#define BINTRACE_R_ERROR_SEEN		0x8C
 /* 0x8D is unused */
-#define UBND			0x8E /* or 0xCE for new*/
-#define BND			0x8F /* or 0xCF for new*/
-#define BLTIN_ID		0x90
-#define SPEC_ID			0x92
-#define CLOS_ID			0x94
-#define PROL_START		0x96
-#define PROL_END		0x97
+#define BINTRACE_UBND			0x8E /* or 0xCE for new*/
+#define BINTRACE_BND			0x8F /* or 0xCF for new*/
+#define BINTRACE_BLTIN_ID		0x90
+#define BINTRACE_SPEC_ID		0x92
+#define BINTRACE_CLOS_ID		0x94
+#define BINTRACE_PROL_START		0x96
+#define BINTRACE_PROL_END		0x97
 
 // Addresses for special closures
 #define C_D_ADDR  1 //any context_drop()

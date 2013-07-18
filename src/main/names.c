@@ -1175,7 +1175,8 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(INTERNAL(fun)) == BUILTINSXP) {
 	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	args = evalList(args, env, call, 0);
-	trcR_emit_primitive_function(INTERNAL(fun), BLTIN_ID|NO_PROLOGUE, bparam, bparam_ldots);  /* Trace Instrumentation */
+	trcR_emit_primitive_function(INTERNAL(fun), BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE,
+                                     bparam, bparam_ldots);  /* Trace Instrumentation */
 	bparam = bparam_tmp;
 	bparam_ldots = bparam_ldots_tmp;
     }
@@ -1191,7 +1192,8 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 		    sparam++;
 		targs = CDR(targs);
 	    }
-	    trcR_emit_primitive_function(INTERNAL(fun), SPEC_ID|NO_PROLOGUE, sparam, sparam_ldots);
+	    trcR_emit_primitive_function(INTERNAL(fun), BINTRACE_SPEC_ID | BINTRACE_NO_PROLOGUE,
+                                         sparam, sparam_ldots);
 	}
     }
     PROTECT(args);

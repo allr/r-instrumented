@@ -116,7 +116,7 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 		    sparam ++;
 		targs = CDR(targs);
 	    }
-	    trcR_emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots);
+	    trcR_emit_primitive_function(op, BINTRACE_SPEC_ID, sparam, sparam_ldots);
         }
 
 	ans = PRIMFUN(op) (call, op, args, rho);
@@ -136,7 +136,7 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	PROTECT(args = evalList(args, rho, call, 0));
 	R_Visible = flag != 1;
-	trcR_emit_primitive_function(op, BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
+	trcR_emit_primitive_function(op, BINTRACE_BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
 	bparam = bparam_tmp;
 	bparam_ldots = bparam_ldots_tmp;
 	ans = PRIMFUN(op) (call, op, args, rho);
@@ -475,7 +475,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	CHAR(STRING_ELT(generic, 0))[0] == '\0')
 	errorcall(call, _("first argument must be a generic name"));
 
-    trcR_emit_closure(val, CLOS_ID, D_UM_ADDR); /* Trace instrumentation */
+    trcR_emit_closure(val, BINTRACE_CLOS_ID, D_UM_ADDR); /* Trace instrumentation */
     int tmp = usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
 			env, callenv, defenv, &ans);
     if (tmp == 1) {

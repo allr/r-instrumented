@@ -308,10 +308,10 @@ void trcR_internal_emit_simple_type(SEXP expr) {
 	type = (unsigned int) TYPEOF(expr);
 	switch (type) {
 	case PROMSXP:
-	    delim = (PRVALUE(expr) == R_UnboundValue) ? UBND : BND;
+	    delim = (PRVALUE(expr) == R_UnboundValue) ? BINTRACE_UBND : BINTRACE_BND;
 	    /* check if this is the first time this promise is emitted */
 	    if (RSTEP(expr)) {
-		delim |= NEW_PROMISE;
+		delim |= BINTRACE_NEW_PROMISE;
 		SET_RSTEP(expr, 0);
 	    }
 	    WRITE_BYTE(bin_trace_file, delim);
@@ -335,26 +335,26 @@ void trcR_internal_emit_simple_type(SEXP expr) {
 	    WRITE_BYTE(bin_trace_file, type);
 	}
     } else { // for NULL expr
-	type = UNIT;
+	type = BINTRACE_UNIT;
 	WRITE_BYTE(bin_trace_file, type);
     }
     event_cnt++;
 }
 
 void trcR_internal_emit_bnd_promise(SEXP prom) {
-    unsigned int delim = BND_PROM_START;
+    unsigned int delim = BINTRACE_BND_PROM_START;
     SEXP prval = PRVALUE(prom);
     //unsigned int type = (unsigned int) TYPEOF (prval);
     WRITE_BYTE(bin_trace_file, delim);
     WRITE_ADDR(bin_trace_file, prom);
     trcR_internal_emit_simple_type(prval);
-    delim = PROM_END;
+    delim = BINTRACE_PROM_END;
     WRITE_BYTE(bin_trace_file, delim);
     event_cnt++;
 }
 
 void trcR_internal_emit_unbnd_promise(SEXP prom) {
-    unsigned int delim = UBND_PROM_START;
+    unsigned int delim = BINTRACE_UBND_PROM_START;
     WRITE_BYTE(bin_trace_file, delim);
     WRITE_ADDR(bin_trace_file, prom);
     push_cstack(PROM, (unsigned long) UPROM_TAG);
@@ -362,7 +362,7 @@ void trcR_internal_emit_unbnd_promise(SEXP prom) {
 }
 
 void trcR_internal_emit_unbnd_promise_return(SEXP prom) {
-    unsigned int delim = PROM_END;
+    unsigned int delim = BINTRACE_PROM_END;
     WRITE_BYTE(bin_trace_file, delim);
     pop_cstack(PROM, (unsigned long) UPROM_TAG);
     event_cnt++;
@@ -375,7 +375,7 @@ void trcR_internal_emit_error_type(unsigned int type) {
 }
 
 void trcR_internal_emit_primitive_function(SEXP fun, unsigned int type, unsigned int bparam, unsigned int bparam_ldots) {
-    if ((type == SPEC_ID) || (type == (SPEC_ID|NO_PROLOGUE)))
+    if ((type == BINTRACE_SPEC_ID) || (type == (BINTRACE_SPEC_ID | BINTRACE_NO_PROLOGUE)))
 	push_cstack(SPEC, SEXP2ID(fun));
     else
 	push_cstack(BUILTIN, SEXP2ID(fun));
@@ -389,7 +389,7 @@ void trcR_internal_emit_primitive_function(SEXP fun, unsigned int type, unsigned
 }
 
 void trcR_internal_emit_prologue_start() {
-    unsigned int delim = PROL_START;
+    unsigned int delim = BINTRACE_PROL_START;
     push_cstack(PC_PAIR, 0);
     push_cstack(PROL, 0);
     WRITE_BYTE(bin_trace_file, delim);
@@ -397,7 +397,7 @@ void trcR_internal_emit_prologue_start() {
 }
 
 void trcR_internal_emit_prologue_end(SEXP clos) {
-    unsigned int delim = PROL_END;
+    unsigned int delim = BINTRACE_PROL_END;
     pop_cstack(PROL, SEXP2ID(clos));
     WRITE_BYTE(bin_trace_file, delim);
     event_cnt++;
@@ -433,7 +433,7 @@ void trcR_internal_emit_closure(SEXP closure, unsigned int type, unsigned long i
 
 // FIXME: type should be (u)intptr_t
 void trcR_internal_emit_empty_closure(SEXP eObj, unsigned long int type) {
-    int delim = CLOS_ID;
+    int delim = BINTRACE_CLOS_ID;
     WRITE_BYTE(bin_trace_file, delim);
     WRITE_ADDR(bin_trace_file, (void *)type);
     push_cstack(SXPEXISTS(eObj) ? sxp_to_stacknodetype(eObj) : CLOSURE, SEXP2ID(eObj)); // I assume that, if eObj is null, we are emitting a closure.
@@ -448,7 +448,7 @@ void trcR_internal_emit_empty_closure(SEXP eObj, unsigned long int type) {
 }
 
 void trcR_internal_emit_function_return(SEXP fun, SEXP ret_val) {
-    unsigned int delim = FUNC_END;
+    unsigned int delim = BINTRACE_FUNC_END;
     pop_cstack(SXPEXISTS(fun) ? sxp_to_stacknodetype(fun) : CLOSURE,  SEXP2ID(fun));
     WRITE_BYTE(bin_trace_file, delim);
 
@@ -492,11 +492,11 @@ void trcR_internal_trace_context_drop() {
 
 	switch (popped_type) {
 	case PROM:
-	    delim = PROM_END;
+	    delim = BINTRACE_PROM_END;
 	    WRITE_BYTE(bin_trace_file, delim);
 	    break;
 	case PROL:
-	    delim = PROL_END;
+	    delim = BINTRACE_PROL_END;
 	    WRITE_BYTE(bin_trace_file, delim);
 	case PC_PAIR:
 	    trcR_emit_empty_closure(ID2SEXP(popped_ID), C_D_ADDR);
@@ -505,7 +505,7 @@ void trcR_internal_trace_context_drop() {
 	case BUILTIN:
 	case CLOSURE:
 	    /* mark end of CLOS, SPEC or BLTIN func */
-	    delim = FUNC_END;
+	    delim = BINTRACE_FUNC_END;
 	    WRITE_BYTE(bin_trace_file, delim);
 	    // emit a return type
 	    trcR_internal_emit_simple_type(NULL);
