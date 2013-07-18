@@ -112,11 +112,6 @@ unsigned int fatal_err_cnt, nonfatal_err_cnt;
 #  define FPRINTF fprintf
 #endif
 
-// Error message printing
-#define PRINTF(formatStringArgument, extraArguments) __attribute__((__format__(printf, formatStringArgument, extraArguments)))
-void print_error_msg(const char *format, ...) PRINTF (1, 2);
-#define ERROR_MSG(...) print_error_msg(__VA_ARGS__)
-
 void initialize_trace_defaults(TR_TYPE mode);
 
 void start_tracing();

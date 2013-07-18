@@ -107,6 +107,18 @@ static ContextStackNode *cstack_top, *cstack_bottom;
 
 char *StackNodeTypeName[] = {"PAIR", "SPEC", "BUIL", "CLOS", "CNTXT", "PROM", "PROL", "UNKN"};
 
+// utility functions
+void __attribute__((__format__(printf, 1, 2)))
+  print_error_msg(const char *format, ...) {
+    fprintf(stderr, "[Error] ");
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    if (format[strlen(format) - 1] != '\n')
+	fprintf(stderr, "\n");
+}
+
 // Trace binary writes
 static inline void WRITE_BYTE(TRACEFILE file, const unsigned char byte) {
     bytes_written += sizeof(char);
@@ -153,7 +165,7 @@ int get_cstack_height() {
 
     // This double checks all counting
     if (cnt != stack_height) {
-	ERROR_MSG("Stack height counter is off by %d\n", stack_height - cnt);
+	print_error_msg("Stack height counter is off by %d\n", stack_height - cnt);
 	trace_exit(1);
     }
 
@@ -230,7 +242,7 @@ inline static uintptr_t peek_id() {
 
 inline static void patch_pc_pair(uintptr_t id) {
     if (peek_type() != PC_PAIR) {
-	ERROR_MSG("Context stack missing a PC_PAIR element\n");
+	print_error_msg("Context stack missing a PC_PAIR element\n");
 	stack_err_cnt++;
 	print_cstack();
 	trace_exit(3);
@@ -247,7 +259,7 @@ static int pop_cstack_node(uintptr_t *id, RCNTXT **cntx) {
     if(cntx)
 	*cntx = popped_node->cptr;
     if (popped_node == cstack_bottom) {
-	ERROR_MSG("Attempted to pop below the context stack bottom.\n");
+	print_error_msg("Attempted to pop below the context stack bottom.\n");
 	stack_err_cnt++;
 	print_cstack();
 	trace_exit(1);
@@ -270,13 +282,13 @@ static void pop_cstack(StackNodeType type, uintptr_t ID) {
 		&& peek_type() == PC_PAIR && peek_id() == ID)
 		pop_cstack_node(NULL, NULL); // What's this unbalanced pop ?
 	} else {
-	    ERROR_MSG("Context stack is out of alignment, type is: %s but ID's don't match %p != %p\n", get_type_name(type), ID2SEXP(node_id), ID2SEXP(ID));
+	    print_error_msg("Context stack is out of alignment, type is: %s but ID's don't match %p != %p\n", get_type_name(type), ID2SEXP(node_id), ID2SEXP(ID));
 	    stack_err_cnt++;
 	    print_cstack();
 	    trace_exit(0);
 	}
     } else {
-	ERROR_MSG("Stack pop type mismatch %s (top)!= %s (pop)\n", get_type_name(node_type), get_type_name(type));
+	print_error_msg("Stack pop type mismatch %s (top)!= %s (pop)\n", get_type_name(node_type), get_type_name(type));
 	print_cstack();
 	stack_err_cnt++;
 	trace_exit(0);
@@ -449,7 +461,7 @@ void trcR_internal_change_top_context(void) {
         if (cstack_top == cstack_bottom) {
             cstack_bottom->cptr = R_ToplevelContext;
         } else {
-            ERROR_MSG("Can't change top level context. Stack height is greater than 0\n");
+            print_error_msg("Can't change top level context. Stack height is greater than 0\n");
             stack_err_cnt++;
             trace_exit(1);
         }
@@ -498,7 +510,7 @@ void trcR_internal_trace_context_drop() {
 	    trcR_internal_emit_simple_type(NULL);
 	    break;
 	default:
-	    ERROR_MSG("Unknown type during context drop: %d\n", cstack_top->type);
+	    print_error_msg("Unknown type during context drop: %d\n", cstack_top->type);
 	    stack_err_cnt++;
 	    break;
 	}
@@ -508,7 +520,7 @@ void trcR_internal_trace_context_drop() {
     if (cstack_top != cstack_bottom) {
 	popped_type = pop_cstack_node(NULL, NULL);
 	if (popped_type != CNTXT) {
-	    ERROR_MSG("Attempted to context drop a non-context item: %d.\n", popped_type);
+	    print_error_msg("Attempted to context drop a non-context item: %d.\n", popped_type);
 	    stack_err_cnt++;
 	    trace_exit(2);
 	}
@@ -520,7 +532,7 @@ void trcR_internal_goto_top_context() {
 	if (cstack_top != cstack_bottom) {
 	    trcR_internal_trace_context_drop();
 	} else {
-	    ERROR_MSG("Failed attempt to return to top level context.\n");
+	    print_error_msg("Failed attempt to return to top level context.\n");
 	    stack_err_cnt++;
 	    trace_exit(1);
 	}
@@ -569,13 +581,13 @@ void initialize_trace_defaults(TR_TYPE mode) {
     }
     // create directory for results if needed
     if (mkdir(trace_info->directory, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) && errno != EEXIST)
-	ERROR_MSG("Can't create directory: %s\n", trace_info->directory);
+	print_error_msg("Can't create directory: %s\n", trace_info->directory);
 
 #ifdef MEMORY_PROFILE
     sprintf(str, "%s/%s", trace_info->directory, MEMORY_MAP_FILE);
     memory_map_file = FOPEN(str);
     if (!memory_map_file) {
-	ERROR_MSG ("Couldn't open file '%s' for writing", str);
+	print_error_msg ("Couldn't open file '%s' for writing", str);
 	trace_exit (1);
     }
     if (mode == TR_SUMMARY) {
@@ -596,7 +608,7 @@ void initialize_trace_defaults(TR_TYPE mode) {
     if (R_InputFileName) {
 	sprintf(str, "cp %s %s/source.R", R_InputFileName, trace_info->directory);
 	if (system(str))
-	    ERROR_MSG("Problem copying input file: %s\n", R_InputFileName);
+	    print_error_msg("Problem copying input file: %s\n", R_InputFileName);
 	// TODO instead of copying grab what's the parser read
     }
 
@@ -604,7 +616,7 @@ void initialize_trace_defaults(TR_TYPE mode) {
     sprintf(str, "%s/R_function_table.txt", trace_info->directory);
     fd = fopen(str, "w");
     if (fd == NULL)
-	ERROR_MSG("Can't open %s for writing: %s", str, strerror(errno));
+	print_error_msg("Can't open %s for writing: %s", str, strerror(errno));
     func = R_FunTab;
     while (func->name != NULL) {
 	fprintf(fd, "%d %s\n", func->eval % 10, func->name);
@@ -616,7 +628,7 @@ void initialize_trace_defaults(TR_TYPE mode) {
     sprintf(str, "%s/%s", trace_info->directory, SRC_MAP_NAME);
     trace_info->src_map_file = FOPEN (str);
     if (!trace_info->src_map_file) {
-	ERROR_MSG ("Couldn't open file '%s' for writing", str);
+	print_error_msg ("Couldn't open file '%s' for writing", str);
 	trace_exit (1);
     }
 }
@@ -628,7 +640,7 @@ void start_tracing() {
 	//open output file
 	bin_trace_file = FOPEN(trace_info->trace_file_name);
 	if (!bin_trace_file) {
-	    ERROR_MSG ("Couldn't open file '%s' for writing", trace_info->trace_file_name);
+	    print_error_msg ("Couldn't open file '%s' for writing", trace_info->trace_file_name);
 	    trace_exit (1);
 	}
 
@@ -774,7 +786,7 @@ void write_summary() {
     // Write a summary file
     summary_fp = fopen(str, "w");
     if (!summary_fp) {
-	ERROR_MSG ("Couldn't open file '%s' for writing", str);
+	print_error_msg ("Couldn't open file '%s' for writing", str);
 	return;
     }
     fprintf(summary_fp, "TraceDir: %s\n", trace_info->directory);
@@ -820,9 +832,9 @@ void print_src_addr (SEXP src) {
 			      INTEGER(srcref)[2], INTEGER(srcref)[3],
 			      INTEGER(srcref)[4], INTEGER(srcref)[5]);
 		} else
-		    ERROR_MSG("src_filename not string or 0 length\n");
+		    print_error_msg("src_filename not string or 0 length\n");
 	    } else
-		ERROR_MSG("srcfile isn't an ENVSXP\n");
+		print_error_msg("srcfile isn't an ENVSXP\n");
 	} else { //srcref is NULL or R_NilValue
 	    unsigned long int body;
 	    unsigned int high, low;
@@ -845,24 +857,4 @@ void trace_exit(int code) {
     trace_cnt_fatal_err();
     terminate_tracing();
     exit(code);
-}
-
-void print_debug_msg(const char *format, ...) {
-    fprintf(stdout, "[Debug] ");
-    va_list args;
-    va_start(args, format);
-    vfprintf(stdout, format, args);
-    va_end(args);
-    if (format[strlen(format) - 1] != '\n')
-	fprintf(stdout, "\n");
-}
-
-void print_error_msg(const char *format, ...) {
-    fprintf(stderr, "[Error] ");
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-    if (format[strlen(format) - 1] != '\n')
-	fprintf(stderr, "\n");
 }
