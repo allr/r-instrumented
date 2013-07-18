@@ -2448,6 +2448,8 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
     /* Trace Instrumentation */
+    /* abuses the "spare" bit in the SXP flags to mark if the promise        */
+    /* has been written to the trace file yet (the bit isn't really "spare") */
     SET_RSTEP(s, 1);
     IF_TRACING(emit_simple_type(s));
     /* Trace Instrumentation End */

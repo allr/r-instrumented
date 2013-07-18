@@ -459,6 +459,8 @@ static SEXP forcePromise(SEXP e)
 	prstack.next = R_PendingPromises;
 	R_PendingPromises = &prstack;
 
+        // FIXME: The other emit_unbnd_promise trace constructs in here
+        //        wrap the SET_PRVALUE statement instead?
 	IF_TRACING(emit_unbnd_promise(e)); /* Trace instrumentation */
 	val = eval(PRCODE(e), PRENV(e));
 	IF_TRACING(emit_unbnd_promise_return(e)); /* Trace instrumentation */

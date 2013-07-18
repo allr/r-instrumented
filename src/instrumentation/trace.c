@@ -292,6 +292,7 @@ void emit_simple_type(SEXP expr){
 	switch(type){
 	case PROMSXP:
 	    delim = (PRVALUE (expr) == R_UnboundValue) ? UBND : BND;
+	    /* check if this is the first time this promise is emitted */
 	    if(RSTEP(expr)){
 		delim |= NEW_PROMISE;
 		SET_RSTEP(expr, 0);
@@ -386,6 +387,7 @@ void emit_prologue_end(SEXP clos) {
 }
 
 // FIXME: alt_addr should be (u)intptr_t
+// FIXME: type is always CLOS_ID or CLOS_ID|NO_PROLOGUE
 void emit_closure(SEXP closure, unsigned int type, unsigned long int alt_addr){
     WRITE_BYTE(bin_trace_file, type);
     if (SXPEXISTS(closure)) {
