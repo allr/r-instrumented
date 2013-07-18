@@ -109,33 +109,33 @@ char *StackNodeTypeName[] = {"PAIR", "SPEC", "BUIL", "CLOS", "CNTXT", "PROM", "P
 
 // Trace binary writes
 static inline void WRITE_BYTE(TRACEFILE file, const unsigned char byte) {
-  bytes_written += sizeof(char);
-  WRITE_FUN(file, &byte, sizeof(char));
+    bytes_written += sizeof(char);
+    WRITE_FUN(file, &byte, sizeof(char));
 }
 
 static inline void WRITE_2BYTES(TRACEFILE file, const unsigned int bytes) {
-  bytes_written       += 2*sizeof(char);
-  WRITE_FUN(file, &bytes, 2*sizeof(char));
+    bytes_written += 2*sizeof(char);
+    WRITE_FUN(file, &bytes, 2*sizeof(char));
 }
 
 static inline void WRITE_ADDR(TRACEFILE file, const void *addr) {
-  bytes_written += sizeof(void*);
-  WRITE_FUN(file, &addr, sizeof(void*));
+    bytes_written += sizeof(void*);
+    WRITE_FUN(file, &addr, sizeof(void*));
 }
 
 // unused
 static inline void WRITE_UINT(TRACEFILE file, const unsigned int num) {
-  bytes_written += sizeof(unsigned int);
-  WRITE_FUN(file, &num, sizeof(unsigned int));
+    bytes_written += sizeof(unsigned int);
+    WRITE_FUN(file, &num, sizeof(unsigned int));
 }
 
 // unused
 static inline void WRITE_INT(TRACEFILE file, const int num) {
-  bytes_written += sizeof(int);
-  WRITE_FUN(file, &num, sizeof(int));
+    bytes_written += sizeof(int);
+    WRITE_FUN(file, &num, sizeof(int));
 }
 
-static char *get_type_name(StackNodeType type){
+static char *get_type_name(StackNodeType type) {
     const int max_type = sizeof(StackNodeTypeName) -1;
     if(type > max_type)
 	type = max_type;
@@ -168,7 +168,7 @@ static void inc_stack_height() {
 static void dec_stack_height() { stack_height--; }
 
 // currently unused, inline silences warning
-static inline void print_node(ContextStackNode *cur){
+static inline void print_node(ContextStackNode *cur) {
     printf("[type:%s\tID:%lu\tCTX:%p]\t", get_type_name(cur->type), cur->ID, cur->cptr);
 }
 
@@ -219,13 +219,15 @@ static void push_cstack(StackNodeType t, unsigned long int ID) {
     inc_stack_height();
 }
 
-inline static int peek_type(){
+inline static int peek_type() {
     return cstack_top->type;
 }
-inline static unsigned long int peek_id(){
+
+inline static unsigned long int peek_id() {
     return cstack_top->ID;
 }
-inline static void patch_pc_pair(unsigned long int id){
+
+inline static void patch_pc_pair(unsigned long int id) {
     if (peek_type() != PC_PAIR) {
 	ERROR_MSG("Context stack missing a PC_PAIR element\n");
 	stack_err_cnt++;
@@ -234,6 +236,7 @@ inline static void patch_pc_pair(unsigned long int id){
     }
     cstack_top->ID = id;
 }
+
 static int pop_cstack_node(unsigned long int *id, RCNTXT **cntx) {
     // Return the type of the top elemennt & set params if provided
     ContextStackNode *popped_node = cstack_top;
@@ -258,7 +261,7 @@ static void pop_cstack(StackNodeType type, unsigned long int ID) {
     unsigned long int node_id;
     StackNodeType node_type = pop_cstack_node(&node_id, NULL);
     if ((node_type == type)) {
-	if (type == PROL){ // close prologue
+	if (type == PROL) { // close prologue
 	    patch_pc_pair(ID); // PC_PAIR gets ID from the PROL_END (it isn't known at PROL_START)
 	} else if (node_id == ID) { // close function or promise
 	    // if call was part of a prologue/call pair then also pop the PC_PAIR marker
@@ -283,17 +286,17 @@ static void pop_cstack(StackNodeType type, unsigned long int ID) {
 //
 // Trace bytecode emitters
 //
-void emit_simple_type(SEXP expr){
+void emit_simple_type(SEXP expr) {
     unsigned int delim;
     unsigned int type;
     unsigned int len;
     if (expr) {
-	type = (unsigned int) TYPEOF (expr);
-	switch(type){
+	type = (unsigned int) TYPEOF(expr);
+	switch (type) {
 	case PROMSXP:
-	    delim = (PRVALUE (expr) == R_UnboundValue) ? UBND : BND;
+	    delim = (PRVALUE(expr) == R_UnboundValue) ? UBND : BND;
 	    /* check if this is the first time this promise is emitted */
-	    if(RSTEP(expr)){
+	    if (RSTEP(expr)) {
 		delim |= NEW_PROMISE;
 		SET_RSTEP(expr, 0);
 	    }
@@ -329,7 +332,7 @@ void emit_bnd_promise(SEXP prom) {
     SEXP prval = PRVALUE(prom);
     //unsigned int type = (unsigned int) TYPEOF (prval);
     WRITE_BYTE(bin_trace_file, delim);
-    WRITE_ADDR (bin_trace_file, prom);
+    WRITE_ADDR(bin_trace_file, prom);
     emit_simple_type(prval);
     delim = PROM_END;
     WRITE_BYTE(bin_trace_file, delim);
@@ -388,7 +391,7 @@ void emit_prologue_end(SEXP clos) {
 
 // FIXME: alt_addr should be (u)intptr_t
 // FIXME: type is always CLOS_ID or CLOS_ID|NO_PROLOGUE
-void emit_closure(SEXP closure, unsigned int type, unsigned long int alt_addr){
+void emit_closure(SEXP closure, unsigned int type, unsigned long int alt_addr) {
     WRITE_BYTE(bin_trace_file, type);
     if (SXPEXISTS(closure)) {
 	WRITE_ADDR(bin_trace_file, closure);
@@ -415,7 +418,7 @@ void emit_closure(SEXP closure, unsigned int type, unsigned long int alt_addr){
 }
 
 // FIXME: type should be (u)intptr_t
-void emit_empty_closure(SEXP eObj, unsigned long int type){
+void emit_empty_closure(SEXP eObj, unsigned long int type) {
     int delim = CLOS_ID;
     WRITE_BYTE(bin_trace_file, delim);
     WRITE_ADDR(bin_trace_file, (void *)type);
@@ -430,7 +433,7 @@ void emit_empty_closure(SEXP eObj, unsigned long int type){
     event_cnt++;
 }
 
-void emit_function_return(SEXP fun, SEXP ret_val){
+void emit_function_return(SEXP fun, SEXP ret_val) {
     unsigned int delim = FUNC_END;
     pop_cstack(SXPEXISTS(fun) ? sxp_to_stacknodetype(fun) : CLOSURE,  SEXP2ID(fun));
     WRITE_BYTE(bin_trace_file, delim);
@@ -501,9 +504,9 @@ void trace_context_drop() {
     }
 
     // then pop the context
-    if ( cstack_top != cstack_bottom) {
+    if (cstack_top != cstack_bottom) {
 	popped_type = pop_cstack_node(NULL, NULL);
-	if (popped_type != CNTXT){
+	if (popped_type != CNTXT) {
 	    ERROR_MSG("Attempted to context drop a non-context item: %d.\n", popped_type);
 	    stack_err_cnt++;
 	    trace_exit(2);
@@ -512,7 +515,7 @@ void trace_context_drop() {
 }
 
 void goto_top_context() {
-    while(cstack_top->cptr != R_ToplevelContext) {
+    while (cstack_top->cptr != R_ToplevelContext) {
 	if (cstack_top != cstack_bottom) {
 	    trace_context_drop();
 	} else {
@@ -527,7 +530,7 @@ void goto_top_context() {
 // This fully flushes the stack
 void goto_abs_top_context() {
     stack_flush_cnt = get_cstack_height();
-    while(cstack_top != cstack_bottom) {
+    while (cstack_top != cstack_bottom) {
 	trace_context_drop();
     }
     return;
@@ -536,8 +539,7 @@ void goto_abs_top_context() {
 //
 // Trace maintenance functions
 //
-void initialize_trace_defaults (TR_TYPE mode)
-{
+void initialize_trace_defaults(TR_TYPE mode) {
     char str[MAX_DNAME];
     FILE *fd;
     FUNTAB *func;
@@ -546,7 +548,7 @@ void initialize_trace_defaults (TR_TYPE mode)
 #ifndef MEMORY_PROFILE
     if (mode == TR_SUMMARY) return;
 #endif
-    trace_info = malloc (sizeof (TraceInfo));
+    trace_info = malloc(sizeof(TraceInfo));
 
     //set the trace directory name
     if (R_TraceDir) {
@@ -554,18 +556,18 @@ void initialize_trace_defaults (TR_TYPE mode)
     } else {
 	int written;
 	time_t t = time (0);
-	struct tm *current_time = localtime (&t);
+	struct tm *current_time = localtime(&t);
 	char *fname = R_InputFileName ? R_InputFileName : "stdin";
 	char *lst = strrchr(fname, '/');
 	lst = lst ? lst + 1 : fname;
-	strftime (str, 15, "%y%m%d_%H%M%S", current_time);
+	strftime(str, 15, "%y%m%d_%H%M%S", current_time);
 	written = sprintf(trace_info->directory, "data_%s_%s",
 			  str, lst);
-	if(R_InputFileName)
+	if (R_InputFileName)
 	    trace_info->directory[written - 2] = 0;
     }
     // create directory for results if needed
-    if(mkdir (trace_info->directory, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) && errno != EEXIST)
+    if (mkdir(trace_info->directory, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) && errno != EEXIST)
 	ERROR_MSG("Can't create directory: %s\n", trace_info->directory);
 
 #ifdef MEMORY_PROFILE
@@ -575,7 +577,7 @@ void initialize_trace_defaults (TR_TYPE mode)
 	ERROR_MSG ("Couldn't open file '%s' for writing", str);
 	trace_exit (1);
     }
-    if (mode == TR_SUMMARY){
+    if (mode == TR_SUMMARY) {
 	free(trace_info);
 	trace_info = NULL;
 	return;
@@ -592,7 +594,7 @@ void initialize_trace_defaults (TR_TYPE mode)
     //copy the R source file into the trace dir
     if (R_InputFileName) {
 	sprintf(str, "cp %s %s/source.R", R_InputFileName, trace_info->directory);
-	if (system (str))
+	if (system(str))
 	    ERROR_MSG("Problem copying input file: %s\n", R_InputFileName);
 	// TODO instead of copying grab what's the parser read
     }
@@ -618,20 +620,19 @@ void initialize_trace_defaults (TR_TYPE mode)
     }
 }
 
-void start_tracing ()
-{
-    if (trace_info &&  !(trace_info->tracing)) {
+void start_tracing() {
+    if (trace_info && !(trace_info->tracing)) {
 	trace_info->tracing = 1;
 
 	//open output file
-	bin_trace_file = FOPEN (trace_info->trace_file_name);
+	bin_trace_file = FOPEN(trace_info->trace_file_name);
 	if (!bin_trace_file) {
 	    ERROR_MSG ("Couldn't open file '%s' for writing", trace_info->trace_file_name);
 	    trace_exit (1);
 	}
 
 	//Write trace header
-	bytes_written = FPRINTF (bin_trace_file, "%.12s", trace_info->trace_version);
+	bytes_written = FPRINTF(bin_trace_file, "%.12s", trace_info->trace_version);
 
 	// init context stack
 	cstack_top = alloc_cstack_node(CNTXT);
@@ -650,15 +651,14 @@ void start_tracing ()
 extern void close_memory_map();
 void write_missing_results(FILE *out);
 
-void write_trace_summary (FILE *out)
-{
+void write_trace_summary(FILE *out) {
     R_gc();
 #ifdef MEMORY_PROFILE
     close_memory_map();
 #endif
     char str[TIME_BUFF > MAX_DNAME? TIME_BUFF : MAX_DNAME];
     time_t current_time = time(0);
-    struct tm *local_time = localtime (&current_time);
+    struct tm *local_time = localtime(&current_time);
     struct rusage my_rusage;
     fprintf(out, "SourceName: %s\n", R_InputFileName ? R_InputFileName : "stdin");
 
@@ -669,7 +669,6 @@ void write_trace_summary (FILE *out)
     // TODO print trace_type all/repl/bootstrap
     fprintf(out, "TracerVersion: %s\n", HG_ID);
     fprintf(out, "PtrSize: %lu\n", sizeof(void*));
-
 
     strftime (str, TIME_BUFF, "%c", local_time);
     fprintf(out, "TraceDate: %s\n", str);
@@ -693,11 +692,11 @@ void write_trace_summary (FILE *out)
     write_missing_results(out);
 }
 
-void write_allocation_summary (FILE *out){
+void write_allocation_summary(FILE *out) {
     fprintf(out, "SizeOfSEXP: %ld\n", sizeof(SEXPREC));
     fprintf(out, "Interp: %lu\n", allocated_cons);
     fprintf(out, "Context: %lu\n", context_opened);
-    fprintf(out, "Calls: %lu %lu %lu %lu\n", clos_call, spec_call, builtin_call, clos_call+ spec_call+ builtin_call);
+    fprintf(out, "Calls: %lu %lu %lu %lu\n", clos_call, spec_call, builtin_call, clos_call + spec_call+ builtin_call);
 
 
     /* seems to be ignored by the Java tool, kept anyway */
@@ -758,16 +757,15 @@ void write_allocation_summary (FILE *out){
     fprintf(out, "AvoidedDup: %lu %lu\n", avoided_dup, need_dup);
 }
 
-void terminate_tracing ()
-{
+void terminate_tracing() {
     // Stop tracing
-    FCLOSE (bin_trace_file);
+    FCLOSE(bin_trace_file);
     trace_info->tracing = 0;
-    FCLOSE (trace_info->src_map_file);
+    FCLOSE(trace_info->src_map_file);
     write_summary();
 }
 
-void write_summary (){
+void write_summary() {
     FILE *summary_fp;
     char str[MAX_DNAME];
     sprintf(str, "%s/%s", trace_info->directory, SUMMARY_NAME);
@@ -795,31 +793,31 @@ void write_summary (){
     fclose(summary_fp);
 }
 
-static inline void print_ref(SEXP src, const char * file, long line, long col, long more1, long more2, long more3, long more4){
+static inline void print_ref(SEXP src, const char * file, long line, long col, long more1, long more2, long more3, long more4) {
     // TODO rename this 'moreX' in an more appropriate way
-    FPRINTF (trace_info->src_map_file, "%#010lx %p %s %#x %#x %#x %#x %#x %#x\n",
-	     bytes_written, src, file,
-	     line, col,
-	     more1, more2,
-	     more3, more4);
+    FPRINTF(trace_info->src_map_file, "%#010lx %p %s %#x %#x %#x %#x %#x %#x\n",
+	    bytes_written, src, file,
+	    line, col,
+	    more1, more2,
+	    more3, more4);
 }
 
 void print_src_addr (SEXP src) {
     SEXP srcref, srcfile, filename;
 
     if (trace_info) {
-	srcref = getAttrib (src, R_SrcrefSymbol);
+	srcref = getAttrib(src, R_SrcrefSymbol);
 	if (SXPEXISTS(srcref)) {
 	    srcfile = getAttrib (srcref, R_SrcfileSymbol);
-	    if (TYPEOF (srcfile) == ENVSXP) {
-		filename = findVar (install ("filename"), srcfile);
-		if (isString (filename) && length (filename)) {
+	    if (TYPEOF(srcfile) == ENVSXP) {
+		filename = findVar(install ("filename"), srcfile);
+		if (isString(filename) && length(filename)) {
 		    /* print out the number of bytes written, address, srcfilename, starting line number, and starting column number */
 		    // print the lazyLoads that occur during the bootstrap
 		    print_ref(src, CHAR(STRING_ELT (filename, 0)),
-			      INTEGER (srcref)[0], INTEGER (srcref)[1],
-			      INTEGER (srcref)[2], INTEGER (srcref)[3],
-			      INTEGER (srcref)[4], INTEGER (srcref)[5]);
+			      INTEGER(srcref)[0], INTEGER(srcref)[1],
+			      INTEGER(srcref)[2], INTEGER(srcref)[3],
+			      INTEGER(srcref)[4], INTEGER(srcref)[5]);
 		} else
 		    ERROR_MSG("src_filename not string or 0 length\n");
 	    } else
@@ -848,24 +846,22 @@ void trace_exit(int code) {
     exit(code);
 }
 
-void print_debug_msg (const char *format, ...)
-{
-    fprintf (stdout, "[Debug] ");
+void print_debug_msg(const char *format, ...) {
+    fprintf(stdout, "[Debug] ");
     va_list args;
-    va_start (args, format);
-    vfprintf (stdout, format, args);
-    va_end (args);
-    if (format[strlen (format) - 1] != '\n')
-	fprintf (stdout, "\n");
+    va_start(args, format);
+    vfprintf(stdout, format, args);
+    va_end(args);
+    if (format[strlen(format) - 1] != '\n')
+	fprintf(stdout, "\n");
 }
 
-void print_error_msg (const char *format, ...)
-{
-    fprintf (stderr, "[Error] ");
+void print_error_msg(const char *format, ...) {
+    fprintf(stderr, "[Error] ");
     va_list args;
-    va_start (args, format);
-    vfprintf (stderr, format, args);
-    va_end (args);
-    if (format[strlen (format) - 1] != '\n')
-	fprintf (stderr, "\n");
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    if (format[strlen(format) - 1] != '\n')
+	fprintf(stderr, "\n");
 }
