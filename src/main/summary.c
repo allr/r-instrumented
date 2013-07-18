@@ -740,14 +740,14 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     UNPROTECT(1);
 
-    IF_TRACING(emit_prologue_start()); /* Trace instrumentation */
+    trcR_emit_prologue_start(); /* Trace instrumentation */
     PROTECT(op = findFun(install("range.default"), env));
-    IF_TRACING(emit_prologue_end(op)); /* Trace instrumentation */
+    trcR_emit_prologue_end(op); /* Trace instrumentation */
     PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
     for (a = args, b = prargs; a != R_NilValue; a = CDR(a), b = CDR(b)) {
-	IF_TRACING(emit_unbnd_promise(CAR(b))); /* Trace instrumentation */
+	trcR_emit_unbnd_promise(CAR(b)); /* Trace instrumentation */
 	SET_PRVALUE(CAR(b), CAR(a));
-	IF_TRACING(emit_unbnd_promise_return(CAR(b))); /* Trace instrumentation */
+	trcR_emit_unbnd_promise_return(CAR(b)); /* Trace instrumentation */
     }
     ans = applyClosure(call, op, prargs, env, R_BaseEnv, TRUE);
     UNPROTECT(3);

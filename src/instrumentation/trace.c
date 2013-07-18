@@ -286,7 +286,7 @@ static void pop_cstack(StackNodeType type, uintptr_t ID) {
 //
 // Trace bytecode emitters
 //
-void emit_simple_type(SEXP expr) {
+void trcR_internal_emit_simple_type(SEXP expr) {
     unsigned int delim;
     unsigned int type;
     unsigned int len;
@@ -327,19 +327,19 @@ void emit_simple_type(SEXP expr) {
     event_cnt++;
 }
 
-void emit_bnd_promise(SEXP prom) {
+void trcR_internal_emit_bnd_promise(SEXP prom) {
     unsigned int delim = BND_PROM_START;
     SEXP prval = PRVALUE(prom);
     //unsigned int type = (unsigned int) TYPEOF (prval);
     WRITE_BYTE(bin_trace_file, delim);
     WRITE_ADDR(bin_trace_file, prom);
-    emit_simple_type(prval);
+    trcR_internal_emit_simple_type(prval);
     delim = PROM_END;
     WRITE_BYTE(bin_trace_file, delim);
     event_cnt++;
 }
 
-void emit_unbnd_promise(SEXP prom) {
+void trcR_internal_emit_unbnd_promise(SEXP prom) {
     unsigned int delim = UBND_PROM_START;
     WRITE_BYTE(bin_trace_file, delim);
     WRITE_ADDR(bin_trace_file, prom);
@@ -347,7 +347,7 @@ void emit_unbnd_promise(SEXP prom) {
     event_cnt++;
 }
 
-void emit_unbnd_promise_return(SEXP prom) {
+void trcR_internal_emit_unbnd_promise_return(SEXP prom) {
     unsigned int delim = PROM_END;
     WRITE_BYTE(bin_trace_file, delim);
     pop_cstack(PROM, (unsigned long) UPROM_TAG);
@@ -355,12 +355,12 @@ void emit_unbnd_promise_return(SEXP prom) {
 }
 
 
-void emit_error_type(unsigned int type) {
+void trcR_internal_emit_error_type(unsigned int type) {
     WRITE_BYTE(bin_trace_file, type);
     event_cnt++;
 }
 
-void emit_primitive_function(SEXP fun, unsigned int type, unsigned int bparam, unsigned int bparam_ldots) {
+void trcR_internal_emit_primitive_function(SEXP fun, unsigned int type, unsigned int bparam, unsigned int bparam_ldots) {
     if ((type == SPEC_ID) || (type == (SPEC_ID|NO_PROLOGUE)))
 	push_cstack(SPEC, SEXP2ID(fun));
     else
@@ -374,7 +374,7 @@ void emit_primitive_function(SEXP fun, unsigned int type, unsigned int bparam, u
     event_cnt++;
 }
 
-void emit_prologue_start() {
+void trcR_internal_emit_prologue_start() {
     unsigned int delim = PROL_START;
     push_cstack(PC_PAIR, 0);
     push_cstack(PROL, 0);
@@ -382,7 +382,7 @@ void emit_prologue_start() {
     event_cnt++;
 }
 
-void emit_prologue_end(SEXP clos) {
+void trcR_internal_emit_prologue_end(SEXP clos) {
     unsigned int delim = PROL_END;
     pop_cstack(PROL, SEXP2ID(clos));
     WRITE_BYTE(bin_trace_file, delim);
@@ -391,7 +391,7 @@ void emit_prologue_end(SEXP clos) {
 
 // FIXME: alt_addr should be (u)intptr_t
 // FIXME: type is always CLOS_ID or CLOS_ID|NO_PROLOGUE
-void emit_closure(SEXP closure, unsigned int type, unsigned long int alt_addr) {
+void trcR_internal_emit_closure(SEXP closure, unsigned int type, unsigned long int alt_addr) {
     WRITE_BYTE(bin_trace_file, type);
     if (SXPEXISTS(closure)) {
 	WRITE_ADDR(bin_trace_file, closure);
@@ -418,7 +418,7 @@ void emit_closure(SEXP closure, unsigned int type, unsigned long int alt_addr) {
 }
 
 // FIXME: type should be (u)intptr_t
-void emit_empty_closure(SEXP eObj, unsigned long int type) {
+void trcR_internal_emit_empty_closure(SEXP eObj, unsigned long int type) {
     int delim = CLOS_ID;
     WRITE_BYTE(bin_trace_file, delim);
     WRITE_ADDR(bin_trace_file, (void *)type);
@@ -429,21 +429,21 @@ void emit_empty_closure(SEXP eObj, unsigned long int type) {
     WRITE_BYTE(bin_trace_file, max);
     WRITE_BYTE(bin_trace_file, max);
 
-    emit_function_return(eObj, NULL);
+    trcR_internal_emit_function_return(eObj, NULL);
     event_cnt++;
 }
 
-void emit_function_return(SEXP fun, SEXP ret_val) {
+void trcR_internal_emit_function_return(SEXP fun, SEXP ret_val) {
     unsigned int delim = FUNC_END;
     pop_cstack(SXPEXISTS(fun) ? sxp_to_stacknodetype(fun) : CLOSURE,  SEXP2ID(fun));
     WRITE_BYTE(bin_trace_file, delim);
 
     //emit the return value type
-    emit_simple_type(ret_val);
+    trcR_internal_emit_simple_type(ret_val);
     event_cnt++;
 }
 
-void change_top_context() {
+void trcR_internal_change_top_context(void) {
     if (cstack_bottom->cptr != R_ToplevelContext) {
         if (cstack_top == cstack_bottom) {
             cstack_bottom->cptr = R_ToplevelContext;
@@ -465,7 +465,7 @@ void trace_context_add() {
     inc_stack_height();
 }
 
-void trace_context_drop() {
+void trcR_internal_trace_context_drop() {
     unsigned int delim = 0;
     StackNodeType popped_type;
     uintptr_t popped_ID = 0;
@@ -485,7 +485,7 @@ void trace_context_drop() {
 	    delim = PROL_END;
 	    WRITE_BYTE(bin_trace_file, delim);
 	case PC_PAIR:
-	    emit_empty_closure(ID2SEXP(popped_ID), C_D_ADDR);
+	    trcR_emit_empty_closure(ID2SEXP(popped_ID), C_D_ADDR);
 	    break;
 	case SPEC:
 	case BUILTIN:
@@ -494,7 +494,7 @@ void trace_context_drop() {
 	    delim = FUNC_END;
 	    WRITE_BYTE(bin_trace_file, delim);
 	    // emit a return type
-	    emit_simple_type(NULL);
+	    trcR_internal_emit_simple_type(NULL);
 	    break;
 	default:
 	    ERROR_MSG("Unknown type during context drop: %d\n", cstack_top->type);
@@ -514,10 +514,10 @@ void trace_context_drop() {
     }
 }
 
-void goto_top_context() {
+void trcR_internal_goto_top_context() {
     while (cstack_top->cptr != R_ToplevelContext) {
 	if (cstack_top != cstack_bottom) {
-	    trace_context_drop();
+	    trcR_internal_trace_context_drop();
 	} else {
 	    ERROR_MSG("Failed attempt to return to top level context.\n");
 	    stack_err_cnt++;
@@ -531,7 +531,7 @@ void goto_top_context() {
 void goto_abs_top_context() {
     stack_flush_cnt = get_cstack_height();
     while (cstack_top != cstack_bottom) {
-	trace_context_drop();
+	trcR_internal_trace_context_drop();
     }
     return;
 }

@@ -1010,7 +1010,7 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     generic = ((PRIMVAL(op) == 1) ? "cbind" : "rbind");
     klass = "";
     method = R_NilValue;
-    IF_TRACING(emit_prologue_start()); /* Trace instrumentation */
+    trcR_emit_prologue_start(); /* Trace instrumentation */
     for (a = args; a != R_NilValue && compatible; a = CDR(a)) {
 	PROTECT(obj = eval(CAR(a), env));
 	if (isObject(obj)) {
@@ -1049,7 +1049,7 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 	UNPROTECT(1);
     }
     if (method != R_NilValue) {
-	IF_TRACING(emit_prologue_end(method)); /* Trace instrumentation */
+	trcR_emit_prologue_end(method); /* Trace instrumentation */
 	PROTECT(method);
 	args = applyClosure(call, method, args, env, R_BaseEnv, TRUE);
 	UNPROTECT(2);
@@ -1057,8 +1057,8 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     } else { /* Trace instruementation */
 	/* added to prevent prologue with no closure */
 	/* slight kludge: cstack matches calls by addresses so use op instead of method==R_NilValue */
-	IF_TRACING(emit_prologue_end(op));
-	IF_TRACING(emit_empty_closure(op, D_B_ADDR));
+	trcR_emit_prologue_end(op);
+	trcR_emit_empty_closure(op, D_B_ADDR);
     }
 
     /* Dispatch based on class membership has failed. */

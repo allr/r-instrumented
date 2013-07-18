@@ -116,11 +116,11 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 		    sparam ++;
 		targs = CDR(targs);
 	    }
-	    emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots);
+	    trcR_emit_primitive_function(op, SPEC_ID, sparam, sparam_ldots);
         }
 
 	ans = PRIMFUN(op) (call, op, args, rho);
-	IF_TRACING(emit_function_return(op, ans)); /* Trace Instrumentation */
+	trcR_emit_function_return(op, ans); /* Trace Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
 	check_stack_balance(op, save);
 	vmaxset(vmax);
@@ -136,11 +136,11 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	PROTECT(args = evalList(args, rho, call, 0));
 	R_Visible = flag != 1;
-	IF_TRACING(emit_primitive_function(op, BLTIN_ID, bparam, bparam_ldots)); /* Trace Instrumentation */
+	trcR_emit_primitive_function(op, BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
 	bparam = bparam_tmp;
 	bparam_ldots = bparam_ldots_tmp;
 	ans = PRIMFUN(op) (call, op, args, rho);
-	IF_TRACING(emit_function_return(op, ans)); /* Trace Instrumentation */
+	trcR_emit_function_return(op, ans); /* Trace Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
 	check_stack_balance(op, save);
@@ -151,7 +151,7 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
     }
     else {
 	/* BGH: presumably never happens */
-	IF_TRACING(emit_empty_closure(op, AM_ADDR)); /* Trace instrumentation */
+	trcR_emit_empty_closure(op, AM_ADDR); /* Trace instrumentation */
 	ans = R_NilValue;  /* for -Wall */
     }
     return ans;
@@ -295,7 +295,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     /* Create a new environment without any */
     /* of the formals to the generic in it. */
 
-    IF_TRACING(emit_prologue_start()); /* Trace instrumentation */
+    trcR_emit_prologue_start(); /* Trace instrumentation */
     PROTECT(newrho = allocSExp(ENVSXP));
     op = CAR(cptr->call);
     switch (TYPEOF(op)) {
@@ -366,7 +366,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    t = newcall;
 	    SETCAR(t, method);
 	    R_GlobalContext->callflag = CTXT_GENERIC;
-	    IF_TRACING(emit_prologue_end(sxp)); /* Trace instrumentation */
+	    trcR_emit_prologue_end(sxp); /* Trace instrumentation */
 	    *ans = applyMethod(t, sxp, matchedarg, rho, newrho);
 	    R_GlobalContext->callflag = CTXT_RETURN;
 	    UNPROTECT(nprotect);
@@ -391,15 +391,15 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	t = newcall;
 	SETCAR(t, method);
 	R_GlobalContext->callflag = CTXT_GENERIC;
-	IF_TRACING(emit_prologue_end(sxp)); /* Trace instrumentation */
+	trcR_emit_prologue_end(sxp); /* Trace instrumentation */
 	*ans = applyMethod(t, sxp, matchedarg, rho, newrho);
 	R_GlobalContext->callflag = CTXT_RETURN;
 	UNPROTECT(5);
 	return 1;
     }
     /* BGH: this is common */
-    IF_TRACING(emit_prologue_end(obj)); /* Trace instrumentation */
-    IF_TRACING(emit_empty_closure(obj, UM_ADDR)); /* Trace instrumentation */
+    trcR_emit_prologue_end(obj); /* Trace instrumentation */
+    trcR_emit_empty_closure(obj, UM_ADDR); /* Trace instrumentation */
     UNPROTECT(5);
     cptr->callflag = CTXT_RETURN;
     return 0;
@@ -449,10 +449,10 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	The generic need not be a closure (Henrik Bengtsson writes
 	UseMethod("$"), although only functions are documented.)
     */
-    IF_TRACING(emit_prologue_start()); /* Trace instrumentation */
+    trcR_emit_prologue_start(); /* Trace instrumentation */
     val = findVar1(install(translateChar(STRING_ELT(generic, 0))),
 		   ENCLOS(env), FUNSXP, TRUE); /* That has evaluated promises */
-    IF_TRACING(emit_prologue_end(val)); /* Trace instrumentation */
+    trcR_emit_prologue_end(val); /* Trace instrumentation */
     if(TYPEOF(val) == CLOSXP) defenv = CLOENV(val);
     else defenv = R_BaseNamespace;
 
@@ -475,17 +475,17 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	CHAR(STRING_ELT(generic, 0))[0] == '\0')
 	errorcall(call, _("first argument must be a generic name"));
 
-    IF_TRACING(emit_closure(val, CLOS_ID, D_UM_ADDR)); /* Trace instrumentation */
+    trcR_emit_closure(val, CLOS_ID, D_UM_ADDR); /* Trace instrumentation */
     int tmp = usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
 			env, callenv, defenv, &ans);
     if (tmp == 1) {
-	IF_TRACING(emit_function_return(val, ans)); /* Trace Instrumentation */
+	trcR_emit_function_return(val, ans); /* Trace Instrumentation */
 	UNPROTECT(3); /* obj, ap, argList */
 	PROTECT(ans);
 	findcontext(CTXT_RETURN, env, ans); /* does not return */
     }
     else {
-	IF_TRACING(emit_function_return(val, R_NilValue)); /* Trace Instrumentation */
+	trcR_emit_function_return(val, R_NilValue); /* Trace Instrumentation */
 	SEXP klass;
 	int nclass;
 	char cl[1000];
@@ -557,7 +557,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     cptr = R_GlobalContext;
     cptr->callflag = CTXT_GENERIC;
 
-    IF_TRACING(emit_prologue_start()); /* Trace instrumentation */
+    trcR_emit_prologue_start(); /* Trace instrumentation */
 
     /* get the env NextMethod was called from */
     sysp = R_GlobalContext->sysparent;
@@ -846,7 +846,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     defineVar(R_dot_Group, group, m);
 
     SETCAR(newcall, method);
-    IF_TRACING(emit_prologue_end(nextfun)); /* Trace instrumentation */
+    trcR_emit_prologue_end(nextfun); /* Trace instrumentation */
     ans = applyMethod(newcall, nextfun, matchedarg, env, m);
     UNPROTECT(10);
     return(ans);
@@ -1482,9 +1482,9 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 		PROTECT(s = promiseArgs(CDR(call), rho));
 		if (length(s) != length(args)) error(_("dispatch error"));
 		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b)) {
-		    IF_TRACING(emit_unbnd_promise(CAR(b))); /* Trace instrumentation */
+		    trcR_emit_unbnd_promise(CAR(b)); /* Trace instrumentation */
 		    SET_PRVALUE(CAR(b), CAR(a));
-		    IF_TRACING(emit_unbnd_promise_return(CAR(b))); /* Trace instrumentation */
+		    trcR_emit_unbnd_promise_return(CAR(b)); /* Trace instrumentation */
 		}
 		value =  applyClosure(call, value, s, rho, R_BaseEnv, FALSE);
 		UNPROTECT(1);
@@ -1504,9 +1504,9 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	PROTECT(s = promiseArgs(CDR(call), rho));
 	if (length(s) != length(args)) error(_("dispatch error"));
 	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b)) {
-	    IF_TRACING(emit_unbnd_promise(CAR(b))); /* Trace instrumentation */
+	    trcR_emit_unbnd_promise(CAR(b)); /* Trace instrumentation */
 	    SET_PRVALUE(CAR(b), CAR(a));
-	    IF_TRACING(emit_unbnd_promise_return(CAR(b))); /* Trace instrumentation */
+	    trcR_emit_unbnd_promise_return(CAR(b)); /* Trace instrumentation */
 	}
 	value = applyClosure(call, fundef, s, rho, R_BaseEnv, FALSE);
 	UNPROTECT(1);

@@ -1175,7 +1175,7 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(INTERNAL(fun)) == BUILTINSXP) {
 	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	args = evalList(args, env, call, 0);
-	IF_TRACING(emit_primitive_function(INTERNAL(fun), BLTIN_ID|NO_PROLOGUE, bparam, bparam_ldots));  /* Trace Instrumentation */
+	trcR_emit_primitive_function(INTERNAL(fun), BLTIN_ID|NO_PROLOGUE, bparam, bparam_ldots);  /* Trace Instrumentation */
 	bparam = bparam_tmp;
 	bparam_ldots = bparam_ldots_tmp;
     }
@@ -1191,14 +1191,14 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 		    sparam++;
 		targs = CDR(targs);
 	    }
-	    emit_primitive_function(INTERNAL(fun), SPEC_ID|NO_PROLOGUE, sparam, sparam_ldots);
+	    trcR_emit_primitive_function(INTERNAL(fun), SPEC_ID|NO_PROLOGUE, sparam, sparam_ldots);
 	}
     }
     PROTECT(args);
     flag = PRIMPRINT(INTERNAL(fun));
     R_Visible = flag != 1;
     ans = PRIMFUN(INTERNAL(fun)) (s, INTERNAL(fun), args, env);
-    IF_TRACING(emit_function_return(INTERNAL(fun), ans)); /* Trace Instrumentation */
+    trcR_emit_function_return(INTERNAL(fun), ans); /* Trace Instrumentation */
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;

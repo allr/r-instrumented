@@ -96,7 +96,6 @@ unsigned int fatal_err_cnt, nonfatal_err_cnt;
 // note: traceR_is_active could be implemented as static inline,
 //       but it's less error-prone as a macro
 #define traceR_is_active (trace_info && trace_info->tracing)
-#define IF_TRACING(x) if (traceR_is_active) do {  x ;} while (0)
 #define SEXP2ID(x) ((uintptr_t)x)
 #define ID2SEXP(x) ((SEXP) x)
 #define SXPEXISTS(x) (x && (x != R_NilValue))
@@ -132,26 +131,105 @@ void write_summary();
 void write_trace_summary(FILE *out);
 void write_allocation_summary(FILE *out);
 
-void emit_simple_type(SEXP expr);
-void emit_error_type(unsigned int type);
-void emit_bnd_promise(SEXP prom);
-void emit_unbnd_promise(SEXP prom);
-void emit_unbnd_promise_return(SEXP prom);
-void emit_prologue_start();
-void emit_prologue_end(SEXP clos);
-void emit_closure(SEXP clos, unsigned int type, unsigned long int alt_addr);
-void emit_empty_closure(SEXP clos, unsigned long int type);
-void emit_primitive_function(SEXP fun, unsigned int type, unsigned int bparam, unsigned int bparam_ldots);
-void emit_function_return(SEXP fun, SEXP ret_val);
-void emit_quit_seq();
+void trcR_internal_emit_simple_type(SEXP expr);
+void trcR_internal_emit_error_type(unsigned int type);
+void trcR_internal_emit_bnd_promise(SEXP prom);
+void trcR_internal_emit_unbnd_promise(SEXP prom);
+void trcR_internal_emit_unbnd_promise_return(SEXP prom);
+void trcR_internal_emit_prologue_start(void);
+void trcR_internal_emit_prologue_end(SEXP clos);
+void trcR_internal_emit_closure(SEXP clos, unsigned int type, unsigned long int alt_addr);
+void trcR_internal_emit_empty_closure(SEXP clos, unsigned long int type);
+void trcR_internal_emit_primitive_function(SEXP fun, unsigned int type, unsigned int bparam, unsigned int bparam_ldots);
+void trcR_internal_emit_function_return(SEXP fun, SEXP ret_val);
+void trcR_internal_emit_quit_seq(void);
 
 void trace_context_add();
-void trace_context_drop();
-void change_top_context();
-void goto_top_context();
+void trcR_internal_trace_context_drop(void);
+void trcR_internal_change_top_context(void);
+void trcR_internal_goto_top_context(void);
 void goto_abs_top_context();
 
 void print_src_addr(SEXP src);
+
+/* a set of wrappers for fasthpathing the trace-disabled-case */
+static inline void trcR_emit_simple_type(SEXP expr) {
+    if (traceR_is_active)
+	trcR_internal_emit_simple_type(expr);
+}
+
+static inline void trcR_emit_error_type(unsigned int type) {
+    if (traceR_is_active)
+	trcR_internal_emit_error_type(type);
+}
+
+static inline void trcR_emit_bnd_promise(SEXP prom) {
+    if (traceR_is_active)
+	trcR_internal_emit_bnd_promise(prom);
+}
+
+static inline void trcR_emit_unbnd_promise(SEXP prom) {
+    if (traceR_is_active)
+	trcR_internal_emit_unbnd_promise(prom);
+}
+
+static inline void trcR_emit_unbnd_promise_return(SEXP prom) {
+    if (traceR_is_active)
+	trcR_internal_emit_unbnd_promise_return(prom);
+}
+
+static inline void trcR_emit_prologue_start(void) {
+    if (traceR_is_active)
+	trcR_internal_emit_prologue_start();
+}
+
+static inline void trcR_emit_prologue_end(SEXP clos) {
+    if (traceR_is_active)
+	trcR_internal_emit_prologue_end(clos);
+}
+
+static inline void trcR_emit_closure(SEXP clos, unsigned int type,
+				     unsigned long int alt_addr) {
+    if (traceR_is_active)
+	trcR_internal_emit_closure(clos, type, alt_addr);
+}
+
+static inline void trcR_emit_empty_closure(SEXP clos, unsigned long int type) {
+    if (traceR_is_active)
+	trcR_internal_emit_empty_closure(clos, type);
+}
+
+static inline void trcR_emit_primitive_function(SEXP fun, unsigned int type,
+						unsigned int bparam,
+						unsigned int bparam_ldots) {
+    if (traceR_is_active)
+	trcR_internal_emit_primitive_function(fun, type, bparam, bparam_ldots);
+}
+
+static inline void trcR_emit_function_return(SEXP fun, SEXP ret_val) {
+    if (traceR_is_active)
+	trcR_internal_emit_function_return(fun, ret_val);
+}
+
+static inline void trcR_emit_quit_seq(void) {
+    if (traceR_is_active)
+	trcR_internal_emit_quit_seq();
+}
+
+static inline void trcR_trace_context_drop(void) {
+    if (traceR_is_active)
+	trcR_internal_trace_context_drop();
+}
+
+static inline void trcR_change_top_context(void) {
+    if (traceR_is_active)
+	trcR_internal_change_top_context();
+}
+
+static inline void trcR_goto_top_context(void) {
+    if (traceR_is_active)
+	trcR_internal_goto_top_context();
+}
 
 static inline void trace_cnt_fatal_err() { fatal_err_cnt++; }
 static inline void trace_cnt_nonfatal_err() { nonfatal_err_cnt++; }
