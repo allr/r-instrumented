@@ -185,7 +185,8 @@ struct sxpinfo_struct {
     unsigned int spare :  1;  /* currently unused */
     unsigned int gcgen :  1;  /* old generation number */
     unsigned int gccls :  3;  /* node class */
-}; /*		    Tot: 32 */
+    unsigned int newpromise: 1; /* for tracing: promise is not in trace file yet */
+}; /*		    Tot: 32 +1 */
 
 struct vecsxp_struct {
     R_len_t	length;
@@ -397,6 +398,9 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define SET_RDEBUG(x,v)	(((x)->sxpinfo.debug)=(v))
 #define RSTEP(x)	((x)->sxpinfo.spare)
 #define SET_RSTEP(x,v)	(((x)->sxpinfo.spare)=(v))
+
+#define NEW_PROMISE(x)       ((x)->sxpinfo.newpromise)
+#define SET_NEW_PROMISE(x,v) (((x)->sxpinfo.newpromise)=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	((x)->u.symsxp.pname)

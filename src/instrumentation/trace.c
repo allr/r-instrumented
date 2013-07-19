@@ -310,9 +310,9 @@ void trcR_internal_emit_simple_type(SEXP expr) {
 	case PROMSXP:
 	    delim = (PRVALUE(expr) == R_UnboundValue) ? BINTRACE_UBND : BINTRACE_BND;
 	    /* check if this is the first time this promise is emitted */
-	    if (RSTEP(expr)) {
+	    if (NEW_PROMISE(expr)) {
 		delim |= BINTRACE_NEW_PROMISE;
-		SET_RSTEP(expr, 0);
+		SET_NEW_PROMISE(expr, 0);
 	    }
 	    WRITE_BYTE(bin_trace_file, delim);
 	    WRITE_ADDR(bin_trace_file, expr);
