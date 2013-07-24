@@ -735,10 +735,10 @@ void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedSmallVectors: %lu %lu %lu %lu\n", allocated_vector_small, allocated_vector_elts_small, allocated_vector_size_small, allocated_vector_asize_small);
     /* WARNING: The next one is a random guess */
     fprintf(out, "AllocatedAllVectors: %lu %lu %lu %lu\n",
-	    allocated_vector + allocated_vector_small + allocated_vector_null + allocated_vector_large,
-	    allocated_vector_elts + allocated_vector_elts_small + allocated_vector_elts_null + allocated_vector_elts_large,
-	    allocated_vector_size + allocated_vector_size_small + allocated_vector_size_null + allocated_vector_size_large,
-	    allocated_vector_asize + allocated_vector_asize_small + allocated_vector_asize_null + allocated_vector_asize_large
+	    allocated_vector_small + allocated_vector_null + allocated_vector_large,
+	    allocated_vector_elts_small + allocated_vector_elts_null + allocated_vector_elts_large,
+	    allocated_vector_size_small + allocated_vector_size_null + allocated_vector_size_large,
+	    allocated_vector_asize_small + allocated_vector_asize_null + allocated_vector_asize_large
 	    );
 
     fprintf(out, "AllocatedStringBuffer: %lu %lu %lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
