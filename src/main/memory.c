@@ -2658,7 +2658,7 @@ SEXP allocVector(SEXPTYPE type, R_xlen_t length)
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SET_NODE_CLASS(s, node_class);
 	    R_SmallVallocSize += alloc_size;
-	    ADD_ALLOC_VECTOR(small, length, size, actual_size);
+	    ADD_ALLOC_VECTOR(small, length, size * sizeof(VECREC), actual_size);
 	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
 	}
 	else {
@@ -2719,7 +2719,7 @@ SEXP allocVector(SEXPTYPE type, R_xlen_t length)
 			      dsize);
 	    }
 	    ADD_ALLOC_VECTOR(large, length,
-			     size,
+			     size * sizeof(VECREC),
 			     (sizeof(SEXPREC_ALIGN) + size * sizeof(VECREC)));
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SET_NODE_CLASS(s, LARGE_NODE_CLASS);
@@ -2734,7 +2734,7 @@ SEXP allocVector(SEXPTYPE type, R_xlen_t length)
     }
     else {
 	GC_PROT(s = allocSExpNonCons(type));
-	ADD_ALLOC_VECTOR(null, 0, BYTE2VEC(sizeof(SEXPREC)), sizeof(SEXPREC));
+	ADD_ALLOC_VECTOR(null, 0, sizeof(SEXPREC), sizeof(SEXPREC));
 	//FIXME remove from sexp non cons
 	SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
     }
