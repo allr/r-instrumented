@@ -706,9 +706,11 @@ void write_allocation_summary(FILE *out) {
 
     /* this is what the Java tool actually wants to see */
     fprintf(out, "AllocatedCons: %lu\n", allocated_cons);
+    fprintf(out, "AllocatedNonCons: %lu\n", allocated_noncons);
     fprintf(out, "AllocatedEnv: %lu\n", allocated_env);
     fprintf(out, "AllocatedPromises: %lu\n", allocated_prom);
     fprintf(out, "AllocatedSXP: %lu\n", allocated_sexp);
+    fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
 
 #define T(i) fprintf(out, "Test" #i ": %lu %lu %lu %g\n", allocated_cell[i], free_cell[i], no_attrb[i], ((double)no_attrb[i]) / free_cell[i] * 100)
     T(0);
