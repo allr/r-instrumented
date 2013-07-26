@@ -2735,7 +2735,8 @@ SEXP allocVector(SEXPTYPE type, R_xlen_t length)
     else {
 	GC_PROT(s = allocSExpNonCons(type));
 	ADD_ALLOC_VECTOR(null, 0, sizeof(SEXPREC), sizeof(SEXPREC));
-	//FIXME remove from sexp non cons
+        /* do not count this as a noncons allocation to avoid double counting */
+        allocated_noncons -= sizeof(SEXPREC);
 	SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
     }
     SET_SHORT_VEC_TRUELENGTH(s, 0);
