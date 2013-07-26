@@ -47,7 +47,8 @@
   R_xlen_t __n__ = XLENGTH(from); \
   PROTECT(from); \
   PROTECT(to = allocVector(TYPEOF(from), __n__)); \
-  duplicate_elts += __n__; \
+  /* counter was already incremented by 1 on function entry */ \
+  duplicate_elts += __n__ - 1; \
   if (__n__ == 1) fun(to)[0] = fun(from)[0]; \
   else memcpy(fun(to), fun(from), __n__ * sizeof(type)); \
   DUPLICATE_ATTRIB(to, from); \
