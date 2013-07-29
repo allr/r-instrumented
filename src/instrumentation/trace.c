@@ -711,6 +711,7 @@ void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedPromises: %lu\n", allocated_prom);
     fprintf(out, "AllocatedSXP: %lu\n", allocated_sexp);
     fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
+    fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
 
 #define T(i) fprintf(out, "Test" #i ": %lu %lu %lu %g\n", allocated_cell[i], free_cell[i], no_attrb[i], ((double)no_attrb[i]) / free_cell[i] * 100)
     T(0);
@@ -735,13 +736,8 @@ void write_allocation_summary(FILE *out) {
 
     /* and now the version that the Java tool expects */
     fprintf(out, "AllocatedSmallVectors: %lu %lu %lu %lu\n", allocated_vector_small, allocated_vector_elts_small, allocated_vector_size_small, allocated_vector_asize_small);
-    /* WARNING: The next one is a random guess */
-    fprintf(out, "AllocatedAllVectors: %lu %lu %lu %lu\n",
-	    allocated_vector_small + allocated_vector_null + allocated_vector_large,
-	    allocated_vector_elts_small + allocated_vector_elts_null + allocated_vector_elts_large,
-	    allocated_vector_size_small + allocated_vector_size_null + allocated_vector_size_large,
-	    allocated_vector_asize_small + allocated_vector_asize_null + allocated_vector_asize_large
-	    );
+    fprintf(out, "AllocatedLargeVectors: %lu %lu %lu %lu\n", allocated_vector_large, allocated_vector_elts_large, allocated_vector_size_large, allocated_vector_asize_large);
+    fprintf(out, "AllocatedNullVectors: %lu %lu %lu %lu\n",  allocated_vector_null,  allocated_vector_elts_null,  allocated_vector_size_null,  allocated_vector_asize_null);
 
     fprintf(out, "AllocatedStringBuffer: %lu %lu %lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
 
