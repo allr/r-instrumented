@@ -241,6 +241,7 @@ static SEXP	NewList(void);
 static SEXP	NextArg(SEXP, SEXP, SEXP);
 static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
+static void	setParseFilename(SEXP);
 
 /* These routines allocate constants */
 
@@ -838,16 +839,16 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   333,   333,   334,   335,   336,   337,   340,   341,   344,
-     347,   348,   349,   350,   352,   353,   355,   356,   357,   358,
-     359,   361,   362,   363,   364,   365,   366,   367,   368,   369,
-     370,   371,   372,   373,   374,   375,   376,   377,   378,   379,
-     380,   382,   383,   384,   386,   387,   388,   389,   390,   391,
-     392,   393,   394,   395,   396,   397,   398,   399,   400,   401,
-     402,   403,   404,   405,   406,   407,   411,   414,   417,   421,
-     422,   423,   424,   425,   426,   429,   430,   433,   434,   435,
-     436,   437,   438,   439,   440,   443,   444,   445,   446,   447,
-     451
+       0,   334,   334,   335,   336,   337,   338,   341,   342,   345,
+     348,   349,   350,   351,   353,   354,   356,   357,   358,   359,
+     360,   362,   363,   364,   365,   366,   367,   368,   369,   370,
+     371,   372,   373,   374,   375,   376,   377,   378,   379,   380,
+     381,   383,   384,   385,   387,   388,   389,   390,   391,   392,
+     393,   394,   395,   396,   397,   398,   399,   400,   401,   402,
+     403,   404,   405,   406,   407,   408,   412,   415,   418,   422,
+     423,   424,   425,   426,   427,   430,   431,   434,   435,   436,
+     437,   438,   439,   440,   441,   444,   445,   446,   447,   448,
+     452
 };
 #endif
 
@@ -3607,10 +3608,11 @@ static int buffer_getc(void)
 
 /* Used only in main.c */
 attribute_hidden
-SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
+SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status, const char *sourcename)
 {
     Rboolean keepSource = FALSE; 
-    int savestack;    
+    int savestack;
+    SEXP srcname;
 
     R_InitSrcRefState(&ParseState);
     savestack = R_PPStackTop;       
@@ -3621,6 +3623,9 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     	    REPROTECT(ParseState.SrcFile = NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv), ParseState.SrcFileProt);
 	    REPROTECT(ParseState.Original = ParseState.SrcFile, ParseState.OriginalProt);
 	    PROTECT_WITH_INDEX(SrcRefs = NewList(), &srindex);
+
+            PROTECT(srcname = mkString(sourcename));
+            setParseFilename(srcname);
 	}
     }
     ParseInit();

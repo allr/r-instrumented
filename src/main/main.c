@@ -209,9 +209,13 @@ typedef struct {
  The "cursor" for the input buffer is moved to the next starting
  point, i.e. the end of the first line or after the first ;.
  */
+/* FIXME: A comment above suggests that this function is meant to
+ *        be an external API in which case the signature must not
+ *        be changed.
+ */
 int
-Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state,
-		 SrcRefState *ParseState)
+Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
+                 R_ReplState *state, const char *sourcename)
 {
     int c, browsevalue;
     SEXP value, thisExpr;
@@ -237,7 +241,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state,
     }
 
     R_PPStackTop = savestack;
-    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status);
+    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status, sourcename);
     
     /* Trace Instrumentation */
     if (R_Trace == TR_REPL)
@@ -260,7 +264,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state,
     case PARSE_OK:
 
 	R_IoBufferReadReset(&R_ConsoleIob);
-	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status);
+	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status, sourcename);
 	if (browselevel) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
 	    if(browsevalue == 1) return -1;
@@ -314,34 +318,29 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 {
     int status;
     R_ReplState state = { PARSE_NULL, 1, 0, "", NULL};
-    SrcRefState ParseState; /* Trace instrumentation */
+    char *sourcename;
 
-    R_InitSrcRefState (&ParseState); /* Trace instrumentation */
     R_IoBufferWriteReset(&R_ConsoleIob);
     state.buf[0] = '\0';
     state.buf[CONSOLE_BUFFER_SIZE] = '\0';
     /* stopgap measure if line > CONSOLE_BUFFER_SIZE chars */
     state.bufp = state.buf;
 
-    /* Trace instrumentation */
-    ParseState.keepSrcRefs = TRUE;
-    PROTECT(ParseState.SrcFile = NewEnvironment(R_NilValue, R_NilValue, rho));
-    if (R_Interactive) {
-	defineVar(install("filename"), mkString("Console"), ParseState.SrcFile);
-    } else {
-	if (R_InputFileName != NULL) {
-	    defineVar(install("filename"), mkString(R_InputFileName), ParseState.SrcFile);
-	} else {
-	    defineVar(install("filename"), mkString("stdin"), ParseState.SrcFile);
-	}
-    }
-    setAttrib(ParseState.SrcFile, R_ClassSymbol, mkString("srcfile"));
     /* Trace instrumentation  */
+    if (R_Interactive) {
+        sourcename = "Console";
+    } else {
+        if (R_InputFileName != NULL) {
+            sourcename = R_InputFileName;
+        } else {
+            sourcename = "(stdin)";
+        }
+    }
 
     if(R_Verbose)
 	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
     for(;;) {
-	status = Rf_ReplIteration(rho, savestack, browselevel, &state, &ParseState); /* Trace instrumentation */
+	status = Rf_ReplIteration(rho, savestack, browselevel, &state, sourcename); /* Trace instrumentation */
 	if(status < 0)
 	  return;
     }
@@ -383,7 +382,7 @@ int R_ReplDLLdo1(void)
 	if(c == ';' || c == '\n') break;
     }
     R_PPStackTop = 0;
-    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &status);
+    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &status, "(embedded)");
 
     switch(status) {
     case PARSE_NULL:
@@ -392,7 +391,7 @@ int R_ReplDLLdo1(void)
 	break;
     case PARSE_OK:
 	R_IoBufferReadReset(&R_ConsoleIob);
-	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &status);
+	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &status, "(embedded)");
 	R_Visible = FALSE;
 	R_EvalDepth = 0;
 	resetTimeLimits();

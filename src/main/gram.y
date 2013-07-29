@@ -172,6 +172,7 @@ static SEXP	NewList(void);
 static SEXP	NextArg(SEXP, SEXP, SEXP);
 static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
+static void	setParseFilename(SEXP);
 
 /* These routines allocate constants */
 
@@ -1379,10 +1380,11 @@ static int buffer_getc(void)
 
 /* Used only in main.c */
 attribute_hidden
-SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
+SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status, const char *sourcename)
 {
     Rboolean keepSource = FALSE; 
-    int savestack;    
+    int savestack;
+    SEXP srcname;
 
     R_InitSrcRefState(&ParseState);
     savestack = R_PPStackTop;       
@@ -1393,6 +1395,9 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     	    REPROTECT(ParseState.SrcFile = NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv), ParseState.SrcFileProt);
 	    REPROTECT(ParseState.Original = ParseState.SrcFile, ParseState.OriginalProt);
 	    PROTECT_WITH_INDEX(SrcRefs = NewList(), &srindex);
+
+            PROTECT(srcname = mkString(sourcename));
+            setParseFilename(srcname);
 	}
     }
     ParseInit();
