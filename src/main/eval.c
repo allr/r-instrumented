@@ -895,6 +895,7 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 	return R_NilValue;
 }
 
+// tracing guess/note: "normalclos" should be true iff a prologue info has been emitted for this call
 SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, Rboolean normalclos)
 {
     SEXP formals, actuals, savedrho;
@@ -4280,6 +4281,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 #ifdef THREADED_CODE
   int which = 0;
 #endif
+  Rboolean has_prologue = FALSE;
 
   BC_CHECK_SIGINT();
 
@@ -4529,6 +4531,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	trcR_emit_prologue_start(); /* Trace Instrumentation */
 	value = findFun(symbol, rho);
 	trcR_emit_prologue_end(value); /* Trace Instrumentation */
+	has_prologue = TRUE;
 	if(RTRACE(value)) {
 	  Rprintf("trace: ");
 	  PrintValue(symbol);
@@ -4551,6 +4554,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	trcR_emit_prologue_start(); /* Trace Instrumentation */
 	value = findFun(symbol, R_GlobalEnv);
 	trcR_emit_prologue_end(value); /* Trace Instrumentation */
+	has_prologue = TRUE;
 	if(RTRACE(value)) {
 	  Rprintf("trace: ");
 	  PrintValue(symbol);
@@ -4695,10 +4699,22 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(PUSHCONSTARG, 1):
       value = VECTOR_ELT(constants, GETOP());
       PUSHCALLARG(duplicate(value));
+      trcR_emit_simple_type(value);
       NEXT();
-    OP(PUSHNULLARG, 0): PUSHCALLARG(R_NilValue); NEXT();
-    OP(PUSHTRUEARG, 0): PUSHCALLARG(mkTrue()); NEXT();
-    OP(PUSHFALSEARG, 0): PUSHCALLARG(mkFalse()); NEXT();
+    OP(PUSHNULLARG, 0):
+      PUSHCALLARG(R_NilValue);
+      trcR_emit_simple_type(R_NilValue);
+      NEXT();
+    OP(PUSHTRUEARG, 0):
+      value = mkTrue();
+      PUSHCALLARG(value);
+      trcR_emit_simple_type(value);
+      NEXT();
+    OP(PUSHFALSEARG, 0):
+      value = mkFalse();
+      PUSHCALLARG(value);
+      trcR_emit_simple_type(value);
+      NEXT();
     OP(CALL, 1):
       {
 	SEXP fun = GETSTACK(-3);
@@ -4711,7 +4727,15 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  checkForMissings(args, call);
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
-          trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
+
+	  /* Trace Instrumentation */
+	  if (has_prologue)
+	      trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID, bparam, bparam_ldots);
+	  else
+	      trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE,
+					   bparam, bparam_ldots);
+	  has_prologue = FALSE;
+
 	  value = PRIMFUN(fun) (call, fun, args, rho);
           trcR_emit_function_return(fun, value); /* Trace Instrumentation */
 	  if (flag < 2) R_Visible = flag != 1;
@@ -4732,7 +4756,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 		      sparam++;
 		  targs = CDR(targs);
 	      }
-	      trcR_emit_primitive_function(fun, BINTRACE_SPEC_ID, sparam, sparam_ldots);
+
+	      if (has_prologue)
+		  trcR_emit_primitive_function(fun, BINTRACE_SPEC_ID, sparam, sparam_ldots);
+	      else
+		  trcR_emit_primitive_function(fun, BINTRACE_SPEC_ID | BINTRACE_NO_PROLOGUE,
+					       sparam, sparam_ldots);
+	      has_prologue = FALSE;
 	  }
 
 	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
@@ -4741,7 +4771,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  break;
 	case CLOSXP:
 	    clos_call++;
-	    value = applyClosure(call, fun, args, rho, R_BaseEnv, FALSE);
+	    value = applyClosure(call, fun, args, rho, R_BaseEnv, has_prologue);
+	    has_prologue = FALSE;
 	  break;
 	default: error(_("bad function"));
 	}
@@ -4761,7 +4792,15 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  error(_("not a BUILTIN function"));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
-	trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
+
+	/* Trace Instrumentation */
+	if (has_prologue)
+	    trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID, bparam, bparam_ldots);
+	else
+	    trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE,
+					 bparam, bparam_ldots);
+	has_prologue = FALSE;
+
 	value = PRIMFUN(fun) (call, fun, args, rho);
 	trcR_emit_function_return(fun, value); /* Trace Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
@@ -4796,7 +4835,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 		    sparam++;
 		targs = CDR(targs);
 	    }
-	    trcR_emit_primitive_function(fun, BINTRACE_SPEC_ID, sparam, sparam_ldots);
+
+	    if (has_prologue)
+		trcR_emit_primitive_function(fun, BINTRACE_SPEC_ID, sparam, sparam_ldots);
+	    else
+		trcR_emit_primitive_function(fun, BINTRACE_SPEC_ID | BINTRACE_NO_PROLOGUE,
+					     sparam, sparam_ldots);
+	    has_prologue = FALSE;
 	}
 
 	value = PRIMFUN(fun) (call, fun, CDR(call), rho);
@@ -5087,7 +5132,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv, TRUE);
+	  value = applyClosure(call, fun, args, rho, R_BaseEnv, has_prologue);
+	  has_prologue = FALSE;
 	  break;
 	default: error(_("bad function"));
 	}
@@ -5129,7 +5175,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv, TRUE);
+	  value = applyClosure(call, fun, args, rho, R_BaseEnv, has_prologue);
+	  has_prologue = FALSE;
 	  break;
 	default: error(_("bad function"));
 	}
