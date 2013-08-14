@@ -175,6 +175,9 @@ void display_unused(FILE *out) {
 #undef AVGSCALAR
 }
 
+/* forward declaration */
+static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_allocation);
+
 static int gc_reporting = 0;
 int gc_count = 0;
 
@@ -624,9 +627,11 @@ unsigned long no_na[NUM_NODE_CLASSES];
 
 unsigned long obj_allocated; // timeline
 
-// SEXP (*56)
+// SEXP (*56) [not verified yet]
 unsigned long allocated_cell[NUM_NODE_CLASSES];
 unsigned long allocated_cons, allocated_prom, allocated_env;
+
+// verified to be in bytes
 unsigned long allocated_external, allocated_sexp, allocated_noncons;
 
 // Vector count
@@ -2240,12 +2245,12 @@ char *R_alloc(size_t nelem, int eltsize)
 	if(dsize > R_XLEN_T_MAX)  /* currently 4096 TB */
 	    error(_("cannot allocate memory block of size %0.f Tb"),
 		  dsize/pow(1024.0, 4.0));
-	s = allocVector(RAWSXP, size + 1);
+	s = allocVectorInternal(RAWSXP, size + 1, FALSE);
 #else
 	if(dsize > R_LEN_T_MAX) /* must be in the Gb range */
 	    error(_("cannot allocate memory block of size %0.1f Gb"),
 		  dsize/pow(1024.0, 3.0));
-	s = allocVector(RAWSXP, size + 1);
+	s = allocVectorInternal(RAWSXP, size + 1, FALSE);
 #endif
 	ADD_ALLOC_BY(external, size);
 	ATTRIB(s) = R_VStack;
@@ -2465,7 +2470,11 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 */
 #define intCHARSXP 73
 
-SEXP allocVector(SEXPTYPE type, R_xlen_t length)
+SEXP allocVector(SEXPTYPE type, R_xlen_t length) {
+    allocVectorInternal(type, length, TRUE);
+}
+
+static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_allocation)
 {
     SEXP s;     /* For the generational collector it would be safer to
 		   work in terms of a VECSEXP here, but that would
@@ -2658,7 +2667,8 @@ SEXP allocVector(SEXPTYPE type, R_xlen_t length)
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SET_NODE_CLASS(s, node_class);
 	    R_SmallVallocSize += alloc_size;
-	    ADD_ALLOC_VECTOR(small, length, size * sizeof(VECREC), actual_size);
+            if (count_allocation)
+		ADD_ALLOC_VECTOR(small, length, size * sizeof(VECREC), actual_size);
 	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
 	}
 	else {
@@ -2718,9 +2728,10 @@ SEXP allocVector(SEXPTYPE type, R_xlen_t length)
 			      _("cannot allocate vector of size %0.f Kb"),
 			      dsize);
 	    }
-	    ADD_ALLOC_VECTOR(large, length,
-			     size * sizeof(VECREC),
-			     (sizeof(SEXPREC_ALIGN) + size * sizeof(VECREC)));
+	    if (count_allocation)
+		ADD_ALLOC_VECTOR(large, length,
+				 size * sizeof(VECREC),
+				 (sizeof(SEXPREC_ALIGN) + size * sizeof(VECREC)));
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SET_NODE_CLASS(s, LARGE_NODE_CLASS);
 	    R_LargeVallocSize += size;
@@ -2734,7 +2745,8 @@ SEXP allocVector(SEXPTYPE type, R_xlen_t length)
     }
     else {
 	GC_PROT(s = allocSExpNonCons(type));
-	ADD_ALLOC_VECTOR(null, 0, sizeof(SEXPREC), sizeof(SEXPREC));
+	if (count_allocation)
+	    ADD_ALLOC_VECTOR(null, 0, sizeof(SEXPREC), sizeof(SEXPREC));
         /* do not count this as a noncons allocation to avoid double counting */
         allocated_noncons -= sizeof(SEXPREC);
 	SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
