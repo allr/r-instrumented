@@ -2517,6 +2517,9 @@ static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_a
 	    VALGRIND_MAKE_WRITABLE(DATAPTR(s), actual_size);
 #endif
 #endif
+            if (count_allocation)
+		ADD_ALLOC_VECTOR(small, length, size * sizeof(VECREC), actual_size);
+
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SET_NODE_CLASS(s, node_class);
 	    R_SmallVallocSize += alloc_size;

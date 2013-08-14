@@ -3014,7 +3014,7 @@ int main() {
 #ifdef ZLIB_VERSION
 /* Work around Debian bug: it uses 1.2.3.4 even though there was no such
    version on the master site zlib.net */
-  exit(strncmp(ZLIB_VERSION, "1.2.5", 5) < 0);
+  exit(strncmp(ZLIB_VERSION, "1.2.3", 5) < 0);
 #else
   exit(1);
 #endif
