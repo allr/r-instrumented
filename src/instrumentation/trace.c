@@ -58,6 +58,7 @@ extern unsigned long allocated_vector, allocated_vector_size, allocated_vector_a
 extern unsigned long allocated_vector_null, allocated_vector_size_null, allocated_vector_asize_null, allocated_vector_elts_null;
 extern unsigned long allocated_vector_small, allocated_vector_size_small, allocated_vector_asize_small, allocated_vector_elts_small;
 extern unsigned long allocated_vector_large, allocated_vector_size_large, allocated_vector_asize_large, allocated_vector_elts_large;
+extern unsigned long allocated_vector_one, allocated_vector_size_one, allocated_vector_asize_one, allocated_vector_elts_one;
 
 // String buffers count
 extern unsigned long allocated_sb, allocated_sb_size, allocated_sb_elts;
@@ -733,10 +734,12 @@ void write_allocation_summary(FILE *out) {
     REPORT_VECTOR("Null",_null);
     REPORT_VECTOR("Small", _small);
     REPORT_VECTOR("Large", _large);
+    REPORT_VECTOR("One", _one);
 
     /* and now the version that the Java tool expects */
     fprintf(out, "AllocatedSmallVectors: %lu %lu %lu %lu\n", allocated_vector_small, allocated_vector_elts_small, allocated_vector_size_small, allocated_vector_asize_small);
     fprintf(out, "AllocatedLargeVectors: %lu %lu %lu %lu\n", allocated_vector_large, allocated_vector_elts_large, allocated_vector_size_large, allocated_vector_asize_large);
+    fprintf(out, "AllocatedOneVectors: %lu %lu %lu %lu\n", allocated_vector_one, allocated_vector_elts_one, allocated_vector_size_one, allocated_vector_asize_one);
     fprintf(out, "AllocatedNullVectors: %lu %lu %lu %lu\n",  allocated_vector_null,  allocated_vector_elts_null,  allocated_vector_size_null,  allocated_vector_asize_null);
 
     fprintf(out, "AllocatedStringBuffer: %lu %lu %lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);

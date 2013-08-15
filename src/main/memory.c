@@ -643,6 +643,8 @@ unsigned long allocated_vector_small, allocated_vector_size_small,
     allocated_vector_asize_small, allocated_vector_elts_small;
 unsigned long allocated_vector_large, allocated_vector_size_large,
     allocated_vector_asize_large, allocated_vector_elts_large;
+unsigned long allocated_vector_one, allocated_vector_size_one,
+    allocated_vector_asize_one, allocated_vector_elts_one;
 
 // String buffers count
 unsigned long allocated_sb, allocated_sb_size, allocated_sb_elts;
@@ -2518,7 +2520,7 @@ static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_a
 #endif
 #endif
             if (count_allocation)
-		ADD_ALLOC_VECTOR(small, length, size * sizeof(VECREC), actual_size);
+		ADD_ALLOC_VECTOR(one, length, alloc_size * sizeof(VECREC), actual_size);
 
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SET_NODE_CLASS(s, node_class);
