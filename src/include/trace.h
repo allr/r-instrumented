@@ -11,21 +11,21 @@
 
 #include "Rinternals.h"
 
-#define TRACE_ZIPPED   // needs external zlib, version 1.2.5 or higher
+#define TRACE_ZIPPED
 #define TRACER_COMPILED_IN
 
 // Output defines
 #ifdef TRACE_ZIPPED
 #  include <zlib.h>
-#  define TRACE_NAME "trace.gz"
-#  define SRC_MAP_NAME "source.map.gz"
+#  define TRACE_NAME      "trace.gz"
+#  define SRC_MAP_NAME    "source.map.gz"
 #  define MEMORY_MAP_FILE "memory.map.gz"
 #else
-#  define TRACE_NAME "trace"
-#  define SRC_MAP_NAME "source.map"
+#  define TRACE_NAME      "trace"
+#  define SRC_MAP_NAME    "source.map"
 #  define MEMORY_MAP_FILE "memory.map"
 #endif
-#define SUMMARY_NAME "trace_summary"
+#define SUMMARY_NAME      "trace_summary"
 
 #define EOS -1
 #define MAX_FNAME 128
@@ -44,7 +44,7 @@ typedef enum {
 #ifdef TRACE_ZIPPED
   typedef gzFile TRACEFILE;
 #else
-  typedef FILE * TRACEFILE;
+  typedef FILE *TRACEFILE;
 #endif
 
 typedef struct TraceInfo_ {
@@ -101,10 +101,10 @@ extern unsigned int fatal_err_cnt;
 #define SXPEXISTS(x) (x && (x != R_NilValue))
 
 #ifdef TRACE_ZIPPED
-#  define FOPEN(file) gzopen(file, "w9")
-#  define FCLOSE(hdl) gzclose(hdl)
-#  define WRITE_FUN(f, data, size) gzwrite(f, data, size)
-#  define FPRINTF gzprintf
+#  define FOPEN(file)              R_gzopen(file, "wb")
+#  define FCLOSE(hdl)              R_gzclose(hdl)
+#  define WRITE_FUN(f, data, size) R_gzwrite(f, data, size)
+#  define FPRINTF                  gz_printf
 #else
 #  define FOPEN(file) fopen(file, "w")
 #  define FCLOSE(hdl) fclose(hdl)

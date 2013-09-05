@@ -121,6 +121,33 @@ void __attribute__((__format__(printf, 1, 2)))
 	fprintf(stderr, "\n");
 }
 
+
+#ifdef TRACE_ZIPPED
+
+/* borrow gzio replacement functions from connections.c
+   which includes them from gzio.h */
+
+gzFile R_gzopen (const char *path, const char *mode);
+int R_gzclose (gzFile file);
+int R_gzwrite (gzFile file, voidpc buf, unsigned len);
+
+// gzprintf replacement because it's not even in gzio.h
+static int __attribute__((format(printf, 2, 3)))
+  gz_printf(TRACEFILE file, const char *format, ...) {
+    char strbuf[2000];
+    int res;
+    va_list args;
+
+    va_start(args, format);
+    res = vsnprintf(strbuf, sizeof(strbuf), format, args);
+    va_end(args);
+    WRITE_FUN(file, strbuf, res);
+    return res;
+}
+
+#endif
+
+
 // Trace binary writes
 static inline void WRITE_BYTE(TRACEFILE file, const unsigned char byte) {
     bytes_written += sizeof(char);

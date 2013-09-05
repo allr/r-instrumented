@@ -376,7 +376,7 @@ char *R_gzgets(gzFile file, char *buf, int len)
 }
 
 
-static int R_gzwrite (gzFile file, voidpc buf, unsigned len)
+int R_gzwrite (gzFile file, voidpc buf, unsigned len)
 {
     gz_stream *s = (gz_stream*) file;
 
