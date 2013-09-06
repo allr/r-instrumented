@@ -16,7 +16,6 @@
 
 // Output defines
 #ifdef TRACE_ZIPPED
-#  include <zlib.h>
 #  define TRACE_NAME      "trace.gz"
 #  define SRC_MAP_NAME    "source.map.gz"
 #  define MEMORY_MAP_FILE "memory.map.gz"
@@ -33,6 +32,7 @@
 #define TIME_BUFF 200
 
 
+/* trace "verbosity" */
 typedef enum {
     TR_ALL,
     TR_REPL,
@@ -41,27 +41,9 @@ typedef enum {
     TR_NONE
 } TR_TYPE;
 
-#ifdef TRACE_ZIPPED
-  typedef gzFile TRACEFILE;
-#else
-  typedef FILE *TRACEFILE;
-#endif
-
-typedef struct TraceInfo_ {
-    int tracing;
-
-    char directory[MAX_DNAME];
-    char trace_file_name[MAX_FNAME];
-
-    TRACEFILE src_map_file;
-
-    char trace_version[12];
-} TraceInfo;
-
-/* Trace Instrumentation - global pointer for logging */
-extern TraceInfo *trace_info;
-
-extern unsigned int fatal_err_cnt;
+/* warning: These vars are defined in main.c because Defn.h includes trace.h! */
+extern int traceR_is_active;
+extern unsigned int fatal_err_cnt; // FIXME: Rename or remove
 
 // Trace output codes
 #define BINTRACE_NO_PROLOGUE		0x01
@@ -93,9 +75,6 @@ extern unsigned int fatal_err_cnt;
 
 
 // Utility macros
-// note: traceR_is_active could be implemented as static inline,
-//       but it's less error-prone as a macro
-#define traceR_is_active (trace_info && trace_info->tracing)
 #define SEXP2ID(x) ((uintptr_t)x)
 #define ID2SEXP(x) ((SEXP) x)
 #define SXPEXISTS(x) (x && (x != R_NilValue))

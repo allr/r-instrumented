@@ -26,17 +26,34 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <zlib.h>
 
 #define HG_ID "000000000000+"  // dummy, don't change length
 
-static TRACEFILE bin_trace_file;
+#ifdef TRACE_ZIPPED
+  typedef gzFile TRACEFILE;
+#else
+  typedef FILE  *TRACEFILE;
+#endif
+
+typedef struct TraceInfo_ {
+    char directory[MAX_DNAME];
+    char trace_file_name[MAX_FNAME];
+
+    TRACEFILE src_map_file;
+
+    char trace_version[12];
+} TraceInfo;
+
 TraceInfo *trace_info;
+
+static TRACEFILE bin_trace_file;
 #ifdef MEMORY_PROFILE
 extern TRACEFILE memory_map_file;
 #endif
 
 // Trace counters
-unsigned int fatal_err_cnt;
+//unsigned int fatal_err_cnt; -> main.c via Defn.h->trace.h
 static unsigned int func_decl_cnt, null_srcref_cnt;
 static unsigned int stack_err_cnt, stack_flush_cnt;
 static unsigned int stack_height, max_stack_height;
@@ -616,7 +633,7 @@ void initialize_trace_defaults(TR_TYPE mode) {
 
     //initialize
     R_KeepSource = TRUE;
-    trace_info->tracing = 0;
+    traceR_is_active = 0;
     strncpy(trace_info->trace_version, HG_ID, 12);
     //set the trace file name
     sprintf(trace_info->trace_file_name, "%s/%s", trace_info->directory, TRACE_NAME);
@@ -651,8 +668,8 @@ void initialize_trace_defaults(TR_TYPE mode) {
 }
 
 void start_tracing() {
-    if (trace_info && !(trace_info->tracing)) {
-	trace_info->tracing = 1;
+    if (!traceR_is_active) {
+	traceR_is_active = 1;
 
 	//open output file
 	bin_trace_file = FOPEN(trace_info->trace_file_name);
@@ -790,7 +807,7 @@ void write_allocation_summary(FILE *out) {
 void terminate_tracing() {
     // Stop tracing
     FCLOSE(bin_trace_file);
-    trace_info->tracing = 0;
+    traceR_is_active = 0;
     FCLOSE(trace_info->src_map_file);
     write_summary();
 }
