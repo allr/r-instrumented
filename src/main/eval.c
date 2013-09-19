@@ -1929,8 +1929,10 @@ SEXP attribute_hidden do_alias(SEXP call, SEXP op, SEXP args, SEXP rho)
 unsigned long apply_define, super_apply_define;
 unsigned long do_set_unique, do_set_allways;
 unsigned long do_super_set_unique, do_super_set_allways;
-unsigned long err_count_assign;
-extern int need_count_assign;
+extern int need_count_assign; /* bool, assignments are counted only if true,
+                                 appears to be set whenever the assignment actually
+                                 came from the R script */
+unsigned long err_count_assign; /* counted assignments that failed to complete */
 unsigned long dispatchFailed;
 unsigned long dispatchs;
 
@@ -4519,7 +4521,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (! SET_BINDING_VALUE(loc, value)) {
 	    SEXP symbol = VECTOR_ELT(constants, sidx);
 	    PROTECT(value);
+	    need_count_assign = 1;
 	    defineVar(symbol, value, rho);
+	    if (need_count_assign) {
+		err_count_assign++;
+		need_count_assign = 0;
+	    }
 	    UNPROTECT(1);
 	}
 	NEXT();
@@ -4903,8 +4910,14 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	case 0: SET_NAMED(value, 1); break;
 	case 1: SET_NAMED(value, 2); break;
 	}
-	if (! SET_BINDING_VALUE(cell, value))
+	if (! SET_BINDING_VALUE(cell, value)) {
+	    need_count_assign = 1;
 	    defineVar(symbol, value, rho);
+	    if (need_count_assign) {
+		err_count_assign++;
+		need_count_assign = 0;
+	    }
+	}
 	R_BCNodeStackTop--; /* now pop LHS value off the stack */
 	/* original right-hand side value is now on top of stack again */
 	/* we do not duplicate the right-hand side value, so to be
@@ -5048,7 +5061,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    value = duplicate(value);
 	    SETSTACK(-1, value);
 	} else avoided_dup++;
+	need_count_assign = 1;
 	setVar(symbol, value, ENCLOS(rho));
+	if (need_count_assign) {
+	    err_count_assign++;
+	    need_count_assign = 0;
+	}
 	NEXT();
       }
     OP(STARTASSIGN2, 1):
@@ -5069,7 +5087,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	case 0: SET_NAMED(value, 1); break;
 	case 1: SET_NAMED(value, 2); break;
 	}
+	need_count_assign = 1;
 	setVar(symbol, value, ENCLOS(rho));
+	if (need_count_assign) {
+	    err_count_assign++;
+	    need_count_assign = 0;
+	}
 	/* original right-hand side value is now on top of stack again */
 	/* we do not duplicate the right-hand side value, so to be
 	   conservative mark the value as NAMED = 2 */
