@@ -1119,6 +1119,7 @@ SEXP install(const char *name)
 
 
 extern unsigned int bparam, bparam_ldots; // Instrumentation
+extern void capR_capture(SEXP, SEXP, char);
 /*  do_internal - This is the code for .Internal(). */
 
 SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1175,6 +1176,7 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(INTERNAL(fun)) == BUILTINSXP) {
 	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	args = evalList(args, env, call, 0);
+	if(1) capR_capture(INTERNAL(fun), args, 'I');
 	trcR_emit_primitive_function(INTERNAL(fun), BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE,
                                      bparam, bparam_ldots);  /* Trace Instrumentation */
 	bparam = bparam_tmp;

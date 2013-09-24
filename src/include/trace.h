@@ -38,7 +38,8 @@ typedef enum {
     TR_REPL,
     TR_BOOTSTRAP,
     TR_SUMMARY,
-    TR_NONE
+    TR_NONE,
+    TR_CAPTURE
 } TR_TYPE;
 
 #ifdef TRACE_ZIPPED

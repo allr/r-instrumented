@@ -82,6 +82,8 @@ void R_Busy(int which) { ptr_R_Busy(which); }
 extern void flush_gc();
 extern void display_unused(FILE *);
 extern void write_trace_summary(FILE *);
+extern void capR_start_capturing();
+extern void capR_stop_capturing();
 void R_CleanUp(SA_TYPE saveact, int status, int runLast) {
     ptr_R_CleanUp(saveact, status, runLast);
     flush_gc();
@@ -95,6 +97,7 @@ void R_CleanUp(SA_TYPE saveact, int status, int runLast) {
 	    write_trace_summary(stderr);
 	}
     }
+    capR_stop_capturing();
     exit(0);
 }
 
@@ -416,6 +419,8 @@ int Rf_initialize_R(int ac, char **av)
 
     if (R_Trace == TR_ALL || R_Trace == TR_BOOTSTRAP)
 	start_tracing();
+    if (R_Trace == TR_CAPTURE)
+    capR_start_capturing();
 
     if(!Rp->NoRenviron) {
 	process_site_Renviron();

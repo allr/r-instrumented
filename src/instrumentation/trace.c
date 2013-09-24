@@ -602,6 +602,9 @@ void initialize_trace_defaults(TR_TYPE mode) {
 	// TODO instead of copying grab what's the parser read
     }
 
+    // Capture: don't need the rest stuff
+    if (mode == TR_CAPTURE) return;
+
     // dump function table into a file
     sprintf(str, "%s/R_function_table.txt", trace_info->directory);
     fd = fopen(str, "w");

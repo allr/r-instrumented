@@ -223,7 +223,11 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 			Rp->Trace = TR_SUMMARY;
 			ac--;
 			av++;
-		    } else if (**tmp == '-') {
+		    } else if (!strcmp(*tmp, "capture")) {
+		    Rp->Trace = TR_CAPTURE;
+			ac--;
+			av++;
+			} else if (**tmp == '-') {
 			/* no options */
 			Rp->Trace = TR_REPL;
 		    } else { /* error */

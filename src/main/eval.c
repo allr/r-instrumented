@@ -479,252 +479,256 @@ static SEXP forcePromise(SEXP e)
     return PRVALUE(e);
 }
 
+extern void capR_capture(SEXP, SEXP, char);
 unsigned int bparam, bparam_ldots; // Instrumentation
 
 /* Return value of "e" evaluated in "rho". */
 
 SEXP eval(SEXP e, SEXP rho)
 {
-    SEXP op, tmp;
-    static int evalcount = 0;
-    evalscount++;
-    
-    /* Save the current srcref context. */
-    
-    SEXP srcrefsave = R_Srcref;
+	SEXP op, tmp;
+	static int evalcount = 0;
+	evalscount++;
 
-    /* The use of depthsave below is necessary because of the
-       possibility of non-local returns from evaluation.  Without this
-       an "expression too complex error" is quite likely. */
+	/* Save the current srcref context. */
 
-    int depthsave = R_EvalDepth++;
+	SEXP srcrefsave = R_Srcref;
 
-    /* We need to explicit set a NULL call here to circumvent attempts
-       to deparse the call in the error-handler */
-    if (R_EvalDepth > R_Expressions) {
-	R_Expressions = R_Expressions_keep + 500;
-	errorcall(R_NilValue,
-		  _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
-    }
-    R_CheckStack();
-    if (++evalcount > 1000) { /* was 100 before 2.8.0 */
-	R_CheckUserInterrupt();
-	evalcount = 0 ;
-    }
+	/* The use of depthsave below is necessary because of the
+	 possibility of non-local returns from evaluation.  Without this
+	 an "expression too complex error" is quite likely. */
 
-    tmp = R_NilValue;		/* -Wall */
+	int depthsave = R_EvalDepth++;
+
+	/* We need to explicit set a NULL call here to circumvent attempts
+	 to deparse the call in the error-handler */
+	if (R_EvalDepth > R_Expressions) {
+		R_Expressions = R_Expressions_keep + 500;
+		errorcall(R_NilValue,
+				_("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
+	}
+	R_CheckStack();
+	if (++evalcount > 1000) { /* was 100 before 2.8.0 */
+		R_CheckUserInterrupt();
+		evalcount = 0;
+	}
+
+	tmp = R_NilValue; /* -Wall */
 #ifdef Win32
-    /* This is an inlined version of Rwin_fpreset (src/gnuwin/extra.c)
-       and resets the precision, rounding and exception modes of a ix86
-       fpu.
-     */
-    __asm__ ( "fninit" );
+	/* This is an inlined version of Rwin_fpreset (src/gnuwin/extra.c)
+	 and resets the precision, rounding and exception modes of a ix86
+	 fpu.
+	 */
+	__asm__ ( "fninit" );
 #endif
 
-    R_Visible = TRUE;
-    switch (TYPEOF(e)) {
-    case NILSXP:
-    case LISTSXP:
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-    case STRSXP:
-    case CPLXSXP:
-    case RAWSXP:
-    case S4SXP:
-    case SPECIALSXP:
-    case BUILTINSXP:
-    case ENVSXP:
-    case CLOSXP:
-    case VECSXP:
-    case EXTPTRSXP:
-    case WEAKREFSXP:
-    case EXPRSXP:
-	tmp = e;
-	/* Make sure constants in expressions are NAMED before being
-	   used as values.  Setting NAMED to 2 makes sure weird calls
-	   to replacement functions won't modify constants in
-	   expressions.  */
-	if (NAMED(tmp) != 2) SET_NAMED(tmp, 2);
-	trcR_emit_simple_type(e); /* Trace Instrumentation */
-	break;
-    case BCODESXP:
-	tmp = bcEval(e, rho, TRUE);
-	    break;
-    case SYMSXP:
-	if (e == R_DotsSymbol)
-	    error(_("'...' used in an incorrect context"));
-	if( DDVAL(e) )
-		tmp = ddfindVar(e,rho);
-	else
-		tmp = findVar(e, rho);
-	if (tmp == R_UnboundValue) {
-	    trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
-	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
-	}
-	/* if ..d is missing then ddfindVar will signal */
-	else if (tmp == R_MissingArg && !DDVAL(e) ) {
-	    const char *n = CHAR(PRINTNAME(e));
-	    trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
-	    if(*n) error(_("argument \"%s\" is missing, with no default"),
-			 CHAR(PRINTNAME(e)));
-	    else error(_("argument is missing, with no default"));
-	}
-	else if (TYPEOF(tmp) == PROMSXP) {
-	    if (PRVALUE(tmp) == R_UnboundValue) {
-		/* not sure the PROTECT is needed here but keep it to
-		   be on the safe side. */
-		PROTECT(tmp);
-		tmp = forcePromise(tmp);
-		UNPROTECT(1);
-	    }
-	    else {
-		trcR_emit_bnd_promise(tmp); /* Trace Instrumentation */
-		tmp = PRVALUE(tmp);
-	    }
-	    SET_NAMED(tmp, 2);
-	}
-	else if (!isNull(tmp)) {
-	    if (NAMED(tmp) < 1)
-		SET_NAMED(tmp, 1);
-	    trcR_emit_simple_type(e); /* Trace Instrumentation */
-	}
-	break;
-    case PROMSXP:
-	if (PRVALUE(e) == R_UnboundValue) {
-	    /* We could just unconditionally use the return value from
-	       forcePromise; the test avoids the function call if the
-	       promise is already evaluated. */
-	    forcePromise(e);
-	    tmp = PRVALUE(e);
-	} else {
-	    tmp = PRVALUE(e);
-	    trcR_emit_bnd_promise(e); /* Trace Instrumentation */
-	}
-	/* This does _not_ change the value of NAMED on the value tmp,
-	   in contrast to the handling of promises bound to symbols in
-	   the SYMSXP case above.  The reason is that one (typically
-	   the only) place promises appear in source code is as
-	   wrappers for the RHS value in replacement function calls for
-	   complex assignment expression created in applydefine().  If
-	   the RHS value is freshly created it will have NAMED = 0 and
-	   we want it to stay that way or a BUILTIN or SPECIAL
-	   replacement function might have to duplicate the value
-	   before inserting it to avoid creating cycles.  (Closure
-	   replacement functions will get the value via the SYMSXP case
-	   from evaluating their 'value' argument so the value will
-	   end up getting duplicated if NAMED = 2.) LT */
-	break;
-    case LANGSXP:
-	trcR_emit_prologue_start(); /* Trace Instrumentation */
-
-	if (TYPEOF(CAR(e)) == SYMSXP)
-	    /* This will throw an error if the function is not found */
-	    PROTECT(op = findFun(CAR(e), rho));
-	else
-	    PROTECT(op = eval(CAR(e), rho));
-
-	trcR_emit_prologue_end(op); /* Trace Instrumentation */
-
-	if(RTRACE(op) && R_current_trace_state()) {
-	    Rprintf("trace: ");
-	    PrintValue(e);
-	}
-	if (TYPEOF(op) == SPECIALSXP) {
-	    spec_call++;
-	    int save = R_PPStackTop, flag = PRIMPRINT(op);
-	    const void *vmax = vmaxget();
-	    PROTECT(CDR(e));
-	    R_Visible = flag != 1;
-
-            if (traceR_is_active) {
-		/* Trace Instrumentation */
-		unsigned int sparam = 0, sparam_ldots = 0;
-		SEXP targs = CDR(e);
-		while (targs != R_NilValue) {
-		    if(CAR(targs) == R_DotsSymbol)
-			sparam_ldots++;
-		    else
-			sparam++;
-		    targs = CDR(targs);
+	R_Visible = TRUE;
+	switch (TYPEOF(e)) {
+	case NILSXP:
+	case LISTSXP:
+	case LGLSXP:
+	case INTSXP:
+	case REALSXP:
+	case STRSXP:
+	case CPLXSXP:
+	case RAWSXP:
+	case S4SXP:
+	case SPECIALSXP:
+	case BUILTINSXP:
+	case ENVSXP:
+	case CLOSXP:
+	case VECSXP:
+	case EXTPTRSXP:
+	case WEAKREFSXP:
+	case EXPRSXP:
+		tmp = e;
+		/* Make sure constants in expressions are NAMED before being
+		 used as values.  Setting NAMED to 2 makes sure weird calls
+		 to replacement functions won't modify constants in
+		 expressions.  */
+		if (NAMED(tmp) != 2)
+			SET_NAMED(tmp, 2);
+		trcR_emit_simple_type(e); /* Trace Instrumentation */
+		break;
+	case BCODESXP:
+		tmp = bcEval(e, rho, TRUE);
+		break;
+	case SYMSXP:
+		if (e == R_DotsSymbol)
+			error(_("'...' used in an incorrect context"));
+		if (DDVAL(e))
+			tmp = ddfindVar(e, rho);
+		else
+			tmp = findVar(e, rho);
+		if (tmp == R_UnboundValue) {
+			trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
+			error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
 		}
-		trcR_emit_primitive_function(op, BINTRACE_SPEC_ID, sparam, sparam_ldots);
-	    }
+		/* if ..d is missing then ddfindVar will signal */
+		else if (tmp == R_MissingArg && !DDVAL(e)) {
+			const char *n = CHAR(PRINTNAME(e));
+			trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
+			if (*n)
+				error(_("argument \"%s\" is missing, with no default"),
+						CHAR(PRINTNAME(e)));
+			else
+				error(_("argument is missing, with no default"));
+		} else if (TYPEOF(tmp) == PROMSXP) {
+			if (PRVALUE(tmp) == R_UnboundValue) {
+				/* not sure the PROTECT is needed here but keep it to
+				 be on the safe side. */
+				PROTECT(tmp);
+				tmp = forcePromise(tmp);
+				UNPROTECT(1);
+			} else {
+				trcR_emit_bnd_promise(tmp); /* Trace Instrumentation */
+				tmp = PRVALUE(tmp);
+			}
+			SET_NAMED(tmp, 2);
+		} else if (!isNull(tmp)) {
+			if (NAMED(tmp) < 1)
+				SET_NAMED(tmp, 1);
+			trcR_emit_simple_type(e); /* Trace Instrumentation */
+		}
+		break;
+	case PROMSXP:
+		if (PRVALUE(e) == R_UnboundValue) {
+			/* We could just unconditionally use the return value from
+			 forcePromise; the test avoids the function call if the
+			 promise is already evaluated. */
+			forcePromise(e);
+			tmp = PRVALUE(e);
+		} else {
+			tmp = PRVALUE(e);
+			trcR_emit_bnd_promise(e); /* Trace Instrumentation */
+		}
+		/* This does _not_ change the value of NAMED on the value tmp,
+		 in contrast to the handling of promises bound to symbols in
+		 the SYMSXP case above.  The reason is that one (typically
+		 the only) place promises appear in source code is as
+		 wrappers for the RHS value in replacement function calls for
+		 complex assignment expression created in applydefine().  If
+		 the RHS value is freshly created it will have NAMED = 0 and
+		 we want it to stay that way or a BUILTIN or SPECIAL
+		 replacement function might have to duplicate the value
+		 before inserting it to avoid creating cycles.  (Closure
+		 replacement functions will get the value via the SYMSXP case
+		 from evaluating their 'value' argument so the value will
+		 end up getting duplicated if NAMED = 2.) LT */
+		break;
+	case LANGSXP:
+		trcR_emit_prologue_start(); /* Trace Instrumentation */
 
-	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
-	    trcR_emit_function_return(op, tmp); /* Trace Instrumentation */
+		if (TYPEOF(CAR(e)) == SYMSXP)
+			/* This will throw an error if the function is not found */
+			PROTECT(op = findFun(CAR(e), rho));
+		else
+			PROTECT(op = eval(CAR(e), rho));
+
+		trcR_emit_prologue_end(op); /* Trace Instrumentation */
+
+		if (RTRACE(op) && R_current_trace_state()) {
+			Rprintf("trace: ");
+			PrintValue(e);
+		}
+		if (TYPEOF(op) == SPECIALSXP) {
+			spec_call++;
+			int save = R_PPStackTop, flag = PRIMPRINT(op);
+			const void *vmax = vmaxget();
+			PROTECT(CDR(e));
+			R_Visible = flag != 1;
+
+			if (traceR_is_active) {
+				/* Trace Instrumentation */
+				unsigned int sparam = 0, sparam_ldots = 0;
+				SEXP targs = CDR(e);
+				while (targs != R_NilValue) {
+					if (CAR(targs) == R_DotsSymbol)
+						sparam_ldots++;
+					else
+						sparam++;
+					targs = CDR(targs);
+				}
+				trcR_emit_primitive_function(op, BINTRACE_SPEC_ID, sparam,
+						sparam_ldots);
+			}
+
+			tmp = PRIMFUN(op)(e, op, CDR(e), rho);
+			trcR_emit_function_return(op, tmp); /* Trace Instrumentation */
 #ifdef CHECK_VISIBILITY
-	    if(flag < 2 && R_Visible == flag) {
-		char *nm = PRIMNAME(op);
-		if(strcmp(nm, "for")
-		   && strcmp(nm, "repeat") && strcmp(nm, "while")
-		   && strcmp(nm, "[[<-") && strcmp(nm, "on.exit"))
-		    printf("vis: special %s\n", nm);
-	    }
+			if(flag < 2 && R_Visible == flag) {
+				char *nm = PRIMNAME(op);
+				if(strcmp(nm, "for")
+						&& strcmp(nm, "repeat") && strcmp(nm, "while")
+						&& strcmp(nm, "[[<-") && strcmp(nm, "on.exit"))
+				printf("vis: special %s\n", nm);
+			}
 #endif
-	    if (flag < 2) R_Visible = flag != 1;
-	    UNPROTECT(1);
-	    check_stack_balance(op, save);
-	    vmaxset(vmax);
-	}
-	else if (TYPEOF(op) == BUILTINSXP) {
-	    builtin_call++;
-	    int save = R_PPStackTop, flag = PRIMPRINT(op);
-	    const void *vmax = vmaxget();
-	    RCNTXT cntxt;
-	    unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
-	    PROTECT(tmp = evalList(CDR(e), rho, e, 0));
-	    trcR_emit_primitive_function(op, BINTRACE_BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
-	    bparam = bparam_tmp;
-	    bparam_ldots = bparam_ldots_tmp;
-	    if (flag < 2) R_Visible = flag != 1;
-	    /* We used to insert a context only if profiling,
-	       but helps for tracebacks on .C etc. */
-	    if (R_Profiling || (PPINFO(op).kind == PP_FOREIGN)) {
-		SEXP oldref = R_Srcref;
-		begincontext(&cntxt, CTXT_BUILTIN, e,
-			     R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
-		R_Srcref = NULL;
-		tmp = PRIMFUN(op) (e, op, tmp, rho);
-		R_Srcref = oldref;
-		endcontext(&cntxt);
-	    } else {
-		tmp = PRIMFUN(op) (e, op, tmp, rho);
-	    }
-	    trcR_emit_function_return(op, tmp); /* Trace Instrumentation */
+			if (flag < 2)
+				R_Visible = flag != 1;
+			UNPROTECT(1);
+			check_stack_balance(op, save);
+			vmaxset(vmax);
+		} else if (TYPEOF(op) == BUILTINSXP) {
+			builtin_call++;
+			int save = R_PPStackTop, flag = PRIMPRINT(op);
+			const void *vmax = vmaxget();
+			RCNTXT cntxt;
+			unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
+			PROTECT(tmp = evalList(CDR(e), rho, e, 0));
+			if (1) capR_capture(op, tmp, 'P');
+			trcR_emit_primitive_function(op, BINTRACE_BLTIN_ID, bparam,
+					bparam_ldots); /* Trace Instrumentation */
+			bparam = bparam_tmp;
+			bparam_ldots = bparam_ldots_tmp;
+			if (flag < 2)
+				R_Visible = flag != 1;
+			/* We used to insert a context only if profiling,
+			 but helps for tracebacks on .C etc. */
+			if (R_Profiling || (PPINFO(op).kind == PP_FOREIGN)) {
+				SEXP oldref = R_Srcref;
+				begincontext(&cntxt, CTXT_BUILTIN, e, R_BaseEnv, R_BaseEnv,
+						R_NilValue, R_NilValue);
+				R_Srcref = NULL;
+				tmp = PRIMFUN(op)(e, op, tmp, rho);
+				R_Srcref = oldref;
+				endcontext(&cntxt);
+			} else {
+				tmp = PRIMFUN(op)(e, op, tmp, rho);
+			}
+			trcR_emit_function_return(op, tmp); /* Trace Instrumentation */
 #ifdef CHECK_VISIBILITY
-	    if(flag < 2 && R_Visible == flag) {
-		char *nm = PRIMNAME(op);
-		printf("vis: builtin %s\n", nm);
-	    }
+			if(flag < 2 && R_Visible == flag) {
+				char *nm = PRIMNAME(op);
+				printf("vis: builtin %s\n", nm);
+			}
 #endif
-	    if (flag < 2) R_Visible = flag != 1;
-	    UNPROTECT(1);
-	    check_stack_balance(op, save);
-	    vmaxset(vmax);
+			if (flag < 2)
+				R_Visible = flag != 1;
+			UNPROTECT(1);
+			check_stack_balance(op, save);
+			vmaxset(vmax);
+		} else if (TYPEOF(op) == CLOSXP) {
+			clos_call++;
+			PROTECT(tmp = promiseArgs(CDR(e), rho));
+			tmp = applyClosure(e, op, tmp, rho, R_BaseEnv, TRUE);
+			UNPROTECT(1);
+		} else {
+			trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
+			error(_("attempt to apply non-function"));
+		}
+		UNPROTECT(1);
+		break;
+	case DOTSXP:
+		trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
+		error(_("'...' used in an incorrect context"));
+	default:
+		trcR_emit_error_type(BINTRACE_UNIMPL_TYPE); /* Trace Instrumentation */
+		UNIMPLEMENTED_TYPE("eval", e);
 	}
-	else if (TYPEOF(op) == CLOSXP) {
-	    clos_call++;
-	    PROTECT(tmp = promiseArgs(CDR(e), rho));
-	    tmp = applyClosure(e, op, tmp, rho, R_BaseEnv, TRUE);
-	    UNPROTECT(1);
-	}
-	else {
-	    trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
-	    error(_("attempt to apply non-function"));
-	}
-	UNPROTECT(1);
-	break;
-    case DOTSXP:
-	trcR_emit_error_type(BINTRACE_R_ERROR_SEEN); /* Trace Instrumentation */
-	error(_("'...' used in an incorrect context"));
-    default:
-	trcR_emit_error_type(BINTRACE_UNIMPL_TYPE); /* Trace Instrumentation */
-	UNIMPLEMENTED_TYPE("eval", e);
-    }
-    R_EvalDepth = depthsave;
-    R_Srcref = srcrefsave;
-    return (tmp);
+	R_EvalDepth = depthsave;
+	R_Srcref = srcrefsave;
+	return (tmp);
 }
 
 attribute_hidden
@@ -4735,6 +4739,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE,
 					   bparam, bparam_ldots);
 	  has_prologue = FALSE;
+	  capR_capture(fun, args, 'P');
 
 	  value = PRIMFUN(fun) (call, fun, args, rho);
           trcR_emit_function_return(fun, value); /* Trace Instrumentation */
