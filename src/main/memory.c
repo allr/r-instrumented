@@ -630,6 +630,7 @@ unsigned long obj_allocated; // timeline
 // SEXP (*56) [not verified yet]
 unsigned long allocated_cell[NUM_NODE_CLASSES];
 unsigned long allocated_cons, allocated_prom, allocated_env;
+unsigned long allocated_cons_current, allocated_cons_peak;
 
 // verified to be in bytes
 unsigned long allocated_external, allocated_sexp, allocated_noncons;
@@ -1912,6 +1913,16 @@ static void RunGenCollect(R_size_t size_needed)
 #endif
 #endif
 
+    /* instrumentation: check for freed cons cells */
+    for (s = NEXT_NODE(R_GenHeap[0].New);
+	 s != R_GenHeap[0].Free;
+	 s = NEXT_NODE(s)) {
+	if (s->sxpinfo.is_cons) {
+	    s->sxpinfo.is_cons = 0;
+	    allocated_cons_current--;
+	}
+    }
+
     /* reset Free pointers */
     for (i = 0; i < NUM_NODE_CLASSES; i++)
 	R_GenHeap[i].Free = NEXT_NODE(R_GenHeap[i].New);
@@ -2360,6 +2371,10 @@ SEXP cons(SEXP car, SEXP cdr)
     VALGRIND_MAKE_WRITABLE(s,3);
 #endif
     s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    s->sxpinfo.is_cons = 1;
+    allocated_cons_current++;
+    if (allocated_cons_current > allocated_cons_peak)
+	allocated_cons_peak = allocated_cons_current;
     TYPEOF(s) = LISTSXP;
     CAR(s) = CHK(car);
     CDR(s) = CHK(cdr);

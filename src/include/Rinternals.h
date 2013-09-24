@@ -186,7 +186,8 @@ struct sxpinfo_struct {
     unsigned int gcgen :  1;  /* old generation number */
     unsigned int gccls :  3;  /* node class */
     unsigned int newpromise: 1; /* for tracing: promise is not in trace file yet */
-}; /*		    Tot: 32 +1 */
+    unsigned int is_cons   : 1; /* for tracing: this SEXP was allocated as a cons */
+}; /*		    Tot: 32 +2 */
 
 struct vecsxp_struct {
     R_len_t	length;

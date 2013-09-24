@@ -67,8 +67,9 @@ extern unsigned long free_cell[NUM_NODE_CLASSES];
 extern unsigned long has_na[NUM_NODE_CLASSES];
 extern unsigned long no_na[NUM_NODE_CLASSES];
 extern unsigned long no_attrb[NUM_NODE_CLASSES];
-extern unsigned long allocated_cons, allocated_prom, allocated_env;
-extern unsigned long allocated_external, allocated_sexp, allocated_noncons;
+extern unsigned long allocated_cons, allocated_prom, allocated_env; // bytes
+extern unsigned long allocated_external, allocated_sexp, allocated_noncons; // bytes
+extern unsigned long allocated_cons_current, allocated_cons_peak; // count
 
 // Vector count
 extern unsigned long allocated_vector, allocated_vector_size, allocated_vector_asize, allocated_vector_elts;
@@ -751,6 +752,7 @@ void write_allocation_summary(FILE *out) {
 
     /* this is what the Java tool actually wants to see */
     fprintf(out, "AllocatedCons: %lu\n", allocated_cons);
+    fprintf(out, "AllocatedConsPeak: %lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
     fprintf(out, "AllocatedNonCons: %lu\n", allocated_noncons);
     fprintf(out, "AllocatedEnv: %lu\n", allocated_env);
     fprintf(out, "AllocatedPromises: %lu\n", allocated_prom);
