@@ -2488,7 +2488,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 #define intCHARSXP 73
 
 SEXP allocVector(SEXPTYPE type, R_xlen_t length) {
-    allocVectorInternal(type, length, TRUE);
+    return allocVectorInternal(type, length, TRUE);
 }
 
 static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_allocation)
