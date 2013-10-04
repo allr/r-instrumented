@@ -34,7 +34,7 @@
 extern TraceInfo *trace_info;
 extern SEXP deparse4capture(SEXP, int);
 
-FILE * capture_fp = NULL;
+FILE *capture_fp = NULL;
 
 Rboolean shouldKeep(SEXP);
 
@@ -55,28 +55,114 @@ void capR_stop_capturing() {
 	}
 }
 
-void capR_capture(SEXP fun, SEXP args, char type) {
+static int depth = 0;
+
+void capR_capture(SEXP fun, SEXP args, SEXP ret, char type) {
+    SEXP t;
+    if (trace_info && depth == 0) { // no recursive capture
+        depth++;
+        if (capture_fp != 0) {
+            fprintf(capture_fp, "func: %s\n", PRIMNAME(fun));
+            fprintf(capture_fp, "type: %c\n", type);
+            t = deparse4capture(args, CUTOFF);;
+            if (shouldKeep(t)) {
+                for (int i = 0; i < LENGTH(t); i++)
+                    fprintf(capture_fp, "args: %s\n", CHAR(STRING_ELT(t, i)));
+            } else {
+                fprintf(capture_fp, "args: <arguments too long, ignored>\n");
+            }
+            t = deparse4capture(ret, CUTOFF);
+            if (shouldKeep(t)) {
+                for (int i = 0; i < LENGTH(t); i++)
+                    fprintf(capture_fp, "retn: %s\n", CHAR(STRING_ELT(t, i)));
+            } else {
+                fprintf(capture_fp, "retn: <returns too long, ignored>\n");
+            }
+        } else {
+            print_error_msg("Cannot write to capture file\n");
+        }
+        depth--;
+    }
+}
+/*
+void capR_capture(SEXP fun, SEXP args, SEXP ret, char type) {
+    SEXP t;
+    if (trace_info && depth == 0) { // no recursive capture
+        depth++;
+        if (capture_fp != 0) {
+            fprintf(capture_fp, "func: %s\n", PRIMNAME(fun));
+            fprintf(capture_fp, "type: %c\n", type);
+            t = deparse4capture(args, CUTOFF);
+            if (shouldKeep(t)) {
+                for (int i = 0; i < LENGTH(t); i++)
+                    fprintf(capture_fp, "args: %s\n", CHAR(STRING_ELT(t, i)));
+            } else {
+                fprintf(capture_fp, "args: <arguments too long, ignored>\n");
+            }
+            t = deparse4capture(ret, CUTOFF);
+            if (shouldKeep(t)) {
+                for (int i = 0; i < LENGTH(t); i++)
+                    fprintf(capture_fp, "retn: %s\n", CHAR(STRING_ELT(t, i)));
+            } else {
+                fprintf(capture_fp, "retn: <return value too long, ignored>\n");
+            }
+        } else {
+            print_error_msg("Cannot write to capture file\n");
+        }
+        depth--;
+    }
+}
+
+SEXP capR_capture_args(SEXP fun, SEXP args, char type) {
+    SEXP t = NULL;
+    if (trace_info && depth == 0) { // no recursive capture
+        depth++;
+        if (capture_fp != 0) {
+            fprintf(capture_fp, "func: %s\n", PRIMNAME(fun));
+            fprintf(capture_fp, "type: %c\n", type);
+            t = deparse4capture(args, CUTOFF);
+            if (shouldKeep(t)) {
+                for (int i = 0; i < LENGTH(t); i++)
+                    fprintf(capture_fp, "args: %s\n", CHAR(STRING_ELT(t, i)));
+            } else {
+                fprintf(capture_fp, "args: <arguments too long, ignored>\n");
+            }
+        } else {
+            print_error_msg("Cannot write to capture file\n");
+        }
+        depth--;
+    }
+    return t;
+}
+
+void capR_capture_ret1(SEXP fun, SEXP args, SEXP ret, char type) {
 	SEXP t;
-	static int depth = 0;
 	if (trace_info && depth == 0) { // no recursive capture
 		depth++;
 		if (capture_fp != 0) {
 			fprintf(capture_fp, "func: %s\n", PRIMNAME(fun));
 			fprintf(capture_fp, "type: %c\n", type);
-			t = deparse4capture(args, CUTOFF);
+			t = args;
 			if (shouldKeep(t)) {
 				for (int i = 0; i < LENGTH(t); i++)
 					fprintf(capture_fp, "args: %s\n", CHAR(STRING_ELT(t, i)));
 			} else {
 				fprintf(capture_fp, "args: <arguments too long, ignored>\n");
 			}
+			t = deparse4capture(ret, CUTOFF);
+			if (shouldKeep(t)) {
+				for (int i = 0; i < LENGTH(t); i++)
+					fprintf(capture_fp, "retn: %s\n", CHAR(STRING_ELT(t, i)));
+			} else {
+				fprintf(capture_fp, "retn: <return value too long, ignored>\n");
+			}
 		} else {
-			print_error_msg("Capture file must be opened before use\n");
+			print_error_msg("Cannot write to capture file\n");
 		}
 		depth--;
 	}
 }
-
+*/
 Rboolean shouldKeep(SEXP t) {
 	return (LENGTH(t) <= MAX_NUM_LINES);
 }

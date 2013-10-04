@@ -31,6 +31,7 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 #include <R_ext/Print.h>
+#include <capture.h>
 
 
 #define ARGUSED(x) LEVELS(x)
@@ -479,7 +480,6 @@ static SEXP forcePromise(SEXP e)
     return PRVALUE(e);
 }
 
-extern void capR_capture(SEXP, SEXP, char);
 unsigned int bparam, bparam_ldots; // Instrumentation
 
 /* Return value of "e" evaluated in "rho". */
@@ -487,6 +487,7 @@ unsigned int bparam, bparam_ldots; // Instrumentation
 SEXP eval(SEXP e, SEXP rho)
 {
 	SEXP op, tmp;
+	SEXP args;
 	static int evalcount = 0;
 	evalscount++;
 
@@ -676,9 +677,9 @@ SEXP eval(SEXP e, SEXP rho)
 			RCNTXT cntxt;
 			unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 			PROTECT(tmp = evalList(CDR(e), rho, e, 0));
-			if (1) capR_capture(op, tmp, 'P');
 			trcR_emit_primitive_function(op, BINTRACE_BLTIN_ID, bparam,
 					bparam_ldots); /* Trace Instrumentation */
+			args = tmp; /* Capture Instrumentation */
 			bparam = bparam_tmp;
 			bparam_ldots = bparam_ldots_tmp;
 			if (flag < 2)
@@ -697,6 +698,8 @@ SEXP eval(SEXP e, SEXP rho)
 				tmp = PRIMFUN(op)(e, op, tmp, rho);
 			}
 			trcR_emit_function_return(op, tmp); /* Trace Instrumentation */
+			if (1) capR_capture(op, args, tmp, 'P'); /* Capture Instrumentation */
+
 #ifdef CHECK_VISIBILITY
 			if(flag < 2 && R_Visible == flag) {
 				char *nm = PRIMNAME(op);
@@ -4739,10 +4742,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      trcR_emit_primitive_function(fun, BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE,
 					   bparam, bparam_ldots);
 	  has_prologue = FALSE;
-	  capR_capture(fun, args, 'P');
-
 	  value = PRIMFUN(fun) (call, fun, args, rho);
-          trcR_emit_function_return(fun, value); /* Trace Instrumentation */
+      trcR_emit_function_return(fun, value); /* Trace Instrumentation */
+      if (1) capR_capture(fun, args, value, 'P');  /* Capture Instrumentation */
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:

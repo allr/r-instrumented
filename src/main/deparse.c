@@ -191,10 +191,10 @@ SEXP deparse1w(SEXP call, Rboolean abbrev, int opts)
 			      opts, -1);
 }
 
-attribute_hidden
-SEXP deparse4capture(SEXP call, int cutoff) {
-	return deparse1WithCutoff(call, FALSE, cutoff, TRUE, SHOWATTRIBUTES, -1);;
-}
+//attribute_hidden
+//SEXP deparse4capture(SEXP call, int cutoff) {
+//	return deparse1WithCutoff(call, FALSE, cutoff, TRUE, SHOWATTRIBUTES, -1);;
+//}
 
 static SEXP deparse1WithCutoff(SEXP call, Rboolean abbrev, int cutoff,
 			       Rboolean backtick, int opts, int nlines)

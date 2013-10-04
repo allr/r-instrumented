@@ -33,6 +33,8 @@
 
 #include <Rinterface.h>
 
+#include <capture.h>
+
 /* Table of  .Internal(.) and .Primitive(.)  R functions
  * =====     =========	      ==========
  *
@@ -1119,7 +1121,6 @@ SEXP install(const char *name)
 
 
 extern unsigned int bparam, bparam_ldots; // Instrumentation
-extern void capR_capture(SEXP, SEXP, char);
 /*  do_internal - This is the code for .Internal(). */
 
 SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1173,10 +1174,11 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
     args = CDR(s);
+    int shouldCapture = 0;
     if (TYPEOF(INTERNAL(fun)) == BUILTINSXP) {
 	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	args = evalList(args, env, call, 0);
-	if(1) capR_capture(INTERNAL(fun), args, 'I');
+	shouldCapture = 1;
 	trcR_emit_primitive_function(INTERNAL(fun), BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE,
                                      bparam, bparam_ldots);  /* Trace Instrumentation */
 	bparam = bparam_tmp;
@@ -1203,6 +1205,9 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     R_Visible = flag != 1;
     ans = PRIMFUN(INTERNAL(fun)) (s, INTERNAL(fun), args, env);
     trcR_emit_function_return(INTERNAL(fun), ans); /* Trace Instrumentation */
+    if(shouldCapture) {
+    	if (1) capR_capture(INTERNAL(fun), args, ans, 'I');
+    }
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;

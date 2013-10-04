@@ -12,8 +12,9 @@ include $(top_builddir)/Makeconf
 
 SOURCES = \
 	trace.c \
-	capture.c
-
+	capture.c \
+	deparse4capture.c
+	
 DEPENDS = $(SOURCES:.c=.d)
 OBJECTS = $(SOURCES:.c=.o)
 HEADERS = \

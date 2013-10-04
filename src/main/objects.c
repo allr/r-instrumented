@@ -30,6 +30,7 @@
 #include <Defn.h>
 #include <Internal.h>
 #include <R_ext/RS.h> /* for Calloc, Realloc and for S4 object bit */
+#include <capture.h>
 
 static SEXP GetObject(RCNTXT *cptr)
 {
@@ -96,7 +97,6 @@ static SEXP GetObject(RCNTXT *cptr)
 
 extern unsigned int bparam, bparam_ldots; // Instrumentation
 extern unsigned long dispatchFailed;
-extern void capR_capture(SEXP, SEXP, char);
 
 
 static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
@@ -138,12 +138,12 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
 	PROTECT(args = evalList(args, rho, call, 0));
 	R_Visible = flag != 1;
-	capR_capture(op, args, 'P');
 	trcR_emit_primitive_function(op, BINTRACE_BLTIN_ID, bparam, bparam_ldots); /* Trace Instrumentation */
 	bparam = bparam_tmp;
 	bparam_ldots = bparam_ldots_tmp;
 	ans = PRIMFUN(op) (call, op, args, rho);
 	trcR_emit_function_return(op, ans); /* Trace Instrumentation */
+	if (1) capR_capture(op, args, ans, 'P'); /* Capture Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
 	check_stack_balance(op, save);
