@@ -4810,6 +4810,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 
 	value = PRIMFUN(fun) (call, fun, args, rho);
 	trcR_emit_function_return(fun, value); /* Trace Instrumentation */
+	if (1) capR_capture(fun, args, value, 'P'); /* Capture Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	R_BCNodeStackTop -= 2;

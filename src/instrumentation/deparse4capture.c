@@ -484,18 +484,19 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
         break;
     case PROMSXP:
         // CAPTURE: we don't want to eval promise
-//	if(d->opts & DELAYPROMISES) {
-        d->sourceable = FALSE;
-        print2buff("<promise: ", d);
-        d->opts &= ~QUOTEEXPRESSIONS; /* don't want delay(quote()) */
-        deparse2buff(PREXPR(s), d);
-        d->opts = localOpts;
-        print2buff(">", d);
-//	} else {
-//	    PROTECT(s = eval(s, NULL)); /* eval uses env of promise */
-//	    deparse2buff(s, d);
-//	    UNPROTECT(1);
-//	}
+        if (d->opts & DELAYPROMISES || 1) {
+            d->sourceable = FALSE;
+            print2buff("<promise: ", d);
+            d->opts &= ~QUOTEEXPRESSIONS; /* don't want delay(quote()) */
+            deparse2buff(PREXPR(s), d);
+            d->opts = localOpts;
+            print2buff(">", d);
+        } else {
+            PROTECT(s = eval(s, NULL));
+            /* eval uses env of promise */
+            deparse2buff(s, d);
+            UNPROTECT(1);
+        }
         break;
     case CLOSXP:
         if (localOpts & SHOWATTRIBUTES)
@@ -831,16 +832,16 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
                 SEXP val = R_NilValue; /* -Wall */
                 if (isSymbol(CAR(s))) {
                     val = SYMVALUE(CAR(s));
-                    // CAPTURE: don't force promise
-//                    if (TYPEOF(val) == PROMSXP) {
-//                        val = eval(val, R_BaseEnv);
-//                        d->sourceable = FALSE;
-//                        print2buff("<promise: ", d);
-//                        d->opts &= ~QUOTEEXPRESSIONS; /* don't want delay(quote()) */
-//                        deparse2buff(PREXPR(val), d);
-//                        d->opts = localOpts;
-//                        print2buff("> ", d);
-//                    }
+                    if (TYPEOF(val) == PROMSXP) {
+                        // CAPTURE: don't force promise
+                        if (0) val = eval(val, R_BaseEnv);
+                        d->sourceable = FALSE;
+                        print2buff("<promise: ", d);
+                        d->opts &= ~QUOTEEXPRESSIONS; /* don't want delay(quote()) */
+                        deparse2buff(PREXPR(val), d);
+                        d->opts = localOpts;
+                        print2buff("> ", d);
+                    }
                 }
                 if (isSymbol(CAR(s)) && TYPEOF(val) == CLOSXP
                 && streql(CHAR(PRINTNAME(CAR(s))), "::")) { /*  :: is special case */
