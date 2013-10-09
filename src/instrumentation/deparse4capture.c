@@ -441,6 +441,7 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
     Rboolean lookahead = FALSE, lbreak = FALSE, parens;
     SEXP op, t;
     int localOpts = d->opts, i, n;
+    Rboolean alwaysDelay;
 
     if (!d->active)
         return;
@@ -484,7 +485,9 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
         break;
     case PROMSXP:
         // CAPTURE: we don't want to eval promise
-        if (d->opts & DELAYPROMISES || 1) {
+        // if promise not evaluated yet, don't force it.
+        alwaysDelay = (PRVALUE(s) == R_UnboundValue);
+        if ((d->opts & DELAYPROMISES) || alwaysDelay) {
             d->sourceable = FALSE;
             print2buff("<promise: ", d);
             d->opts &= ~QUOTEEXPRESSIONS; /* don't want delay(quote()) */
@@ -834,13 +837,17 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
                     val = SYMVALUE(CAR(s));
                     if (TYPEOF(val) == PROMSXP) {
                         // CAPTURE: don't force promise
-                        if (0) val = eval(val, R_BaseEnv);
-                        d->sourceable = FALSE;
-                        print2buff("<promise: ", d);
-                        d->opts &= ~QUOTEEXPRESSIONS; /* don't want delay(quote()) */
-                        deparse2buff(PREXPR(val), d);
-                        d->opts = localOpts;
-                        print2buff("> ", d);
+                        if (PRVALUE(val) != R_UnboundValue) {
+//                            val = eval(val, R_BaseEnv);
+                            val = PRVALUE(val);
+                        } else {
+                            d->sourceable = FALSE;
+                            print2buff("<promise: ", d);
+                            d->opts &= ~QUOTEEXPRESSIONS; /* don't want delay(quote()) */
+                            deparse2buff(PREXPR(val), d);
+                            d->opts = localOpts;
+                            print2buff("> ", d);
+                        }
                     }
                 }
                 if (isSymbol(CAR(s)) && TYPEOF(val) == CLOSXP
