@@ -202,6 +202,4 @@ static inline void trcR_goto_top_context(void) {
 
 static inline void trace_cnt_fatal_err() { fatal_err_cnt++; }
 
-static void trace_exit(int ecode);
-
 #endif /* TRACE_H_ */
