@@ -875,9 +875,6 @@
    */
 #undef LT_OBJDIR
 
-/* mmap mode */
-#undef MEMORY_PROFILE
-
 /* Define if mktime sets errno. */
 #undef MKTIME_SETS_ERRNO
 

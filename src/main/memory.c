@@ -542,93 +542,14 @@ static int NodeClassSize[NUM_SMALL_NODE_CLASSES] = { 0, 1, 2, 4, 6, 8, 16 };
 #define NODE_CLASS(s) ((s)->sxpinfo.gccls)
 #define SET_NODE_CLASS(s,v) (((s)->sxpinfo.gccls) = (v))
 
-#ifdef MEMORY_PROFILE
-#  define COUNT_NA(__type, __cast, __id)				\
-    case __type:							\
-    for (int i = 0; i < LENGTH(s); i++) {				\
-	if (__cast(s)[i] == NA_##__cast) {				\
-	    has_na[__id] ++;						\
-	    break;							\
-	}								\
-	no_na[__id] ++;							\
-    }									\
-    break
-#  define NA_STRING_PTR NA_STRING /*only to simplify the count_na macro */
-#  define NA_COMPLEX na_cmplx
 
-#  define REPORT_COLLECTED_OBJ(cls, obj)  do {				\
-	free_cell[cls]++;						\
-	if (memory_map_file)						\
-	    WRITE_GC_INFO(cls, obj);					\
-	if (!ATTRIB(s) || ATTRIB(s) == R_NilValue) no_attrb[cls]++;	\
-	switch (TYPEOF(s)) {						\
-	    COUNT_NA(LGLSXP, LOGICAL, 0);				\
-	    COUNT_NA(INTSXP, INTEGER, 1);				\
-	    COUNT_NA(REALSXP, REAL, 2);					\
-	    /*COUNT_NA(CPLXSXP, COMPLEX, 3);*/				\
-	    COUNT_NA(STRSXP, STRING_PTR, 4);				\
-	};								\
-    } while (0)
+unsigned long allocated_cell[NUM_NODE_CLASSES];
 
-#  define MEMMAP_BLOCK 0xffff
-struct {
-    unsigned int size:	32;
-    unsigned int cls:	3;
-    unsigned int type:	5;
-    unsigned int gcgen:	1;
-    unsigned int gccount: 23;
-    unsigned long creation_date;
-    unsigned long life_time;
-} memorymap_block[MEMMAP_BLOCK];
-
-int memmap_block = MEMMAP_BLOCK;
-TRACEFILE memory_map_file = NULL;
-#  define WRITE_GC_INFO(__cls, obj) do {				\
-	memorymap_block[--memmap_block].gcgen = NODE_GENERATION(obj);	\
-	memorymap_block[memmap_block].cls = __cls;			\
-	memorymap_block[memmap_block].type = TYPEOF(obj);		\
-	memorymap_block[memmap_block].size = 0;				\
-	memorymap_block[memmap_block].gccount = gc_count - MEMPROF(obj).creation_gc; \
-	memorymap_block[memmap_block].creation_date = MEMPROF(obj).creation_date; \
-	memorymap_block[memmap_block].life_time = obj_allocated - MEMPROF(obj).creation_date; \
-	if (!memmap_block)						\
-	    WRITE_FUN(memory_map_file, memorymap_block,			\
-		      (memmap_block = MEMMAP_BLOCK) * sizeof(memorymap_block[0])); \
-    } while (0)
-
-void close_memory_map(void) {
-    if (memmap_block < MEMMAP_BLOCK)
-	WRITE_FUN(memory_map_file, &memorymap_block[memmap_block],
-		  (MEMMAP_BLOCK - memmap_block) * sizeof(memorymap_block[0]));
-    FCLOSE (memory_map_file);
-    memory_map_file = NULL;
-}
-#else
-#  define REPORT_COLLECTED_OBJ(cls, obj) do { }while(0)
-#endif
-
-#ifdef MEMORY_PROFILE
 #define REPORT_ALLOCATED_CELL(cls, obj) do {				\
 	allocated_cell[cls] ++;						\
-	MEMPROF(obj).creation_date = obj_allocated ++;			\
-	MEMPROF(obj).creation_gc = gc_count;				\
     } while (0)
-#else
-#  define REPORT_ALLOCATED_CELL(cls, obj) do {				\
-	allocated_cell[cls] ++;						\
-    } while (0)
-#endif
-
-extern Rcomplex na_cmplx;
-unsigned long free_cell[NUM_NODE_CLASSES];
-unsigned long no_attrb[NUM_NODE_CLASSES];
-unsigned long has_na[NUM_NODE_CLASSES];
-unsigned long no_na[NUM_NODE_CLASSES];
-
-unsigned long obj_allocated; // timeline
 
 // SEXP (*56) [not verified yet]
-unsigned long allocated_cell[NUM_NODE_CLASSES];
 unsigned long allocated_cons, allocated_prom, allocated_env;
 unsigned long allocated_cons_current, allocated_cons_peak;
 
@@ -1052,9 +973,6 @@ static void GetNewPage(int node_class)
 	if (page == NULL)
 	    mem_err_malloc((R_size_t) R_PAGE_SIZE);
     }
-#ifdef R_MEMORY_PROFILING
-    R_ReportNewPage();
-#endif
     page->next = R_GenHeap[node_class].pages;
     R_GenHeap[node_class].pages = page;
     R_GenHeap[node_class].PageCount++;
@@ -1210,7 +1128,6 @@ static void ReleaseLargeFreeVectors(void)
 	    UNSNAP_NODE(s);
 	    R_LargeVallocSize -= size;
 	    R_GenHeap[LARGE_NODE_CLASS].AllocCount--;
-	    REPORT_COLLECTED_OBJ(LARGE_NODE_CLASS, s);
 #ifdef LONG_VECTOR_SUPPORT
 	    if (IS_LONG_VEC(s))
 		free(((char *) s) - sizeof(R_long_vec_hdr_t));
@@ -1891,26 +1808,20 @@ static void RunGenCollect(R_size_t size_needed)
     DEBUG_CHECK_NODE_COUNTS("after releasing large allocated nodes");
 
     /* tell Valgrind about free nodes */
-#if VALGRIND_LEVEL > 1 || defined(MEMORY_PROFILE)
+#if VALGRIND_LEVEL > 1
     for(i=1; i< NUM_NODE_CLASSES;i++){
 	for(s=NEXT_NODE(R_GenHeap[i].New); s!=R_GenHeap[i].Free; s=NEXT_NODE(s)){
-	    REPORT_COLLECTED_OBJ(i, s);
-# if VALGRIND_LEVEL > 1
 	    VALGRIND_MAKE_NOACCESS(DATAPTR(s), NodeClassSize[i]*sizeof(VECREC));
-# endif
 # if VALGRIND_LEVEL > 2
 	    VALGRIND_MAKE_NOACCESS(&ATTRIB(s), sizeof(void *));
             VALGRIND_MAKE_NOACCESS(s, 3);
 # endif
 	}
     }
-#if VALGRIND_LEVEL > 2 || defined(MEMORY_PROFILE)
-    for(s=NEXT_NODE(R_GenHeap[0].New);s!=R_GenHeap[0].Free; s=NEXT_NODE(s)){
-	    REPORT_COLLECTED_OBJ(0, s);
 #if VALGRIND_LEVEL > 2
+    for(s=NEXT_NODE(R_GenHeap[0].New);s!=R_GenHeap[0].Free; s=NEXT_NODE(s)){
             VALGRIND_MAKE_NOACCESS(&(s->u), 3*(sizeof(void *)));
             VALGRIND_MAKE_NOACCESS(s, 3);
-#endif
     }
 #endif
 #endif

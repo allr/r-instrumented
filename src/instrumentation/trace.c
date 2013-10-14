@@ -48,9 +48,6 @@ typedef struct TraceInfo_ {
 TraceInfo *trace_info;
 
 static TRACEFILE bin_trace_file;
-#ifdef MEMORY_PROFILE
-extern TRACEFILE memory_map_file;
-#endif
 
 // Trace counters
 //unsigned int fatal_err_cnt; -> main.c via Defn.h->trace.h
@@ -63,10 +60,6 @@ extern unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
 #define NUM_NODE_CLASSES 8
 // SEXP (*56)
 extern unsigned long allocated_cell[NUM_NODE_CLASSES];
-extern unsigned long free_cell[NUM_NODE_CLASSES];
-extern unsigned long has_na[NUM_NODE_CLASSES];
-extern unsigned long no_na[NUM_NODE_CLASSES];
-extern unsigned long no_attrb[NUM_NODE_CLASSES];
 extern unsigned long allocated_cons, allocated_prom, allocated_env; // bytes
 extern unsigned long allocated_external, allocated_sexp, allocated_noncons; // bytes
 extern unsigned long allocated_cons_current, allocated_cons_peak; // count
@@ -593,9 +586,6 @@ void initialize_trace_defaults(TR_TYPE mode) {
     FUNTAB *func;
 
     if (mode == TR_NONE) return;
-#ifndef MEMORY_PROFILE
-    if (mode == TR_SUMMARY) return;
-#endif
     trace_info = malloc(sizeof(TraceInfo));
 
     //set the trace directory name
@@ -617,20 +607,6 @@ void initialize_trace_defaults(TR_TYPE mode) {
     // create directory for results if needed
     if (mkdir(trace_info->directory, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) && errno != EEXIST)
 	print_error_msg("Can't create directory: %s\n", trace_info->directory);
-
-#ifdef MEMORY_PROFILE
-    sprintf(str, "%s/%s", trace_info->directory, MEMORY_MAP_FILE);
-    memory_map_file = FOPEN(str);
-    if (!memory_map_file) {
-	print_error_msg ("Couldn't open file '%s' for writing", str);
-	trace_exit (1);
-    }
-    if (mode == TR_SUMMARY) {
-	free(trace_info);
-	trace_info = NULL;
-	return;
-    }
-#endif
 
     //initialize
     R_KeepSource = TRUE;
@@ -701,9 +677,6 @@ void write_missing_results(FILE *out);
 
 void write_trace_summary(FILE *out) {
     R_gc();
-#ifdef MEMORY_PROFILE
-    close_memory_map();
-#endif
     char str[TIME_BUFF > MAX_DNAME? TIME_BUFF : MAX_DNAME];
     time_t current_time = time(0);
     struct tm *local_time = localtime(&current_time);
@@ -760,20 +733,6 @@ void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
     fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
 
-#define T(i) fprintf(out, "Test" #i ": %lu %lu %lu %g\n", allocated_cell[i], free_cell[i], no_attrb[i], ((double)no_attrb[i]) / free_cell[i] * 100)
-    T(0);
-    T(1);
-    T(2);
-    T(3);
-    T(4);
-    T(5);
-    T(6);
-    T(7);
-#define P_NA(t, i) fprintf(out,"WithNA"#t" %lu %lu %g\n", has_na[i], no_na[i], ((double)has_na[i])/(no_na[i]+has_na[i])*100)
-    P_NA(LGLSXP, 0);
-    P_NA(INTSXP, 1);
-    P_NA(REALSXP, 2);
-    P_NA(STRSXP, 4);
 #define REPORT_VECTOR(n, __t)\
     fprintf(out, "AllocatedVectors" n ": %lu %lu %lu %lu\n", allocated_vector ## __t, allocated_vector_elts ## __t, allocated_vector_size ## __t, allocated_vector_asize ## __t)
     REPORT_VECTOR(,);

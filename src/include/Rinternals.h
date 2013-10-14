@@ -231,22 +231,10 @@ struct promsxp_struct {
 /* Every node must start with a set of sxpinfo flags and an attribute
    field. Under the generational collector these are followed by the
    fields used to maintain the collector's linked list structures. */
-#ifdef MEMORY_PROFILE
-    struct memory_profile {
-	unsigned long int creation_date;
-	unsigned creation_gc;
-    };
-# define SEXPREC_HEADER				        \
-    struct sxpinfo_struct sxpinfo;			\
-    struct SEXPREC *attrib;				\
-    struct SEXPREC *gengc_next_node, *gengc_prev_node;	\
-    struct memory_profile memory_info
-#else
 # define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
     struct SEXPREC *attrib; \
     struct SEXPREC *gengc_next_node, *gengc_prev_node
-#endif
 
 /* The standard node structure consists of a header followed by the
    node data. */
@@ -301,10 +289,6 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
     } while (0)
 #define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
 #define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=((unsigned short)v))
-
-#ifdef MEMORY_PROFILE
-#   define MEMPROF(x)	((x)->memory_info)
-#endif
 
 /* S4 object bit, set by R_do_new_object for all new() calls */
 #define S4_OBJECT_MASK ((unsigned short)(1<<4))
