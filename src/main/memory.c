@@ -544,6 +544,7 @@ static int NodeClassSize[NUM_SMALL_NODE_CLASSES] = { 0, 1, 2, 4, 6, 8, 16 };
 
 
 unsigned long allocated_cell[NUM_NODE_CLASSES];
+unsigned int  allocated_cell_len = NUM_NODE_CLASSES;
 
 #define REPORT_ALLOCATED_CELL(cls, obj) do {				\
 	allocated_cell[cls] ++;						\

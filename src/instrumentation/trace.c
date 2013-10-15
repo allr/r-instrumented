@@ -57,9 +57,11 @@ static unsigned int stack_height, max_stack_height;
 static unsigned long int bytes_written, event_cnt;
 
 extern unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
-#define NUM_NODE_CLASSES 8
+
+extern unsigned long allocated_cell[];
+extern unsigned int  allocated_cell_len;
+
 // SEXP (*56)
-extern unsigned long allocated_cell[NUM_NODE_CLASSES];
 extern unsigned long allocated_cons, allocated_prom, allocated_env; // bytes
 extern unsigned long allocated_external, allocated_sexp, allocated_noncons; // bytes
 extern unsigned long allocated_cons_current, allocated_cons_peak; // count
@@ -158,6 +160,13 @@ static int __attribute__((format(printf, 2, 3)))
 
 #endif
 
+// emergency exit
+static void trace_exit(int code) {
+    goto_abs_top_context();
+    trace_cnt_fatal_err();
+    terminate_tracing();
+    exit(code);
+}
 
 // Trace binary writes
 static inline void WRITE_BYTE(TRACEFILE file, const unsigned char byte) {
@@ -741,6 +750,11 @@ void write_allocation_summary(FILE *out) {
     REPORT_VECTOR("Large", _large);
     REPORT_VECTOR("One", _one);
 
+    /* allocation counts per node class */
+    for (unsigned int i = 0; i < allocated_cell_len; i++) {
+      fprintf(out, "Class%uAllocs: %lu\n", i, allocated_cell[i]);
+    }
+
     /* and now the version that the Java tool expects */
     fprintf(out, "AllocatedSmallVectors: %lu %lu %lu %lu\n", allocated_vector_small, allocated_vector_elts_small, allocated_vector_size_small, allocated_vector_asize_small);
     fprintf(out, "AllocatedLargeVectors: %lu %lu %lu %lu\n", allocated_vector_large, allocated_vector_elts_large, allocated_vector_size_large, allocated_vector_asize_large);
@@ -802,7 +816,7 @@ void write_summary() {
 
 static inline void print_ref(SEXP src, const char * file, long line, long col, long more1, long more2, long more3, long more4) {
     // TODO rename this 'moreX' in an more appropriate way
-    FPRINTF(trace_info->src_map_file, "%#010lx %p %s %#x %#x %#x %#x %#x %#x\n",
+    FPRINTF(trace_info->src_map_file, "%#010lx %p %s %#lx %#lx %#lx %#lx %#lx %#lx\n",
 	    bytes_written, src, file,
 	    line, col,
 	    more1, more2,
@@ -844,11 +858,4 @@ void print_src_addr (SEXP src) {
 	func_decl_cnt++;
     }
     return;
-}
-
-void trace_exit(int code) {
-    goto_abs_top_context();
-    trace_cnt_fatal_err();
-    terminate_tracing();
-    exit(code);
 }
