@@ -48,6 +48,8 @@
 
 #include <errno.h>
 
+#include <Rdebug.h>
+
 #include "Fileio.h"
 
 // This creates the interface pointers in this file
@@ -171,6 +173,9 @@ static int num_initialized = 0;
 
 int Rf_initialize_R(int ac, char **av)
 {
+    DEBUGSCOPE_ACTIVATE("debugScope_readFile");
+    DEBUGSCOPE_READFILE("debug.conf");
+    DEBUGSCOPE_START("Rf_initialize_R");
     int i, ioff = 1, j;
     Rboolean useX11 = TRUE, useTk = FALSE;
     char *p, msg[1024], cmdlines[10000], **avv;
@@ -471,6 +476,7 @@ int Rf_initialize_R(int ac, char **av)
 	Rstd_read_history(R_HistoryFile);
     fpu_setup(1);
 
+    DEBUGSCOPE_END("Rf_initialize_R");
     return(0);
 }
 

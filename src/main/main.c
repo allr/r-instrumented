@@ -42,6 +42,8 @@
 #include <locale.h>
 #include <R_ext/Print.h>
 
+#include <Rdebug.h> // debug scopes
+
 #ifdef ENABLE_NLS
 void attribute_hidden nl_Rdummy(void)
 {
@@ -742,6 +744,8 @@ void setup_Rmainloop(void)
     volatile int ndeferred_warnings = 0;
     char path[PATH_MAX + 1];
     char base_path[PATH_MAX + 1];
+    
+    DEBUGSCOPE_START("setup_Rmainloop");
 
     InitConnections(); /* needed to get any output at all */
 
@@ -818,7 +822,9 @@ void setup_Rmainloop(void)
 
     /* make sure srand is called before R_tmpnam, PR#14381 */
     srand(TimeToSeed());
+    DEBUGSCOPE_PRINT("srand finished\n");
 
+    
     InitTempDir(); /* must be before InitEd */
     InitMemory();
     InitStringHash(); /* must be before InitNames */
@@ -964,6 +970,7 @@ void setup_Rmainloop(void)
     /* Initial Loading is done.
        At this point we try to invoke the .First Function.
        If there is an error we continue. */
+    //DEBUGSCOPE_PRINT("Initial Loading done; try to invoke '.First'\n");
 
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);
@@ -1013,6 +1020,7 @@ void setup_Rmainloop(void)
     /* trying to do this earlier seems to run into bootstrapping issues. */
     R_init_jit_enabled();
     R_Is_Running = 2;
+    DEBUGSCOPE_END("setup_Rmainloop");
 }
 
 extern SA_TYPE SaveAction; /* from src/main/startup.c */

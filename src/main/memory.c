@@ -82,6 +82,9 @@
 #include <R_ext/GraphicsEngine.h> /* GEDevDesc, GEgetDevice */
 #include <R_ext/Rdynload.h>
 
+#include <Rdebug.h>
+
+
 #define ADD_ALLOC(type) allocated_##type += sizeof(SEXPREC)
 #define ADD_ALLOC_BY(type, val) allocated_##type += val
 #define ADD_ALLOC_VECTOR(__t, __items, __size, __actual)                \
