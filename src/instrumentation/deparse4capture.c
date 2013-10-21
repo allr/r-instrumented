@@ -144,7 +144,8 @@ static void deparse2(SEXP, SEXP, LocalParseData *);
 
 attribute_hidden
 SEXP deparse4capture(SEXP call, int cutoff) {
-    return deparse1WithCutoff(call, FALSE, cutoff, TRUE, SHOWATTRIBUTES, -1);;
+    int opts = KEEPINTEGER | QUOTEEXPRESSIONS | SHOWATTRIBUTES | KEEPNA;
+    return deparse1WithCutoff(call, FALSE, cutoff, TRUE, opts, -1);;
 }
 
 static SEXP deparse1WithCutoff(SEXP call, Rboolean abbrev, int cutoff,
@@ -502,6 +503,9 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
         }
         break;
     case CLOSXP:
+        print2buff("<closure>", d);
+        break;
+        // CAPTURE: just put a mark here rather than output the source
         if (localOpts & SHOWATTRIBUTES)
             attr1(s, d);
         if ((d->opts & USESOURCE) && !isNull(t = getAttrib(s, R_SrcrefSymbol)))
@@ -535,6 +539,9 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
             attr2(s, d);
         break;
     case EXPRSXP:
+        print2buff("<expression>", d);
+        break;
+        // CAPTURE: just put a mark here rather than output the source
         if (localOpts & SHOWATTRIBUTES)
             attr1(s, d);
         if (length(s) <= 0)
@@ -577,6 +584,9 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
             attr2(s, d);
         break;
     case LANGSXP:
+        print2buff("<call>", d);
+        break;
+        // CAPTURE: just put a mark here rather than output the source
         printcomment(s, d);
         if (!isNull(ATTRIB(s)))
             d->sourceable = FALSE;
