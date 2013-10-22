@@ -10,6 +10,6 @@
 
 void capR_start_capturing();
 void capR_stop_capturing();
-void capR_capture(SEXP, SEXP, SEXP, char);
+void capR_capture_primitive(SEXP, SEXP, SEXP);
 
 #endif /* CAPTURE_H_ */

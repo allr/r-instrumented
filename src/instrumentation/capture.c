@@ -28,8 +28,8 @@
 
 #define MAX_DNAME 1024
 #define CAP_FILENAME "capture"
-#define CUTOFF 1000
-#define MAX_NUM_LINES 5
+#define CUTOFF 512
+#define MAX_NUM_LINES 10
 
 extern TraceInfo *trace_info;
 extern SEXP deparse4capture(SEXP, int);
@@ -70,32 +70,39 @@ void capR_stop_capturing() {
 	}
 }
 
-void capR_capture(SEXP fun, SEXP args, SEXP ret, char type) {
+void capR_capture_primitive(SEXP fun, SEXP args, SEXP ret) {
     SEXP t;
     static int depth = 0;
     if (trace_info && depth == 0) { // no recursive capture
         depth++;
-        if (capture_fp != 0) {
-            if (!on_blacklist(fun)) {
-                fprintf(capture_fp, "func: %s\n", PRIMNAME(fun));
-                fprintf(capture_fp, "type: %c\n", type);
-                t = deparse4capture(args, CUTOFF);
-                if (shouldKeep(t)) {
-                    for (int i = 0; i < LENGTH(t); i++)
-                        fprintf(capture_fp, "args: %s\n", CHAR(STRING_ELT(t, i)));
-                } else {
-                    fprintf(capture_fp, "args: <arguments too long, ignored>\n");
-                }
-                t = deparse4capture(ret, CUTOFF);
-                if (shouldKeep(t)) {
-                    for (int i = 0; i < LENGTH(t); i++)
-                        fprintf(capture_fp, "retn: %s\n", CHAR(STRING_ELT(t, i)));
-                } else {
-                    fprintf(capture_fp, "retn: <returns too long, ignored>\n");
-                }
-            }
-        } else {
+        if (capture_fp == 0) {
             print_error_msg("Cannot write to capture file\n");
+            exit(1);
+        }
+        if (!on_blacklist(fun)) {
+            char type = PRIMINTERNAL(fun) ? 'I' : 'P';
+            fprintf(capture_fp, "func: %s\n", PRIMNAME(fun));
+            fprintf(capture_fp, "type: %c\n", type);
+            t = deparse4capture(args, CUTOFF);
+            PROTECT(t);
+            if (shouldKeep(t)) {
+                for (int i = 0; i < LENGTH(t); i++) {
+                    fprintf(capture_fp, "args: %s\n", CHAR(STRING_ELT(t, i)));
+                }
+            } else {
+                fprintf(capture_fp, "args: <arguments too long, ignored>\n");
+            }
+            UNPROTECT(1);
+            PROTECT(t);
+            t = deparse4capture(ret, CUTOFF);
+            if (shouldKeep(t)) {
+                for (int i = 0; i < LENGTH(t); i++) {
+                    fprintf(capture_fp, "retn: %s\n", CHAR(STRING_ELT(t, i)));
+                }
+            } else {
+                fprintf(capture_fp, "retn: <returns too long, ignored>\n");
+            }
+            UNPROTECT(1);
         }
         depth--;
     }

@@ -698,7 +698,7 @@ SEXP eval(SEXP e, SEXP rho)
 				tmp = PRIMFUN(op)(e, op, tmp, rho);
 			}
 			trcR_emit_function_return(op, tmp); /* Trace Instrumentation */
-			if (1) capR_capture(op, args, tmp, 'P'); /* Capture Instrumentation */
+			if (1) capR_capture_primitive(op, args, tmp); /* Capture Instrumentation */
 
 #ifdef CHECK_VISIBILITY
 			if(flag < 2 && R_Visible == flag) {
@@ -4744,7 +4744,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  has_prologue = FALSE;
 	  value = PRIMFUN(fun) (call, fun, args, rho);
       trcR_emit_function_return(fun, value); /* Trace Instrumentation */
-      if (1) capR_capture(fun, args, value, 'P');  /* Capture Instrumentation */
+      if (1) capR_capture_primitive(fun, args, value);  /* Capture Instrumentation */
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:
@@ -4810,7 +4810,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 
 	value = PRIMFUN(fun) (call, fun, args, rho);
 	trcR_emit_function_return(fun, value); /* Trace Instrumentation */
-	if (1) capR_capture(fun, args, value, 'P'); /* Capture Instrumentation */
+	if (1) capR_capture_primitive(fun, args, value); /* Capture Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	R_BCNodeStackTop -= 2;

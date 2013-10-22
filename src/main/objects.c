@@ -143,7 +143,7 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 	bparam_ldots = bparam_ldots_tmp;
 	ans = PRIMFUN(op) (call, op, args, rho);
 	trcR_emit_function_return(op, ans); /* Trace Instrumentation */
-	if (1) capR_capture(op, args, ans, 'P'); /* Capture Instrumentation */
+	if (1) capR_capture_primitive(op, args, ans); /* Capture Instrumentation */
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
 	check_stack_balance(op, save);

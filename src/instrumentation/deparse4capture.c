@@ -455,6 +455,12 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
         print2buff("NULL", d);
         break;
     case SYMSXP:
+        // capture:
+        if (localOpts & QUOTEEXPRESSIONS) {
+            d->sourceable = FALSE;
+            print2buff("<symbol>", d);
+            break;
+        }
         if (localOpts & QUOTEEXPRESSIONS) {
             attr1(s, d);
             print2buff("quote(", d);
@@ -503,6 +509,8 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
         }
         break;
     case CLOSXP:
+        // capture
+        d->sourceable = FALSE;
         print2buff("<closure>", d);
         break;
         // CAPTURE: just put a mark here rather than output the source
@@ -539,6 +547,8 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
             attr2(s, d);
         break;
     case EXPRSXP:
+        // capture
+        d->sourceable = FALSE;
         print2buff("<expression>", d);
         break;
         // CAPTURE: just put a mark here rather than output the source
@@ -584,6 +594,8 @@ static void deparse2buff(SEXP s, LocalParseData *d) {
             attr2(s, d);
         break;
     case LANGSXP:
+        // capture
+        d->sourceable = FALSE;
         print2buff("<call>", d);
         break;
         // CAPTURE: just put a mark here rather than output the source

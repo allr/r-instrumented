@@ -1206,7 +1206,7 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     ans = PRIMFUN(INTERNAL(fun)) (s, INTERNAL(fun), args, env);
     trcR_emit_function_return(INTERNAL(fun), ans); /* Trace Instrumentation */
     if(shouldCapture) {
-    	if (1) capR_capture(INTERNAL(fun), args, ans, 'I');
+    	if (1) capR_capture_primitive(INTERNAL(fun), args, ans);
     }
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
