@@ -90,11 +90,7 @@ extern int gc_count;
 extern unsigned long context_opened;
 unsigned long clos_call, spec_call, builtin_call;
 
-// Argument counters
-// Not realy pretty way to pass this, but as the more easy;
-extern int more_args, by_keywords, by_position;
 
-extern void display_unused(FILE *);
 
 //
 // Context Stack
@@ -456,17 +452,19 @@ void trcR_internal_emit_closure(SEXP closure, unsigned int type, unsigned long i
     push_cstack(SXPEXISTS(closure) ? sxp_to_stacknodetype(closure) : CLOSURE, SEXP2ID(closure));
 
     if (alt_addr != D_UM_ADDR) {
-	int max = (by_position > 0xFF) ? 0xFF : by_position;
+	int max = (trcR_by_position > 0xFF) ? 0xFF : trcR_by_position;
 	WRITE_BYTE(bin_trace_file, max);
-	max = (by_keywords > 0xFF) ? 0xFF : by_keywords;
+
+	max = (trcR_by_keyword > 0xFF) ? 0xFF : trcR_by_keyword;
 	WRITE_BYTE(bin_trace_file, max);
-	max = (more_args > 0xFF) ? 0xFF : more_args;
+
+	max = (trcR_by_dots > 0xFF) ? 0xFF : trcR_by_dots;
 	WRITE_BYTE(bin_trace_file, max);
     } else {
-	int max = 0; // Is this true ? maybe empty closure have args ? at least the one of the true closure to come
-	WRITE_BYTE(bin_trace_file, max);
-	WRITE_BYTE(bin_trace_file, max);
-	WRITE_BYTE(bin_trace_file, max);
+	// Is this true ? maybe empty closure have args ? at least the one of the true closure to come
+	WRITE_BYTE(bin_trace_file, 0);
+	WRITE_BYTE(bin_trace_file, 0);
+	WRITE_BYTE(bin_trace_file, 0);
 
     }
     event_cnt++;
@@ -681,6 +679,7 @@ void start_tracing() {
 }
 
 extern void close_memory_map();
+extern void display_unused(FILE *);
 void write_missing_results(FILE *out);
 
 void write_trace_summary(FILE *out) {

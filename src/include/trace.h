@@ -41,9 +41,13 @@ typedef enum {
     TR_NONE
 } TR_TYPE;
 
-/* warning: These vars are defined in main.c because Defn.h includes trace.h! */
+/* Warning: All vars here are defined in main.c because Defn.h includes trace.h! */
 extern int traceR_is_active;
 extern unsigned int fatal_err_cnt; // FIXME: Rename or remove
+
+// counters for the three classes of arguments
+// (implicit parameters for trcR_count_closure_args and emit_closure)
+extern unsigned int trcR_by_position, trcR_by_keyword, trcR_by_dots;
 
 // Trace output codes
 #define BINTRACE_NO_PROLOGUE		0x01
