@@ -45,7 +45,6 @@ static Rboolean bc_profiling = FALSE;
 
 static int R_Profiling = 0;
 
-unsigned long evalscount = 0;
 unsigned long bcodeops_count = 0;
 unsigned long clos_call, spec_call, builtin_call;
 
@@ -488,7 +487,6 @@ SEXP eval(SEXP e, SEXP rho)
 {
     SEXP op, tmp;
     static int evalcount = 0;
-    evalscount++;
 
     if (!rho)
 	error("'rho' cannot be C NULL: detected in C-level eval");

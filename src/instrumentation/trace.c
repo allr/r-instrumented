@@ -93,7 +93,6 @@ unsigned long clos_call, spec_call, builtin_call;
 // Argument counters
 // Not realy pretty way to pass this, but as the more easy;
 extern int more_args, by_keywords, by_position;
-extern unsigned long evalscount;
 
 extern void display_unused(FILE *);
 
