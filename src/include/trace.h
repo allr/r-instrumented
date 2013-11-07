@@ -117,6 +117,10 @@ void trcR_internal_emit_primitive_function(SEXP fun, unsigned int type, unsigned
 void trcR_internal_emit_function_return(SEXP fun, SEXP ret_val);
 void trcR_internal_emit_quit_seq(void);
 
+/* Note: The arg counters are implicitly passed via globals: */
+/*   trcR_by_position, trcR_by_keyword, trcR_by_dots         */
+void trcR_count_closure_args(SEXP op);
+
 void trace_context_add();
 void trcR_internal_trace_context_drop(void);
 void trcR_internal_change_top_context(void);

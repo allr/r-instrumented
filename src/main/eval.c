@@ -947,6 +947,8 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, 
     PROTECT(actuals = matchArgs(formals, arglist, call));
     PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
 
+    trcR_count_closure_args(op); // note: counters are in globals
+
     /*  Use the default code for unbound formals.  FIXME: It looks like
 	this code should preceed the building of the environment so that
 	this will also go into the hash table.  */

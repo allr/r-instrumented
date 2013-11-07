@@ -91,6 +91,90 @@ extern unsigned long context_opened;
 unsigned long clos_call, spec_call, builtin_call;
 
 
+/*
+ *
+ * closure argument histogram
+ *
+ */
+
+typedef struct {
+    /* number of calls with <index> args */
+    unsigned int calls;
+
+    /* straight total_args -> number_of_foo mapping */
+    unsigned int by_position;
+    unsigned int by_keyword;
+    unsigned int by_dots;
+
+    /* number_of_foo -> call_count mapping */
+    unsigned int nposition_count;
+    unsigned int nkeyword_count;
+    unsigned int ndots_count;
+} argcounter_t;
+
+static argcounter_t *arg_histogram;
+static int           max_hist_args   = -1;
+static Rboolean      argcount_failed = FALSE;
+
+/* update the counters for closure argument histograms */
+void trcR_count_closure_args(SEXP op) {
+    (void) op; // this simple version does not support per-closure counting
+
+    int cur_args = trcR_by_position + trcR_by_keyword + trcR_by_dots;
+
+    if (cur_args > max_hist_args) {
+	argcounter_t *newhist = realloc(arg_histogram, (cur_args + 1) * sizeof(argcounter_t));
+
+	if (newhist == NULL) {
+	    // realloc failed, ignore this call
+	    argcount_failed = TRUE;
+	    return;
+	}
+
+	/* clear new space */
+	memset((unsigned char *)newhist +
+	       (max_hist_args + 1) * sizeof(argcounter_t), 0,
+	       (cur_args - max_hist_args) * sizeof(argcounter_t));
+
+	max_hist_args = cur_args;
+	arg_histogram = newhist;
+    }
+
+    arg_histogram[cur_args].calls++;
+
+    /* count arguments indexed by total number of args */
+    arg_histogram[cur_args].by_position += trcR_by_position;
+    arg_histogram[cur_args].by_keyword  += trcR_by_keyword;
+    arg_histogram[cur_args].by_dots     += trcR_by_dots;
+
+    /* count calls indexed by number of pos/key/dot args */
+    arg_histogram[trcR_by_position].nposition_count++;
+    arg_histogram[trcR_by_keyword].nkeyword_count++;
+    arg_histogram[trcR_by_dots].ndots_count++;
+}
+
+/* write argument histogram to trace file */
+static void write_arg_histogram(FILE *fd) {
+    if (argcount_failed) {
+	fprintf(fd, "# argument count histogram calculation failed\n");
+	fprintf(fd, "ArgHistogramFailed 1\n");
+	return;
+    }
+
+    fprintf(fd, "# argument count histogram\n");
+    fprintf(fd, "# count calls by_position by_keyword by_dots npos_calls nkey_calls ndots_calls\n");
+    for (int i = 0; i <= max_hist_args; i++) {
+	fprintf(fd, "ArgCount %d %u %u %u %u %u %u %u\n", i,
+		arg_histogram[i].calls,
+		arg_histogram[i].by_position,
+		arg_histogram[i].by_keyword,
+		arg_histogram[i].by_dots,
+		arg_histogram[i].nposition_count,
+		arg_histogram[i].nkeyword_count,
+		arg_histogram[i].ndots_count);
+    }
+}
+
 
 //
 // Context Stack
@@ -717,6 +801,7 @@ void write_trace_summary(FILE *out) {
 
     // :display_unused(out);
     write_allocation_summary(out);
+    write_arg_histogram(out);
     write_missing_results(out);
 }
 
