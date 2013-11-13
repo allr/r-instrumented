@@ -201,6 +201,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo){
     printf("Current Scope is NULL - this should not happen!\n");
   }
 }  
+
 void debugScope_print(char* output,...){
   if (NULL != currentScope){ // safety check
     if ((1==1)==currentScope->enabled){
@@ -229,8 +230,8 @@ void debugScope_print(char* output,...){
   /* do nothing */
 }
 
-#define PRINT_JUMP_INFO
-//#undef PRINT_JUMP_INFO
+//#define PRINT_JUMP_INFO
+#undef PRINT_JUMP_INFO
 void printJumpInfo(jmp_buf givenJumpInfo){
   unsigned char* jumpInfoBin = (unsigned char*) givenJumpInfo;
   #ifdef PRINT_JUMP_INFO
@@ -293,6 +294,15 @@ void debugScope_loadJump(jmp_buf givenJumpInfo){
   printf("loadJump - target found\n");
   printf("loadJump - target found, %d entrys iterated\n",countedJumpInfos);
 }  
+
+void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue){
+  if (0 == jumpValue){ // if setjmp returns 0, the jump was setup
+    debugScope_saveJump(givenJumpInfo);
+  }else{ // for everything else, we returned from jump
+    debugScope_loadJump(givenJumpInfo);
+  }
+}
+    
 
 #endif // JUSTJUMP_TEST
 

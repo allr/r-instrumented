@@ -20,6 +20,7 @@
   #define DEBUGSCOPE_PRINTSTACK() do {} while (0)
   #define DEBUGSCOPE_SAVEJUMP(jumpInfo) do {} while (0)
   #define DEBUGSCOPE_LOADJUMP(jumpInfo) do {} while (0)
+  #define DEBUGSCOPE_SAVELOADJUMP(jumpInfo, jumpValue) do {} while (0)
   
 #endif
 #ifdef ENABLE_SCOPING_DEBUG
@@ -62,6 +63,7 @@
   #define DEBUGSCOPE_PRINTSTACK() { debugScope_printStack(); }
   #define DEBUGSCOPE_SAVEJUMP(jumpInfo) { debugScope_saveJump(jumpInfo); }
   #define DEBUGSCOPE_LOADJUMP(jumpInfo) { debugScope_loadJump(jumpInfo); }
+  #define DEBUGSCOPE_SAVELOADJUMP(jumpInfo, jumpValue) { debugScope_saveloadJump(jumpInfo, jumpValue);}
   
   //! Marks the given Scope as active - as in "print info from it"
   void debugScope_activate(char* scopeName);
@@ -80,6 +82,9 @@
 
   void debugScope_loadJump(jmp_buf jumpInfo);  
   void debugScope_saveJump(jmp_buf jumpInfo);  
+  
+  //! depending on jumpValue, save or load a jump
+  void debugScope_saveloadJump(jmp_buf jumpInfo, int jumpValue);  
 #endif
 
   
