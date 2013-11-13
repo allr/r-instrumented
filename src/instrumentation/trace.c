@@ -28,6 +28,8 @@
 #include <stdarg.h>
 #include <zlib.h>
 
+#include <Rdebug.h>
+
 #define HG_ID "000000000000+"  // dummy, don't change length
 
 #ifdef TRACE_ZIPPED
@@ -512,10 +514,12 @@ void trcR_internal_emit_primitive_function(SEXP fun, unsigned int type, unsigned
 }
 
 void trcR_internal_emit_prologue_start() {
+    DEBUGSCOPE_START("trcR_internal_emit_prologue_start");
     push_cstack(PC_PAIR, 0);
     push_cstack(PROL, 0);
     WRITE_BYTE(bin_trace_file, BINTRACE_PROL_START);
     event_cnt++;
+    DEBUGSCOPE_END("trcR_internal_emit_prologue_start");
 }
 
 void trcR_internal_emit_prologue_end(SEXP clos) {

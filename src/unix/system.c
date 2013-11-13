@@ -173,8 +173,6 @@ static int num_initialized = 0;
 
 int Rf_initialize_R(int ac, char **av)
 {
-    DEBUGSCOPE_ACTIVATE("debugScope_readFile");
-    DEBUGSCOPE_READFILE("debug.conf");
     DEBUGSCOPE_START("Rf_initialize_R");
     int i, ioff = 1, j;
     Rboolean useX11 = TRUE, useTk = FALSE;
@@ -184,8 +182,8 @@ int Rf_initialize_R(int ac, char **av)
     Rboolean force_interactive = FALSE;
 
     if (num_initialized++) {
-	fprintf(stderr, "%s", "R is already initialized\n");
-	exit(1);
+      fprintf(stderr, "%s", "R is already initialized\n");
+      exit(1);
     }
 
 
@@ -231,6 +229,7 @@ int Rf_initialize_R(int ac, char **av)
 }
 #endif
 
+    DEBUGSCOPE_PRINT("setting function pointers\n");
     ptr_R_Suicide = Rstd_Suicide;
     ptr_R_ShowMessage = Rstd_ShowMessage;
     ptr_R_ReadConsole = Rstd_ReadConsole;
@@ -409,6 +408,7 @@ int Rf_initialize_R(int ac, char **av)
 	    R_ShowMessage(msg);
 	}
     }
+    DEBUGSCOPE_PRINT("Finished commandline reading\n");
 
     if(strlen(cmdlines)) { /* had at least one -e option */
 	size_t res;

@@ -46,6 +46,7 @@
 #include "Startup.h"
 #include <R_ext/Riconv.h>
 #include <R_ext/Print.h> // for REprintf
+#include <Rdebug.h>
 
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>		/* for unlink */
@@ -1040,6 +1041,7 @@ void R_CleanTempDir(void)
 
 void attribute_hidden Rstd_CleanUp(SA_TYPE saveact, int status, int runLast)
 {
+    DEBUGSCOPE_START("Rstd_CleanUp");
     if(saveact == SA_DEFAULT) /* The normal case apart from R_Suicide */
 	saveact = SaveAction;
 
@@ -1106,6 +1108,7 @@ void attribute_hidden Rstd_CleanUp(SA_TYPE saveact, int status, int runLast)
     if(ifp) fclose(ifp);        /* input file from -f or --file= */
     fpu_setup(FALSE);
 
+    DEBUGSCOPE_START("Rstd_CleanUp");
     //exit(status);
 }
 

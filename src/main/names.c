@@ -32,6 +32,7 @@
 #include "arithmetic.h" /* for do_math[1234], do_cmathfuns */
 
 #include <Rinterface.h>
+#include <Rdebug.h>
 
 /* Table of  .Internal(.) and .Primitive(.)  R functions
  * =====     =========	      ==========
@@ -1267,16 +1268,21 @@ SEXP attribute_hidden do_sizeof(SEXP call, SEXP op, SEXP args, SEXP env) {
 
 SEXP attribute_hidden do_tilde(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    if (isObject(call))
-	return duplicate(call);
-    else {
-	SEXP klass;
-	PROTECT(call = duplicate(call));
-	PROTECT(klass = mkString("formula"));
-	setAttrib(call, R_ClassSymbol, klass);
-	setAttrib(call, R_DotEnvSymbol, rho);
-	UNPROTECT(2);
-	return call;
+    DEBUGSCOPE_START("do_tilde");
+    if (isObject(call)){
+      DEBUGSCOPE_PRINT("duplicated\n");
+      DEBUGSCOPE_END("do_tilde");
+      return duplicate(call);
+    }else {
+      SEXP klass;
+      PROTECT(call = duplicate(call));
+      PROTECT(klass = mkString("formula"));
+      setAttrib(call, R_ClassSymbol, klass);
+      setAttrib(call, R_DotEnvSymbol, rho);
+      UNPROTECT(2);
+      DEBUGSCOPE_PRINT("not duplicated\n");
+      DEBUGSCOPE_END("do_tilde");
+      return call;
     }
 }
 

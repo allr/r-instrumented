@@ -111,6 +111,8 @@
 #include <Defn.h>
 #include <Internal.h>
 
+#include "Rdebug.h"
+
 unsigned long context_opened;
 
 /* R_run_onexits - runs the conexit/cend code for all contexts from
@@ -192,6 +194,7 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 
 static void jumpfun(RCNTXT * cptr, int mask, SEXP val)
 {
+    DEBUGSCOPE_START("jumpfun");
     Rboolean savevis = R_Visible;
 
     /* run onexit/cend code for all contexts down to but not including
@@ -211,8 +214,9 @@ static void jumpfun(RCNTXT * cptr, int mask, SEXP val)
 			       perhaps allow loops to be handled with
 			       fewer SETJMP's.  LT */
     R_restore_globals(R_GlobalContext);
-
+    
     LONGJMP(cptr->cjmpbuf, mask);
+    DEBUGSCOPE_END("jumpfun");
 }
 
 
@@ -277,6 +281,7 @@ void endcontext(RCNTXT * cptr)
 
 void attribute_hidden findcontext(int mask, SEXP env, SEXP val)
 {
+    DEBUGSCOPE_START("findcontext");
     RCNTXT *cptr;
     cptr = R_GlobalContext;
     if (mask & CTXT_LOOP) {		/* break/next */
@@ -299,6 +304,7 @@ void attribute_hidden findcontext(int mask, SEXP env, SEXP val)
 	}
 	error(_("no function to return from, jumping to top level"));
     }
+    DEBUGSCOPE_END("findcontext");
 }
 
 void attribute_hidden R_JumpToContext(RCNTXT *target, int mask, SEXP val)
@@ -710,9 +716,11 @@ Rboolean R_ToplevelExec(void (*fun)(void *), void *data)
 
     begincontext(&thiscontext, CTXT_TOPLEVEL, R_NilValue, R_GlobalEnv,
 		 R_BaseEnv, R_NilValue, R_NilValue);
-    if (SETJMP(thiscontext.cjmpbuf))
+    int jumpValue = SETJMP(thiscontext.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf,jumpValue);
+    if (jumpValue){
 	result = FALSE;
-    else {
+    }else {
 	R_GlobalContext = R_ToplevelContext = &thiscontext;
 	fun(data);
 	result = TRUE;
