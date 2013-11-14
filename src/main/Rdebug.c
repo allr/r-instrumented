@@ -7,6 +7,15 @@
 #include <Rdebug.h>
 
 #ifdef ENABLE_SCOPING_DEBUG
+//#undef ENABLE_SCOPING_DEBUG
+/* 
+ * this should move somewhere else
+ *
+ * Disabling this macro means that this file doesn't really has to be 
+ * compiled
+ */
+
+
 
 static debugScope* currentScope = (debugScope*)NULL;
 static activeScopesLinList* activeScopes = (activeScopesLinList*)NULL;
@@ -85,8 +94,8 @@ void debugScope_readFile(char* fileName){
   
 }
 
-#define JUSTJUMP_TEST
-//#undef JUSTJUMP_TEST
+//#define JUSTJUMP_TEST
+#undef JUSTJUMP_TEST
 /*
  * The Justjump-Test is a limited debug mode which is only used to check
  * whether longjumps from the R interpreter can be correctly detected.
@@ -163,8 +172,7 @@ void debugScope_saveJump(jmp_buf givenJumpInfo){
     newJumpInfo->next = jumpInfos;
     
     jumpInfos = newJumpInfo;
-    //debugScope_print(
-    printf(
+    debugScope_print(
       "# Saved a jump target in %s\n",
       currentScope->scopeName
       );
@@ -175,28 +183,82 @@ void debugScope_saveJump(jmp_buf givenJumpInfo){
   
 void debugScope_loadJump(jmp_buf givenJumpInfo){
   if(NULL != currentScope){ // safety check
-    //unsigned int countedJumpInfos = 0;
+    unsigned int countedJumpInfos = 0;
     jumpInfos_linlist* jumpInfoWalker = jumpInfos;
     while(1==1){ // forever - until something happens
       if(NULL == jumpInfoWalker){ // iterated complete table - but not found
-        printf("ERROR: loadJump but target unknown\n");
-        //printf("ERROR: loadJump but target unknown - %d entrys\n",countedJumpInfos);
+        printf("ERROR: loadJump but target unknown - %d entrys\n",countedJumpInfos);
         return;
       }
       if(0!=memcmp(jumpInfoWalker->jumpInfo, givenJumpInfo,sizeof(jmp_buf))){// not equal
         // not found - yet
         jumpInfoWalker = jumpInfoWalker->next;
-        //countedJumpInfos++;
+        countedJumpInfos++;
         continue;
       }
       // found
       break;
     }
     debugScope* targetScope = jumpInfoWalker->targetScope;
-    printf("loadJump - with target %s\n",targetScope->scopeName);
-    // todo: stack correction - remove scopes from linlist
-    
-    // todo: jumpInfo correction - remove jumpInfo(s?) from linlist
+    if (currentScope == targetScope){
+      debugScope_print("[%u] ^ LONGJUMP IN: %s\n",targetScope->depth, targetScope->scopeName);
+      return;
+    }
+    /*
+     * A word of warning:
+     *
+     * This might explode.
+     *
+     * Normally, longjumps are used in an exception-style program flow - and
+     * therefore used to jump *back* to a *higher* function which (directly or 
+     * via sub-functions) at one time has called the function in which the 
+     * longjump is found.
+     *
+     * This means, that the function the longjump jumps to is on our scope
+     * stack as "has been started and not ended". This should be read as 
+     * "the information exists". 
+     *
+     * We correct the stack after longjumps - as in "the intermediate scopes which
+     * have not really ended have been jumped over". We need to resume the
+     * scope of the aforementioned "parent" function, thus killing the information
+     * for all the children inbetween.
+     *
+     * If, at some point, a long jump is performed to one of these children
+     * (which doesn't count as "exception and return to higher function" but
+     * as a "cross-jump"), the jumpInfo-linlist will still have a pointer
+     * to a debugscope but as the debugscope has been killed, it will point
+     * into "invalid memory". Segfault may occur.
+     *
+     * For now, I simply hope that this never happens and that all longjumps
+     * are considered exceptions and quick-returns with everthing inbetween
+     * no longer needed.
+     * If, however, there are such cross-jumps in the code, we need a new idea.
+     * (backuping scopes that we presumed "dead" in another data structure?)
+     */
+   
+    while(1==1){
+      if (NULL == currentScope){
+        printf("ERROR: loadJump-target not found on scope-stack\n");
+        return;
+      }
+      if (currentScope != targetScope){
+        debugScope* endingScope = currentScope;
+        if (NULL == endingScope->parent){
+          printf("This was root Scope!\n");
+          currentScope=NULL;
+        }else{
+          currentScope = endingScope->parent;
+        }
+        // either way: the previous scope has ended
+        free(endingScope);
+        continue;
+      }
+      // currentScope == targetScope
+      break;
+    }
+    if (currentScope->enabled){
+      printf("[%u] <-- ENTER via longjump: %s\n",currentScope->depth, currentScope->scopeName);
+    }
   }else{ // NULL
     printf("Current Scope is NULL - this should not happen!\n");
   }
@@ -220,6 +282,13 @@ void debugScope_print(char* output,...){
 #endif // JUSTJUMP_TEST
 
 #ifdef JUSTJUMP_TEST 
+/* 
+ * this mode deactives the regular scopestarts and ends and just
+ * tries to save and load jumpinfos - but is much more verbose than
+ * the regular mode.
+ *
+ * It was mainly used for initial debugging of the jumpinfo-map
+ */
 void debugScope_start(char* scopeName){
   /* do nothing */
 }
@@ -295,15 +364,6 @@ void debugScope_loadJump(jmp_buf givenJumpInfo){
   printf("loadJump - target found, %d entrys iterated\n",countedJumpInfos);
 }  
 
-void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue){
-  if (0 == jumpValue){ // if setjmp returns 0, the jump was setup
-    debugScope_saveJump(givenJumpInfo);
-  }else{ // for everything else, we returned from jump
-    debugScope_loadJump(givenJumpInfo);
-  }
-}
-    
-
 #endif // JUSTJUMP_TEST
 
 /*
@@ -336,7 +396,18 @@ void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue){
  * newer entries for the same jmp_buf will be found first, as we are
  * using a stack as map structure.
  */
-  
+
+void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue){
+  if (0 == jumpValue){ // if setjmp returns 0, the jump was setup
+    debugScope_saveJump(givenJumpInfo);
+  }else{ // for everything else, we returned from jump
+    debugScope_loadJump(givenJumpInfo);
+  }
+}
+    
+
+ 
+ 
 void debugScope_printStack(){
   printf("--- START Debug Scope Stack ---\n");
   debugScope* scopeIterator = currentScope;
