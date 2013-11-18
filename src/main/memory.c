@@ -84,16 +84,16 @@
 
 #define ADD_ALLOC(type) allocated_##type += sizeof(SEXPREC)
 #define ADD_ALLOC_BY(type, val) allocated_##type += val
-#define ADD_ALLOC_VECTOR(__t, __items, __size, __actual)                \
-    do {								\
-	allocated_vector++;						\
-	allocated_vector_elts          += __items;			\
-	allocated_vector_size          += __size;			\
-	allocated_vector_asize         += __actual;			\
-	allocated_vector_ ## __t ++;					\
-	allocated_vector_elts_ ## __t  += __items;			\
-	allocated_vector_size_ ## __t  += __size;			\
-	allocated_vector_asize_ ## __t += __actual;			\
+#define ADD_ALLOC_VECTOR(type, elements_, size_, asize_)	\
+    do {							\
+	vecstats_total.allocs++;				\
+	vecstats_total.elements     += elements_;		\
+	vecstats_total.size         += size_;			\
+	vecstats_total.asize        += asize_;			\
+	vecstats_ ## type.allocs++;				\
+	vecstats_ ## type.elements  += elements_;		\
+	vecstats_ ## type.size      += size_;			\
+	vecstats_ ## type.asize     += asize_;			\
     } while (0)
 
 #if defined(Win32) && defined(LEA_MALLOC)
@@ -557,17 +557,9 @@ unsigned long allocated_cons_current, allocated_cons_peak;
 // verified to be in bytes
 unsigned long allocated_external, allocated_sexp, allocated_noncons;
 
-// Vector count
-unsigned long allocated_vector, allocated_vector_size,
-    allocated_vector_asize, allocated_vector_elts;
-unsigned long allocated_vector_zero, allocated_vector_size_zero,
-    allocated_vector_asize_zero, allocated_vector_elts_zero;
-unsigned long allocated_vector_small, allocated_vector_size_small,
-    allocated_vector_asize_small, allocated_vector_elts_small;
-unsigned long allocated_vector_large, allocated_vector_size_large,
-    allocated_vector_asize_large, allocated_vector_elts_large;
-unsigned long allocated_vector_one, allocated_vector_size_one,
-    allocated_vector_asize_one, allocated_vector_elts_one;
+// Vector allocation counts
+vec_alloc_stats_t vecstats_total, vecstats_zero,
+    vecstats_one, vecstats_small, vecstats_large;
 
 // String buffers count
 unsigned long allocated_sb, allocated_sb_size, allocated_sb_elts;

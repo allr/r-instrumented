@@ -41,6 +41,15 @@ typedef enum {
     TR_NONE
 } TR_TYPE;
 
+
+/* vector allocation statistics struct */
+typedef struct {
+    unsigned long allocs;
+    unsigned long elements;
+    unsigned long size;
+    unsigned long asize;
+} vec_alloc_stats_t;
+
 /* Warning: All vars here are defined in main.c because Defn.h includes trace.h! */
 extern int traceR_is_active;
 extern unsigned int fatal_err_cnt; // FIXME: Rename or remove
