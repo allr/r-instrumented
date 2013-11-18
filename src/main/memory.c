@@ -119,7 +119,7 @@ extern void *Rm_realloc(void * p, size_t n);
 
 enum SEXPMAP { INT_SM, LGL_SM, CPLX_SM, REAL_SM, EXPR_SM, STR_SM, VECTOR_SM, MAX_SM };
 unsigned long scalarvector[MAX_SM];
-unsigned long nullvector[MAX_SM];
+unsigned long zerovector[MAX_SM];
 unsigned long vector_collected[MAX_SM];
 
 static long int unused_tag, unused_attrb, gced_conslike, gced_obj;
@@ -141,18 +141,18 @@ void display_unused(FILE *out) {
 	     scalarvector[CPLX_SM] + scalarvector[REAL_SM] +
 	     scalarvector[STR_SM]  + scalarvector[EXPR_SM] +
 	     scalarvector[VECTOR_SM]) );
-    fprintf(out, "NullVector: %lu %lu %lu %lu %lu %lu %lu %lu\n",
-	    nullvector[INT_SM],
-	    nullvector[LGL_SM],
-	    nullvector[CPLX_SM],
-	    nullvector[REAL_SM],
-	    nullvector[STR_SM],
-	    nullvector[EXPR_SM],
-	    nullvector[VECTOR_SM],
-	    (nullvector[INT_SM]  + nullvector[LGL_SM]  +
-	     nullvector[CPLX_SM] + nullvector[REAL_SM] +
-	     nullvector[STR_SM]  + nullvector[EXPR_SM] +
-	     nullvector[VECTOR_SM]) );
+    fprintf(out, "Zerovector: %lu %lu %lu %lu %lu %lu %lu %lu\n",
+	    zerovector[INT_SM],
+	    zerovector[LGL_SM],
+	    zerovector[CPLX_SM],
+	    zerovector[REAL_SM],
+	    zerovector[STR_SM],
+	    zerovector[EXPR_SM],
+	    zerovector[VECTOR_SM],
+	    (zerovector[INT_SM]  + zerovector[LGL_SM]  +
+	     zerovector[CPLX_SM] + zerovector[REAL_SM] +
+	     zerovector[STR_SM]  + zerovector[EXPR_SM] +
+	     zerovector[VECTOR_SM]) );
     fprintf(out, "VectorCollected: %lu %lu %lu %lu %lu %lu %lu %lu\n",
 	    vector_collected[INT_SM],
 	    vector_collected[LGL_SM],
@@ -563,8 +563,8 @@ unsigned long allocated_external, allocated_sexp, allocated_noncons;
 // Vector count
 unsigned long allocated_vector, allocated_vector_size,
     allocated_vector_asize, allocated_vector_elts;
-unsigned long allocated_vector_null, allocated_vector_size_null,
-    allocated_vector_asize_null, allocated_vector_elts_null;
+unsigned long allocated_vector_zero, allocated_vector_size_zero,
+    allocated_vector_asize_zero, allocated_vector_elts_zero;
 unsigned long allocated_vector_small, allocated_vector_size_small,
     allocated_vector_asize_small, allocated_vector_elts_small;
 unsigned long allocated_vector_large, allocated_vector_size_large,
@@ -756,7 +756,7 @@ static R_size_t R_NodesInUse = 0;
     if (LENGTH(__n__) == 1) \
       scalarvector[ (__t__ == INTSXP) ? INT_SM : (__t__ == LGLSXP) ?  LGL_SM: (__t__ == CPLXSXP) ? CPLX_SM : REAL_SM] ++; \
     if (LENGTH(__n__) == 0) \
-      nullvector[ (__t__ == INTSXP) ? INT_SM : (__t__ == LGLSXP) ?  LGL_SM: (__t__ == CPLXSXP) ? CPLX_SM : REAL_SM] ++; \
+      zerovector[ (__t__ == INTSXP) ? INT_SM : (__t__ == LGLSXP) ?  LGL_SM: (__t__ == CPLXSXP) ? CPLX_SM : REAL_SM] ++; \
     vector_collected[ (__t__ == INTSXP) ? INT_SM : (__t__ == LGLSXP) ?  LGL_SM: (__t__ == CPLXSXP) ? CPLX_SM : REAL_SM] ++; \
     break; \
   case STRSXP: \
@@ -766,7 +766,7 @@ static R_size_t R_NodesInUse = 0;
       if (LENGTH(__n__) == 1) \
         scalarvector[ (__t__ == STRSXP) ? STR_SM : (__t__ == EXPRSXP) ?  EXPR_SM : VECTOR_SM] ++; \
       if (LENGTH(__n__) == 0) \
-        nullvector[ (__t__ == STRSXP) ? STR_SM : (__t__ == EXPRSXP) ?  EXPR_SM : VECTOR_SM] ++; \
+        zerovector[ (__t__ == STRSXP) ? STR_SM : (__t__ == EXPRSXP) ?  EXPR_SM : VECTOR_SM] ++; \
       vector_collected[ (__t__ == STRSXP) ? STR_SM : (__t__ == EXPRSXP) ?  EXPR_SM : VECTOR_SM] ++; \
       int i; \
       for (i = 0; i < LENGTH(__n__); i++) \
@@ -2683,7 +2683,7 @@ static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_a
     else {
 	GC_PROT(s = allocSExpNonCons(type));
 	if (count_allocation)
-	    ADD_ALLOC_VECTOR(null, 0, sizeof(SEXPREC), sizeof(SEXPREC));
+	    ADD_ALLOC_VECTOR(zero, 0, sizeof(SEXPREC), sizeof(SEXPREC));
         /* do not count this as a noncons allocation to avoid double counting */
         allocated_noncons -= sizeof(SEXPREC);
 	SET_SHORT_VEC_LENGTH(s, (R_len_t) length);

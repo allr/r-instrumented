@@ -70,7 +70,7 @@ extern unsigned long allocated_cons_current, allocated_cons_peak; // count
 
 // Vector count
 extern unsigned long allocated_vector, allocated_vector_size, allocated_vector_asize, allocated_vector_elts;
-extern unsigned long allocated_vector_null, allocated_vector_size_null, allocated_vector_asize_null, allocated_vector_elts_null;
+extern unsigned long allocated_vector_zero, allocated_vector_size_zero, allocated_vector_asize_zero, allocated_vector_elts_zero;
 extern unsigned long allocated_vector_small, allocated_vector_size_small, allocated_vector_asize_small, allocated_vector_elts_small;
 extern unsigned long allocated_vector_large, allocated_vector_size_large, allocated_vector_asize_large, allocated_vector_elts_large;
 extern unsigned long allocated_vector_one, allocated_vector_size_one, allocated_vector_asize_one, allocated_vector_elts_one;
@@ -832,7 +832,7 @@ void write_allocation_summary(FILE *out) {
 #define REPORT_VECTOR(n, __t)\
     fprintf(out, "AllocatedVectors" n ": %lu %lu %lu %lu\n", allocated_vector ## __t, allocated_vector_elts ## __t, allocated_vector_size ## __t, allocated_vector_asize ## __t)
     REPORT_VECTOR(,);
-    REPORT_VECTOR("Null",_null);
+    REPORT_VECTOR("Zero",_zero);
     REPORT_VECTOR("Small", _small);
     REPORT_VECTOR("Large", _large);
     REPORT_VECTOR("One", _one);
@@ -846,7 +846,7 @@ void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedSmallVectors: %lu %lu %lu %lu\n", allocated_vector_small, allocated_vector_elts_small, allocated_vector_size_small, allocated_vector_asize_small);
     fprintf(out, "AllocatedLargeVectors: %lu %lu %lu %lu\n", allocated_vector_large, allocated_vector_elts_large, allocated_vector_size_large, allocated_vector_asize_large);
     fprintf(out, "AllocatedOneVectors: %lu %lu %lu %lu\n", allocated_vector_one, allocated_vector_elts_one, allocated_vector_size_one, allocated_vector_asize_one);
-    fprintf(out, "AllocatedNullVectors: %lu %lu %lu %lu\n",  allocated_vector_null,  allocated_vector_elts_null,  allocated_vector_size_null,  allocated_vector_asize_null);
+    fprintf(out, "AllocatedZeroVectors: %lu %lu %lu %lu\n",  allocated_vector_zero,  allocated_vector_elts_zero,  allocated_vector_size_zero,  allocated_vector_asize_zero);
 
     fprintf(out, "AllocatedStringBuffer: %lu %lu %lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
 
