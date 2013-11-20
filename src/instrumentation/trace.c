@@ -236,14 +236,6 @@ static int __attribute__((format(printf, 2, 3)))
 
 #endif
 
-// emergency exit
-static void trace_exit(int code) {
-    goto_abs_top_context();
-    trace_cnt_fatal_err();
-    terminate_tracing();
-    exit(code);
-}
-
 // Trace binary writes
 static inline void WRITE_BYTE(TRACEFILE file, const unsigned char byte) {
     bytes_written += sizeof(char);
@@ -291,7 +283,7 @@ int get_cstack_height() {
     // This double checks all counting
     if (cnt != stack_height) {
 	print_error_msg("Stack height counter is off by %d\n", stack_height - cnt);
-	trace_exit(1);
+	abort();
     }
 
     return cnt;
@@ -370,7 +362,7 @@ inline static void patch_pc_pair(uintptr_t id) {
 	print_error_msg("Context stack missing a PC_PAIR element\n");
 	stack_err_cnt++;
 	print_cstack();
-	trace_exit(3);
+	abort();
     }
     cstack_top->ID = id;
 }
@@ -387,7 +379,7 @@ static int pop_cstack_node(uintptr_t *id, RCNTXT **cntx) {
 	print_error_msg("Attempted to pop below the context stack bottom.\n");
 	stack_err_cnt++;
 	print_cstack();
-	trace_exit(1);
+	abort();
     }
     cstack_top = popped_node->next;
     free(popped_node);
@@ -410,13 +402,13 @@ static void pop_cstack(StackNodeType type, uintptr_t ID) {
 	    print_error_msg("Context stack is out of alignment, type is: %s but ID's don't match %p != %p\n", get_type_name(type), ID2SEXP(node_id), ID2SEXP(ID));
 	    stack_err_cnt++;
 	    print_cstack();
-	    trace_exit(0);
+	    abort();
 	}
     } else {
 	print_error_msg("Stack pop type mismatch %s (top)!= %s (pop)\n", get_type_name(node_type), get_type_name(type));
 	print_cstack();
 	stack_err_cnt++;
-	trace_exit(0);
+	abort();
     }
 }
 
@@ -582,7 +574,7 @@ void trcR_internal_change_top_context(void) {
         } else {
             print_error_msg("Can't change top level context. Stack height is greater than 0\n");
             stack_err_cnt++;
-            trace_exit(1);
+	    abort();
         }
     }
 }
@@ -637,7 +629,7 @@ void trcR_internal_trace_context_drop() {
 	if (popped_type != CNTXT) {
 	    print_error_msg("Attempted to context drop a non-context item: %d.\n", popped_type);
 	    stack_err_cnt++;
-	    trace_exit(2);
+	    abort();
 	}
     }
 }
@@ -649,14 +641,14 @@ void trcR_internal_goto_top_context() {
 	} else {
 	    print_error_msg("Failed attempt to return to top level context.\n");
 	    stack_err_cnt++;
-	    trace_exit(1);
+	    abort();
 	}
     }
     return;
 }
 
 // This fully flushes the stack
-void goto_abs_top_context() {
+static void goto_abs_top_context() {
     stack_flush_cnt = get_cstack_height();
     while (cstack_top != cstack_bottom) {
 	trcR_internal_trace_context_drop();
@@ -667,13 +659,17 @@ void goto_abs_top_context() {
 //
 // Trace maintenance functions
 //
-void initialize_trace_defaults(TR_TYPE mode) {
+static void initialize_trace_defaults(TR_TYPE mode) {
     char str[MAX_DNAME];
     FILE *fd;
     FUNTAB *func;
 
-    if (mode == TR_NONE) return;
+    if (mode == TR_DISABLED)
+	return;
+
     trace_info = malloc(sizeof(TraceInfo));
+    if (trace_info = NULL)
+	abort();
 
     //set the trace directory name
     if (R_TraceDir) {
@@ -727,11 +723,11 @@ void initialize_trace_defaults(TR_TYPE mode) {
     trace_info->src_map_file = FOPEN (str);
     if (!trace_info->src_map_file) {
 	print_error_msg ("Couldn't open file '%s' for writing", str);
-	trace_exit (1);
+	abort();
     }
 }
 
-void start_tracing() {
+static void start_tracing() {
     if (!traceR_is_active) {
 	traceR_is_active = 1;
 
@@ -739,7 +735,7 @@ void start_tracing() {
 	bin_trace_file = FOPEN(trace_info->trace_file_name);
 	if (!bin_trace_file) {
 	    print_error_msg ("Couldn't open file '%s' for writing", trace_info->trace_file_name);
-	    trace_exit (1);
+	    abort();
 	}
 
 	//Write trace header
@@ -759,48 +755,14 @@ void start_tracing() {
     }
 }
 
+
+/*
+ * Summary output
+ */
+
 extern void close_memory_map();
 extern void display_unused(FILE *);
 void write_missing_results(FILE *out);
-
-void write_trace_summary(FILE *out) {
-    R_gc();
-    char str[TIME_BUFF > MAX_DNAME? TIME_BUFF : MAX_DNAME];
-    time_t current_time = time(0);
-    struct tm *local_time = localtime(&current_time);
-    struct rusage my_rusage;
-    fprintf(out, "SourceName: %s\n", R_InputFileName ? R_InputFileName : "stdin");
-
-    getcwd(str, MAX_DNAME);
-    fprintf(out, "Workdir: %s\n", str);
-    fprintf(out, "File: %s/%s\n", str, R_InputFileName ? R_InputFileName : "stdin");
-    fprintf(out, "Args: "); write_commandArgs(out);
-    // TODO print trace_type all/repl/bootstrap
-    fprintf(out, "TracerVersion: %s\n", HG_ID);
-    fprintf(out, "PtrSize: %lu\n", sizeof(void*));
-
-    strftime (str, TIME_BUFF, "%c", local_time);
-    fprintf(out, "TraceDate: %s\n", str);
-    getrusage(RUSAGE_SELF, &my_rusage);
-    fprintf(out, "RusageMaxResidentMemorySet: %ld\n", my_rusage.ru_maxrss);
-    fprintf(out, "RusageSharedMemSize: %ld\n", my_rusage.ru_ixrss);
-    fprintf(out, "RusageUnsharedDataSize: %ld\n", my_rusage.ru_idrss);
-    fprintf(out, "RusagePageReclaims: %ld\n", my_rusage.ru_minflt);
-    fprintf(out, "RusagePageFaults: %ld\n", my_rusage.ru_majflt);
-    fprintf(out, "RusageSwaps: %ld\n", my_rusage.ru_nswap);
-    fprintf(out, "RusageBlockInputOps: %ld\n", my_rusage.ru_inblock);
-    fprintf(out, "RusageBlockOutputOps: %ld\n", my_rusage.ru_oublock);
-    fprintf(out, "RusageIPCSends: %ld\n", my_rusage.ru_msgsnd);
-    fprintf(out, "RusageIPCRecv: %ld\n", my_rusage.ru_msgrcv);
-    fprintf(out, "RusageSignalsRcvd: %ld\n", my_rusage.ru_nsignals);
-    fprintf(out, "RusageVolnContextSwitches: %ld\n", my_rusage.ru_nvcsw);
-    fprintf(out, "RusageInvolnContextSwitches: %ld\n", my_rusage.ru_nivcsw);
-
-    // :display_unused(out);
-    write_allocation_summary(out);
-    write_arg_histogram(out);
-    write_missing_results(out);
-}
 
 static void report_vectorstats(FILE *out, const char *name, vec_alloc_stats_t *stats) {
     fprintf(out, "Allocated%sVectors: %lu %lu %lu %lu\n", name,
@@ -808,7 +770,7 @@ static void report_vectorstats(FILE *out, const char *name, vec_alloc_stats_t *s
 	    stats->size,   stats->asize);
 }
 
-void write_allocation_summary(FILE *out) {
+static void write_allocation_summary(FILE *out) {
     fprintf(out, "SizeOfSEXP: %ld\n", sizeof(SEXPREC));
     fprintf(out, "Interp: %lu\n", allocated_cons);
     fprintf(out, "Context: %lu\n", context_opened);
@@ -855,15 +817,46 @@ void write_allocation_summary(FILE *out) {
     fprintf(out, "AvoidedDup: %lu %lu\n", avoided_dup, need_dup);
 }
 
-void terminate_tracing() {
-    // Stop tracing
-    FCLOSE(bin_trace_file);
-    traceR_is_active = 0;
-    FCLOSE(trace_info->src_map_file);
-    write_summary();
+static void write_trace_summary(FILE *out) {
+    R_gc();
+    char str[TIME_BUFF > MAX_DNAME? TIME_BUFF : MAX_DNAME];
+    time_t current_time = time(0);
+    struct tm *local_time = localtime(&current_time);
+    struct rusage my_rusage;
+    fprintf(out, "SourceName: %s\n", R_InputFileName ? R_InputFileName : "stdin");
+
+    getcwd(str, MAX_DNAME);
+    fprintf(out, "Workdir: %s\n", str);
+    fprintf(out, "File: %s/%s\n", str, R_InputFileName ? R_InputFileName : "stdin");
+    fprintf(out, "Args: "); write_commandArgs(out);
+    // TODO print trace_type all/repl/bootstrap
+    fprintf(out, "TracerVersion: %s\n", HG_ID);
+    fprintf(out, "PtrSize: %lu\n", sizeof(void*));
+
+    strftime (str, TIME_BUFF, "%c", local_time);
+    fprintf(out, "TraceDate: %s\n", str);
+    getrusage(RUSAGE_SELF, &my_rusage);
+    fprintf(out, "RusageMaxResidentMemorySet: %ld\n", my_rusage.ru_maxrss);
+    fprintf(out, "RusageSharedMemSize: %ld\n", my_rusage.ru_ixrss);
+    fprintf(out, "RusageUnsharedDataSize: %ld\n", my_rusage.ru_idrss);
+    fprintf(out, "RusagePageReclaims: %ld\n", my_rusage.ru_minflt);
+    fprintf(out, "RusagePageFaults: %ld\n", my_rusage.ru_majflt);
+    fprintf(out, "RusageSwaps: %ld\n", my_rusage.ru_nswap);
+    fprintf(out, "RusageBlockInputOps: %ld\n", my_rusage.ru_inblock);
+    fprintf(out, "RusageBlockOutputOps: %ld\n", my_rusage.ru_oublock);
+    fprintf(out, "RusageIPCSends: %ld\n", my_rusage.ru_msgsnd);
+    fprintf(out, "RusageIPCRecv: %ld\n", my_rusage.ru_msgrcv);
+    fprintf(out, "RusageSignalsRcvd: %ld\n", my_rusage.ru_nsignals);
+    fprintf(out, "RusageVolnContextSwitches: %ld\n", my_rusage.ru_nvcsw);
+    fprintf(out, "RusageInvolnContextSwitches: %ld\n", my_rusage.ru_nivcsw);
+
+    // :display_unused(out);
+    write_allocation_summary(out);
+    write_arg_histogram(out);
+    write_missing_results(out);
 }
 
-void write_summary() {
+static void write_summary() {
     FILE *summary_fp;
     char str[MAX_DNAME];
     sprintf(str, "%s/%s", trace_info->directory, SUMMARY_NAME);
@@ -889,6 +882,22 @@ void write_summary() {
 
     fclose(summary_fp);
 }
+
+/*
+ * end of tracing
+ */
+static void terminate_tracing() {
+    // Stop tracing
+    FCLOSE(bin_trace_file);
+    traceR_is_active = 0;
+    FCLOSE(trace_info->src_map_file);
+    write_summary();
+}
+
+
+/*
+ * source map
+ */
 
 static inline void print_ref(SEXP src, const char * file, long line, long col, long more1, long more2, long more3, long more4) {
     // TODO rename this 'moreX' in an more appropriate way
@@ -934,4 +943,47 @@ void print_src_addr (SEXP src) {
 	func_decl_cnt++;
     }
     return;
+}
+
+
+/*
+ * external interface for init/deinit of tracing
+ */
+
+/* early initialisation, just after the command line was parsed */
+void traceR_initialize(void) {
+    initialize_trace_defaults(R_TraceLevel);
+
+    if (R_TraceLevel == TR_ALL || R_TraceLevel == TR_BOOTSTRAP)
+	start_tracing();
+}
+
+/* called just before the first entry in the REPL */
+void traceR_start_repl(void) {
+    if (R_TraceLevel == TR_REPL)
+	start_tracing();
+    else if (R_TraceLevel == TR_BOOTSTRAP)
+	terminate_tracing();
+}
+
+/* normal exit of the R interpreter */
+void traceR_finish_clean(void) {
+    if (traceR_is_active) {
+	goto_abs_top_context();
+	terminate_tracing();
+    } else {
+	if (R_TraceLevel == TR_SUMMARY) {
+	    write_trace_summary(stderr);
+	}
+    }
+}
+
+/* called when R is about to abort after a segfault or similar */
+void traceR_finish_abort(void) {
+    // FIXME: Replace with small "drop everything" implementation: called from a signal handler!
+    if (traceR_is_active) {
+	/* Trace instrumentation */
+	trace_cnt_fatal_err();
+	terminate_tracing();
+    }
 }

@@ -85,16 +85,7 @@ extern void write_trace_summary(FILE *);
 void R_CleanUp(SA_TYPE saveact, int status, int runLast) {
     ptr_R_CleanUp(saveact, status, runLast);
     flush_gc();
-    if (traceR_is_active) {
-	/* Trace instrumentation */
-
-	goto_abs_top_context();
-	terminate_tracing();
-    } else {
-	if (R_Trace == TR_SUMMARY) {
-	    write_trace_summary(stderr);
-	}
-    }
+    traceR_finish_clean();
     exit(0);
 }
 
@@ -419,11 +410,8 @@ int Rf_initialize_R(int ac, char **av)
 
     R_SetParams(Rp);
 
-    /* Trace Instrumentation  - init logging system */
-    initialize_trace_defaults (R_Trace);
-
-    if (R_Trace == TR_ALL || R_Trace == TR_BOOTSTRAP)
-	start_tracing();
+    /* Trace Instrumentation - init logging system */
+    traceR_initialize();
 
     if(!Rp->NoRenviron) {
 	process_site_Renviron();

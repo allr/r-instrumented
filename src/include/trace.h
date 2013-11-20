@@ -34,11 +34,11 @@
 
 /* trace "verbosity" */
 typedef enum {
-    TR_ALL,
-    TR_REPL,
+    TR_DISABLED,
     TR_BOOTSTRAP,
-    TR_SUMMARY,
-    TR_NONE
+    TR_REPL,
+    TR_ALL,
+    TR_SUMMARY
 } TR_TYPE;
 
 
@@ -104,14 +104,10 @@ extern unsigned int trcR_by_position, trcR_by_keyword, trcR_by_dots;
 #  define FPRINTF fprintf
 #endif
 
-void initialize_trace_defaults(TR_TYPE mode);
-
-void start_tracing();
-
-void terminate_tracing();
-void write_summary();
-void write_trace_summary(FILE *out);
-void write_allocation_summary(FILE *out);
+void traceR_initialize(void);
+void traceR_start_repl(void);
+void traceR_finish_clean(void);
+void traceR_finish_abort(void);
 
 void trcR_internal_emit_simple_type(SEXP expr);
 void trcR_internal_emit_error_type(unsigned int type);
@@ -134,7 +130,6 @@ void trace_context_add();
 void trcR_internal_trace_context_drop(void);
 void trcR_internal_change_top_context(void);
 void trcR_internal_goto_top_context(void);
-void goto_abs_top_context();
 
 void print_src_addr(SEXP src);
 
