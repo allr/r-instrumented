@@ -69,11 +69,8 @@ extern unsigned long allocated_external, allocated_sexp, allocated_noncons; // b
 extern unsigned long allocated_cons_current, allocated_cons_peak; // count
 
 // Vector count
-extern unsigned long allocated_vector, allocated_vector_size, allocated_vector_asize, allocated_vector_elts;
-extern unsigned long allocated_vector_zero, allocated_vector_size_zero, allocated_vector_asize_zero, allocated_vector_elts_zero;
-extern unsigned long allocated_vector_small, allocated_vector_size_small, allocated_vector_asize_small, allocated_vector_elts_small;
-extern unsigned long allocated_vector_large, allocated_vector_size_large, allocated_vector_asize_large, allocated_vector_elts_large;
-extern unsigned long allocated_vector_one, allocated_vector_size_one, allocated_vector_asize_one, allocated_vector_elts_one;
+extern vec_alloc_stats_t vecstats_total, vecstats_zero,
+    vecstats_one, vecstats_small, vecstats_large;
 
 // String buffers count
 extern unsigned long allocated_sb, allocated_sb_size, allocated_sb_elts;
@@ -241,14 +238,6 @@ static int __attribute__((format(printf, 2, 3)))
 
 #endif
 
-// emergency exit
-static void trace_exit(int code) {
-    goto_abs_top_context();
-    trace_cnt_fatal_err();
-    terminate_tracing();
-    exit(code);
-}
-
 // Trace binary writes
 static inline void WRITE_BYTE(TRACEFILE file, const unsigned char byte) {
     bytes_written += sizeof(char);
@@ -296,7 +285,7 @@ int get_cstack_height() {
     // This double checks all counting
     if (cnt != stack_height) {
 	print_error_msg("Stack height counter is off by %d\n", stack_height - cnt);
-	trace_exit(1);
+	abort();
     }
 
     return cnt;
@@ -375,7 +364,7 @@ inline static void patch_pc_pair(uintptr_t id) {
 	print_error_msg("Context stack missing a PC_PAIR element\n");
 	stack_err_cnt++;
 	print_cstack();
-	trace_exit(3);
+	abort();
     }
     cstack_top->ID = id;
 }
@@ -392,7 +381,7 @@ static int pop_cstack_node(uintptr_t *id, RCNTXT **cntx) {
 	print_error_msg("Attempted to pop below the context stack bottom.\n");
 	stack_err_cnt++;
 	print_cstack();
-	trace_exit(1);
+	abort();
     }
     cstack_top = popped_node->next;
     free(popped_node);
@@ -415,13 +404,13 @@ static void pop_cstack(StackNodeType type, uintptr_t ID) {
 	    print_error_msg("Context stack is out of alignment, type is: %s but ID's don't match %p != %p\n", get_type_name(type), ID2SEXP(node_id), ID2SEXP(ID));
 	    stack_err_cnt++;
 	    print_cstack();
-	    trace_exit(0);
+	    abort();
 	}
     } else {
 	print_error_msg("Stack pop type mismatch %s (top)!= %s (pop)\n", get_type_name(node_type), get_type_name(type));
 	print_cstack();
 	stack_err_cnt++;
-	trace_exit(0);
+	abort();
     }
 }
 
@@ -589,7 +578,7 @@ void trcR_internal_change_top_context(void) {
         } else {
             print_error_msg("Can't change top level context. Stack height is greater than 0\n");
             stack_err_cnt++;
-            trace_exit(1);
+	    abort();
         }
     }
 }
@@ -644,7 +633,7 @@ void trcR_internal_trace_context_drop() {
 	if (popped_type != CNTXT) {
 	    print_error_msg("Attempted to context drop a non-context item: %d.\n", popped_type);
 	    stack_err_cnt++;
-	    trace_exit(2);
+	    abort();
 	}
     }
 }
@@ -656,14 +645,14 @@ void trcR_internal_goto_top_context() {
 	} else {
 	    print_error_msg("Failed attempt to return to top level context.\n");
 	    stack_err_cnt++;
-	    trace_exit(1);
+	    abort();
 	}
     }
     return;
 }
 
 // This fully flushes the stack
-void goto_abs_top_context() {
+static void goto_abs_top_context() {
     stack_flush_cnt = get_cstack_height();
     while (cstack_top != cstack_bottom) {
 	trcR_internal_trace_context_drop();
@@ -674,13 +663,17 @@ void goto_abs_top_context() {
 //
 // Trace maintenance functions
 //
-void initialize_trace_defaults(TR_TYPE mode) {
+static void initialize_trace_defaults(TR_TYPE mode) {
     char str[MAX_DNAME];
     FILE *fd;
     FUNTAB *func;
 
-    if (mode == TR_NONE) return;
+    if (mode == TR_DISABLED)
+	return;
+
     trace_info = malloc(sizeof(TraceInfo));
+    if (trace_info = NULL)
+	abort();
 
     //set the trace directory name
     if (R_TraceDir) {
@@ -734,11 +727,11 @@ void initialize_trace_defaults(TR_TYPE mode) {
     trace_info->src_map_file = FOPEN (str);
     if (!trace_info->src_map_file) {
 	print_error_msg ("Couldn't open file '%s' for writing", str);
-	trace_exit (1);
+	abort();
     }
 }
 
-void start_tracing() {
+static void start_tracing() {
     if (!traceR_is_active) {
 	traceR_is_active = 1;
 
@@ -746,7 +739,7 @@ void start_tracing() {
 	bin_trace_file = FOPEN(trace_info->trace_file_name);
 	if (!bin_trace_file) {
 	    print_error_msg ("Couldn't open file '%s' for writing", trace_info->trace_file_name);
-	    trace_exit (1);
+	    abort();
 	}
 
 	//Write trace header
@@ -766,11 +759,69 @@ void start_tracing() {
     }
 }
 
+
+/*
+ * Summary output
+ */
+
 extern void close_memory_map();
 extern void display_unused(FILE *);
 void write_missing_results(FILE *out);
 
-void write_trace_summary(FILE *out) {
+static void report_vectorstats(FILE *out, const char *name, vec_alloc_stats_t *stats) {
+    fprintf(out, "Allocated%sVectors: %lu %lu %lu %lu\n", name,
+	    stats->allocs, stats->elements,
+	    stats->size,   stats->asize);
+}
+
+static void write_allocation_summary(FILE *out) {
+    fprintf(out, "SizeOfSEXP: %ld\n", sizeof(SEXPREC));
+    fprintf(out, "Interp: %lu\n", allocated_cons);
+    fprintf(out, "Context: %lu\n", context_opened);
+    fprintf(out, "Calls: %lu %lu %lu %lu\n", clos_call, spec_call, builtin_call, clos_call + spec_call+ builtin_call);
+
+
+    /* seems to be ignored by the Java tool, kept anyway */
+    fprintf(out, "Allocated: %lu %lu %lu %lu %lu %lu %lu\n", allocated_cons, allocated_prom, allocated_env, allocated_external, allocated_sexp, allocated_noncons, allocated_cons + allocated_prom + allocated_env + allocated_external + allocated_sexp + allocated_noncons);
+
+    /* this is what the Java tool actually wants to see */
+    fprintf(out, "AllocatedCons: %lu\n", allocated_cons);
+    fprintf(out, "AllocatedConsPeak: %lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
+    fprintf(out, "AllocatedNonCons: %lu\n", allocated_noncons);
+    fprintf(out, "AllocatedEnv: %lu\n", allocated_env);
+    fprintf(out, "AllocatedPromises: %lu\n", allocated_prom);
+    fprintf(out, "AllocatedSXP: %lu\n", allocated_sexp);
+    fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
+    fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
+
+    report_vectorstats(out, "",      &vecstats_total);
+    report_vectorstats(out, "Zero",  &vecstats_zero);
+    report_vectorstats(out, "One",   &vecstats_one);
+    report_vectorstats(out, "Small", &vecstats_small);
+    report_vectorstats(out, "Large", &vecstats_large);
+
+    /* allocation counts per node class */
+    for (unsigned int i = 0; i < allocated_cell_len; i++) {
+      fprintf(out, "Class%uAllocs: %lu\n", i, allocated_cell[i]);
+    }
+
+    fprintf(out, "GC: %d\n", gc_count);
+
+    //fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
+
+    fprintf(out, "Dispatch: %lu %lu\n", dispatchs, dispatchFailed);
+    fprintf(out, "Duplicate: %lu %lu %lu\n", duplicate_object, duplicate_elts, duplicate1_elts);
+    fprintf(out, "Named: %lu %lu %lu %lu\n", named_elts, named_promoted, named_downgraded, named_keeped);
+    fprintf(out, "ApplyDefine: %lu %lu\n", apply_define, super_apply_define);
+    fprintf(out, "DefineVar: %lu %lu\n", define_var, super_define_var);
+    fprintf(out, "SetVar: %lu %lu\n", set_var, super_set_var);
+    fprintf(out, "DefineUserDb: %lu\n", define_user_db);
+    fprintf(out, "ErrCountAssign: %lu\n", err_count_assign);
+    fprintf(out, "ErrorEvalSet: %lu %lu\n", do_set_allways - do_set_unique, do_super_set_allways - do_super_set_unique );
+    fprintf(out, "AvoidedDup: %lu %lu\n", avoided_dup, need_dup);
+}
+
+static void write_trace_summary(FILE *out) {
     R_gc();
     char str[TIME_BUFF > MAX_DNAME? TIME_BUFF : MAX_DNAME];
     time_t current_time = time(0);
@@ -809,72 +860,7 @@ void write_trace_summary(FILE *out) {
     write_missing_results(out);
 }
 
-void write_allocation_summary(FILE *out) {
-    fprintf(out, "SizeOfSEXP: %ld\n", sizeof(SEXPREC));
-    fprintf(out, "Interp: %lu\n", allocated_cons);
-    fprintf(out, "Context: %lu\n", context_opened);
-    fprintf(out, "Calls: %lu %lu %lu %lu\n", clos_call, spec_call, builtin_call, clos_call + spec_call+ builtin_call);
-
-
-    /* seems to be ignored by the Java tool, kept anyway */
-    fprintf(out, "Allocated: %lu %lu %lu %lu %lu %lu %lu\n", allocated_cons, allocated_prom, allocated_env, allocated_external, allocated_sexp, allocated_noncons, allocated_cons + allocated_prom + allocated_env + allocated_external + allocated_sexp + allocated_noncons);
-
-    /* this is what the Java tool actually wants to see */
-    fprintf(out, "AllocatedCons: %lu\n", allocated_cons);
-    fprintf(out, "AllocatedConsPeak: %lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
-    fprintf(out, "AllocatedNonCons: %lu\n", allocated_noncons);
-    fprintf(out, "AllocatedEnv: %lu\n", allocated_env);
-    fprintf(out, "AllocatedPromises: %lu\n", allocated_prom);
-    fprintf(out, "AllocatedSXP: %lu\n", allocated_sexp);
-    fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
-    fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
-
-#define REPORT_VECTOR(n, __t)\
-    fprintf(out, "AllocatedVectors" n ": %lu %lu %lu %lu\n", allocated_vector ## __t, allocated_vector_elts ## __t, allocated_vector_size ## __t, allocated_vector_asize ## __t)
-    REPORT_VECTOR(,);
-    REPORT_VECTOR("Zero",_zero);
-    REPORT_VECTOR("Small", _small);
-    REPORT_VECTOR("Large", _large);
-    REPORT_VECTOR("One", _one);
-
-    /* allocation counts per node class */
-    for (unsigned int i = 0; i < allocated_cell_len; i++) {
-      fprintf(out, "Class%uAllocs: %lu\n", i, allocated_cell[i]);
-    }
-
-    /* and now the version that the Java tool expects */
-    fprintf(out, "AllocatedSmallVectors: %lu %lu %lu %lu\n", allocated_vector_small, allocated_vector_elts_small, allocated_vector_size_small, allocated_vector_asize_small);
-    fprintf(out, "AllocatedLargeVectors: %lu %lu %lu %lu\n", allocated_vector_large, allocated_vector_elts_large, allocated_vector_size_large, allocated_vector_asize_large);
-    fprintf(out, "AllocatedOneVectors: %lu %lu %lu %lu\n", allocated_vector_one, allocated_vector_elts_one, allocated_vector_size_one, allocated_vector_asize_one);
-    fprintf(out, "AllocatedZeroVectors: %lu %lu %lu %lu\n",  allocated_vector_zero,  allocated_vector_elts_zero,  allocated_vector_size_zero,  allocated_vector_asize_zero);
-
-    fprintf(out, "AllocatedStringBuffer: %lu %lu %lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
-
-    fprintf(out, "GC: %d\n", gc_count);
-
-    //fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
-
-    fprintf(out, "Dispatch: %lu %lu\n", dispatchs, dispatchFailed);
-    fprintf(out, "Duplicate: %lu %lu %lu\n", duplicate_object, duplicate_elts, duplicate1_elts);
-    fprintf(out, "Named: %lu %lu %lu %lu\n", named_elts, named_promoted, named_downgraded, named_keeped);
-    fprintf(out, "ApplyDefine: %lu %lu\n", apply_define, super_apply_define);
-    fprintf(out, "DefineVar: %lu %lu\n", define_var, super_define_var);
-    fprintf(out, "SetVar: %lu %lu\n", set_var, super_set_var);
-    fprintf(out, "DefineUserDb: %lu\n", define_user_db);
-    fprintf(out, "ErrCountAssign: %lu\n", err_count_assign);
-    fprintf(out, "ErrorEvalSet: %lu %lu\n", do_set_allways - do_set_unique, do_super_set_allways - do_super_set_unique );
-    fprintf(out, "AvoidedDup: %lu %lu\n", avoided_dup, need_dup);
-}
-
-void terminate_tracing() {
-    // Stop tracing
-    FCLOSE(bin_trace_file);
-    traceR_is_active = 0;
-    FCLOSE(trace_info->src_map_file);
-    write_summary();
-}
-
-void write_summary() {
+static void write_summary() {
     FILE *summary_fp;
     char str[MAX_DNAME];
     sprintf(str, "%s/%s", trace_info->directory, SUMMARY_NAME);
@@ -900,6 +886,22 @@ void write_summary() {
 
     fclose(summary_fp);
 }
+
+/*
+ * end of tracing
+ */
+static void terminate_tracing() {
+    // Stop tracing
+    FCLOSE(bin_trace_file);
+    traceR_is_active = 0;
+    FCLOSE(trace_info->src_map_file);
+    write_summary();
+}
+
+
+/*
+ * source map
+ */
 
 static inline void print_ref(SEXP src, const char * file, long line, long col, long more1, long more2, long more3, long more4) {
     // TODO rename this 'moreX' in an more appropriate way
@@ -945,4 +947,47 @@ void print_src_addr (SEXP src) {
 	func_decl_cnt++;
     }
     return;
+}
+
+
+/*
+ * external interface for init/deinit of tracing
+ */
+
+/* early initialisation, just after the command line was parsed */
+void traceR_initialize(void) {
+    initialize_trace_defaults(R_TraceLevel);
+
+    if (R_TraceLevel == TR_ALL || R_TraceLevel == TR_BOOTSTRAP)
+	start_tracing();
+}
+
+/* called just before the first entry in the REPL */
+void traceR_start_repl(void) {
+    if (R_TraceLevel == TR_REPL)
+	start_tracing();
+    else if (R_TraceLevel == TR_BOOTSTRAP)
+	terminate_tracing();
+}
+
+/* normal exit of the R interpreter */
+void traceR_finish_clean(void) {
+    if (traceR_is_active) {
+	goto_abs_top_context();
+	terminate_tracing();
+    } else {
+	if (R_TraceLevel == TR_SUMMARY) {
+	    write_trace_summary(stderr);
+	}
+    }
+}
+
+/* called when R is about to abort after a segfault or similar */
+void traceR_finish_abort(void) {
+    // FIXME: Replace with small "drop everything" implementation: called from a signal handler!
+    if (traceR_is_active) {
+	/* Trace instrumentation */
+	trace_cnt_fatal_err();
+	terminate_tracing();
+    }
 }

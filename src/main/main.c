@@ -249,12 +249,6 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
     R_PPStackTop = savestack;
     R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status, sourcename);
     
-    /* Trace Instrumentation */
-    if (R_Trace == TR_REPL)
-	start_tracing();
-    else if (R_Trace == TR_BOOTSTRAP)
-	terminate_tracing();
-
     switch(state->status) {
 
     case PARSE_NULL:
@@ -363,6 +357,9 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
             sourcename = "(stdin)";
         }
     }
+
+    /* Trace Instrumentation */
+    traceR_start_repl();
 
     if(R_Verbose)
 	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
@@ -660,11 +657,7 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	}
     }
     REprintf("aborting ...\n");
-    if (traceR_is_active) {
-      /* Trace instrumentation */
-      trace_cnt_fatal_err();
-      terminate_tracing();
-    }
+    traceR_finish_abort();
     R_CleanTempDir();
     /* now do normal behaviour, e.g. core dump */
     signal(signum, SIG_DFL);

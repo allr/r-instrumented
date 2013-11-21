@@ -153,7 +153,7 @@ void R_DefParams(Rstart Rp)
     Rp->LoadSiteFile = TRUE;
     Rp->LoadInitFile = TRUE;
     Rp->DebugInitFile = FALSE;
-    Rp->Trace = TR_NONE;
+    Rp->TraceLevel = TR_DISABLED;
     Rp->TraceDir = NULL;
     Rp->InputFileName = NULL;
     Rp->vsize = R_VSIZE;
@@ -234,7 +234,7 @@ void R_SetParams(Rstart Rp)
     LoadInitFile = Rp->LoadInitFile;
     DebugInitFile = Rp->DebugInitFile;
     R_TraceDir = Rp->TraceDir;
-    R_Trace = Rp->Trace;
+    R_TraceLevel = Rp->TraceLevel;
     R_InputFileName = Rp->InputFileName;
     SetSize(Rp->vsize, Rp->nsize);
     R_SetMaxNSize(Rp->max_nsize);

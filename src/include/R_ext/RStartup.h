@@ -66,7 +66,7 @@ typedef struct
     Rboolean LoadSiteFile;
     Rboolean LoadInitFile;
     Rboolean DebugInitFile;
-    TR_TYPE Trace;
+    TR_TYPE TraceLevel;
     char *TraceDir;
     char *InputFileName;
     SA_TYPE RestoreAction;

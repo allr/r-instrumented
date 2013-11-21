@@ -627,9 +627,9 @@ extern0 Rboolean R_Verbose	INI_as(FALSE);	/* Be verbose */
 
 /* traceR variables */
 #include <trace.h>
-extern0 TR_TYPE R_Trace INI_as (TR_NONE);    /* Turn on logging */
-extern  char*   R_TraceDir INI_as (NULL);
-extern  char*   R_InputFileName INI_as (NULL);
+extern0 TR_TYPE R_TraceLevel    INI_as(TR_DISABLED); /* Tracing level */
+extern  char*   R_TraceDir      INI_as(NULL);
+extern  char*   R_InputFileName INI_as(NULL);
 
 /* extern int	R_Console; */	    /* Console active flag */
 /* IoBuffer R_ConsoleIob; : --> ./IOStuff.h */

@@ -208,30 +208,30 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 		if (ac > 1) {
 		    char **tmp = av+1;
 		    if (!strcmp(*tmp, "all")){
-			Rp->Trace = TR_ALL;
+			Rp->TraceLevel = TR_ALL;
 			ac--;
 			av++;
 		    } else if (!strcmp(*tmp, "repl")) {
-			Rp->Trace = TR_REPL;
+			Rp->TraceLevel = TR_REPL;
 			ac--;
 			av++;
 		    } else if (!strcmp(*tmp, "bootstrap")) {
-			Rp->Trace = TR_BOOTSTRAP;
+			Rp->TraceLevel = TR_BOOTSTRAP;
 			ac--;
 			av++;
 		    } else if (!strcmp(*tmp, "summary")) {
-			Rp->Trace = TR_SUMMARY;
+			Rp->TraceLevel = TR_SUMMARY;
 			ac--;
 			av++;
 		    } else if (**tmp == '-') {
 			/* no options */
-			Rp->Trace = TR_REPL;
+			Rp->TraceLevel = TR_REPL;
 		    } else { /* error */
-			Rp->Trace = TR_REPL;
+			Rp->TraceLevel = TR_REPL;
 			R_ShowMessage (_("WARNING: unknown tracing type requested, using 'repl'\n"));
 		    }
 		} else /* default */
-		    Rp->Trace = TR_REPL;
+		    Rp->TraceLevel = TR_REPL;
 	    }
 	    else if (!strncmp(*av, "--encoding", 10)) {
 		if(strlen(*av) < 12) {
