@@ -808,6 +808,7 @@ static inline void print_ref(SEXP src, const char * file, long line, long col, l
 }
 
 void print_src_addr (SEXP src) {
+	/*	
     SEXP srcref, srcfile, filename;
 
     if (trace_info) {
@@ -817,7 +818,7 @@ void print_src_addr (SEXP src) {
 	    if (TYPEOF(srcfile) == ENVSXP) {
 		filename = findVar(install ("filename"), srcfile);
 		if (isString(filename) && length(filename)) {
-		    /* print out the number of bytes written, address, srcfilename, starting line number, and starting column number */
+			// print out the number of bytes written, address, srcfilename, starting line number, and starting column number
 		    // print the lazyLoads that occur during the bootstrap
 		    print_ref(src, CHAR(STRING_ELT (filename, 0)),
 			      INTEGER(srcref)[0], INTEGER(srcref)[1],
@@ -842,6 +843,7 @@ void print_src_addr (SEXP src) {
 	func_decl_cnt++;
     }
     return;
+	*/
 }
 
 void trace_exit(int code) {
