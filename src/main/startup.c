@@ -154,6 +154,7 @@ void R_DefParams(Rstart Rp)
     Rp->LoadInitFile = TRUE;
     Rp->DebugInitFile = FALSE;
     Rp->TraceLevel = TR_DISABLED;
+    Rp->TraceExternalCalls = FALSE;
     Rp->TraceDir = NULL;
     Rp->InputFileName = NULL;
     Rp->vsize = R_VSIZE;
@@ -234,6 +235,7 @@ void R_SetParams(Rstart Rp)
     LoadInitFile = Rp->LoadInitFile;
     DebugInitFile = Rp->DebugInitFile;
     R_TraceDir = Rp->TraceDir;
+    traceR_TraceExternalCalls = Rp->TraceExternalCalls;
     R_TraceLevel = Rp->TraceLevel;
     R_InputFileName = Rp->InputFileName;
     SetSize(Rp->vsize, Rp->nsize);

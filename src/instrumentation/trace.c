@@ -41,6 +41,7 @@ typedef struct TraceInfo_ {
     char trace_file_name[MAX_FNAME];
 
     TRACEFILE src_map_file;
+    TRACEFILE extcalls_fd;
 } TraceInfo;
 
 static TraceInfo trace_info;
@@ -661,7 +662,7 @@ static void goto_abs_top_context() {
 static void create_tracedir() {
     char str[MAX_DNAME];
 
-    if (R_TraceLevel == TR_DISABLED)
+    if (!traceR_TraceExternalCalls && R_TraceLevel == TR_DISABLED)
 	return;
 
     /* generate or copy the trace directory name */
@@ -726,6 +727,21 @@ static void initialize_trace_defaults(TR_TYPE mode) {
     trace_info.src_map_file = FOPEN (str);
     if (!trace_info.src_map_file) {
 	print_error_msg ("Couldn't open file '%s' for writing", str);
+	abort();
+    }
+}
+
+static void init_externalcalls() {
+    char str[MAX_DNAME];
+
+    if (!traceR_TraceExternalCalls)
+	return;
+
+    /* open the externalcalls file for writing */
+    sprintf(str, "%s/%s", trace_info.directory, EXTCALLS_NAME);
+    trace_info.extcalls_fd = FOPEN(str);
+    if (trace_info.extcalls_fd == NULL) {
+	print_error_msg("Could not open file '%s' for writing", str);
 	abort();
     }
 }
@@ -959,6 +975,7 @@ void print_src_addr (SEXP src) {
 void traceR_initialize(void) {
     create_tracedir();
     initialize_trace_defaults(R_TraceLevel);
+    init_externalcalls();
 
     if (R_TraceLevel == TR_ALL || R_TraceLevel == TR_BOOTSTRAP)
 	start_tracing();
@@ -982,6 +999,10 @@ void traceR_finish_clean(void) {
 	    write_trace_summary(stderr);
 	}
     }
+
+    if (traceR_TraceExternalCalls) {
+	FCLOSE(trace_info.extcalls_fd);
+    }
 }
 
 /* called when R is about to abort after a segfault or similar */
@@ -991,5 +1012,23 @@ void traceR_finish_abort(void) {
 	/* Trace instrumentation */
 	trace_cnt_fatal_err();
 	terminate_tracing();
+    }
+}
+
+/* quick-hack-port of the --externalcalls functionality from old timeR */
+void traceR_report_external_int(int /*NativeSymbolType*/ type,
+				char *buf,
+				char *name,
+				void /*DL_FUNC*/ *fun) {
+    /* create synthetic name if information is missing */
+    if (name != NULL && strlen(name) == 0)
+	name = "(unknown)";
+
+    if (buf[0] == 0) {
+	FPRINTF(trace_info.extcalls_fd, "%d %p %s %p\n",
+		type, fun, name ? name : "?NULL?" , fun);
+    } else {
+	FPRINTF(trace_info.extcalls_fd, "%d %s %s %p\n",
+		type, buf, name ? name : "?NULL?" , fun);
     }
 }

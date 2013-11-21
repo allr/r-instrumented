@@ -206,29 +206,28 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 	    }
 	    else if (!strcmp (*av, "--trace")) {
 		if (ac > 1) {
-		    char **tmp = av+1;
-		    if (!strcmp(*tmp, "all")){
-			Rp->TraceLevel = TR_ALL;
-			ac--;
-			av++;
-		    } else if (!strcmp(*tmp, "repl")) {
-			Rp->TraceLevel = TR_REPL;
-			ac--;
-			av++;
-		    } else if (!strcmp(*tmp, "bootstrap")) {
-			Rp->TraceLevel = TR_BOOTSTRAP;
-			ac--;
-			av++;
-		    } else if (!strcmp(*tmp, "summary")) {
-			Rp->TraceLevel = TR_SUMMARY;
-			ac--;
-			av++;
-		    } else if (**tmp == '-') {
-			/* no options */
-			Rp->TraceLevel = TR_REPL;
-		    } else { /* error */
-			Rp->TraceLevel = TR_REPL;
-			R_ShowMessage (_("WARNING: unknown tracing type requested, using 'repl'\n"));
+		    char *arg = *(av+1);
+		    char *tok = strtok(arg, ",");
+
+		    ac--;
+		    av++;
+
+		    while (tok != NULL) {
+			if (!strcmp(tok, "all")){
+			    Rp->TraceLevel = TR_ALL;
+			} else if (!strcmp(tok, "repl")) {
+			    Rp->TraceLevel = TR_REPL;
+			} else if (!strcmp(tok, "bootstrap")) {
+			    Rp->TraceLevel = TR_BOOTSTRAP;
+			} else if (!strcmp(tok, "summary")) {
+			    Rp->TraceLevel = TR_SUMMARY;
+			} else if (!strcmp(tok, "externalcalls")) {
+			    Rp->TraceExternalCalls = TRUE;
+			} else { /* unknown */
+			    Rp->TraceLevel = TR_REPL;
+			    R_ShowMessage (_("WARNING: unknown tracing type requested, using 'repl'\n"));
+			}
+			tok = strtok(NULL, ",");
 		    }
 		} else /* default */
 		    Rp->TraceLevel = TR_REPL;

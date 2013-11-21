@@ -207,7 +207,10 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     }
 
     /* We were given a symbol (or an address), so we are done. */
-    if (*fun) return args;
+    if (*fun) {
+	traceR_report_external(symbol->type, buf, dll.DLLname, fun);
+	return args;
+    }
 
     if (dll.type == FILENAME && !strlen(dll.DLLname))
 	errorcall(call, _("PACKAGE = \"\" is invalid"));
@@ -248,7 +251,10 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 	/* no PACKAGE= arg, so see if we can identify a DLL
 	   from the namespace defining the function */
 	*fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
-	if (*fun) return args;
+	if (*fun) {
+	    traceR_report_external(symbol->type, buf, dll.DLLname, fun);
+	    return args;
+	}
 	errorcall(call, "\"%s\" not resolved from current namespace (%s)", 
 		  buf, ns);
     }
@@ -259,7 +265,10 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     */
 
     *fun = R_FindSymbol(buf, dll.DLLname, symbol);
-    if (*fun) return args;
+    if (*fun) {
+	traceR_report_external(symbol->type, buf, dll.DLLname, fun);
+	return args;
+    }
 
     /* so we've failed and bail out */
     if(strlen(dll.DLLname)) {
