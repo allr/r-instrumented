@@ -208,7 +208,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 
     /* We were given a symbol (or an address), so we are done. */
     if (*fun) {
-	traceR_report_external(symbol->type, buf, dll.DLLname, fun);
+	traceR_report_external(symbol->type, buf, fun);
 	return args;
     }
 
@@ -252,7 +252,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 	   from the namespace defining the function */
 	*fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
 	if (*fun) {
-	    traceR_report_external(symbol->type, buf, dll.DLLname, fun);
+	    traceR_report_external(symbol->type, buf, fun);
 	    return args;
 	}
 	errorcall(call, "\"%s\" not resolved from current namespace (%s)", 
@@ -266,7 +266,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 
     *fun = R_FindSymbol(buf, dll.DLLname, symbol);
     if (*fun) {
-	traceR_report_external(symbol->type, buf, dll.DLLname, fun);
+	traceR_report_external(symbol->type, buf, fun);
 	return args;
     }
 

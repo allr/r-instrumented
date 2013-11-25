@@ -220,16 +220,14 @@ static inline void trace_cnt_fatal_err() { fatal_err_cnt++; }
 
 /* external call tracing */
 void traceR_report_external_int(int /*NativeSymbolType*/ type,
-				char *buf,
-				char *name,
+				char *funcname,
 				void /*DL_FUNC*/ *fun);
 
 static inline void traceR_report_external(int /*NativeSymbolType*/ type,
-					  char *buf,
-					  char *name,
+					  char *funcname,
 					  void /*DL_FUNC*/ *fun) {
     if (traceR_TraceExternalCalls)
-	traceR_report_external_int(type, buf, name, fun);
+	traceR_report_external_int(type, funcname, fun);
 }
 
 #endif /* TRACE_H_ */

@@ -1015,20 +1015,16 @@ void traceR_finish_abort(void) {
     }
 }
 
-/* quick-hack-port of the --externalcalls functionality from old timeR */
+/* log calls to external code */
 void traceR_report_external_int(int /*NativeSymbolType*/ type,
-				char *buf,
-				char *name,
+				char *funcname,
 				void /*DL_FUNC*/ *fun) {
-    /* create synthetic name if information is missing */
-    if (name != NULL && strlen(name) == 0)
-	name = "(unknown)";
-
-    if (buf[0] == 0) {
-	FPRINTF(trace_info.extcalls_fd, "%d %p %s %p\n",
-		type, fun, name ? name : "?NULL?" , fun);
+    if (funcname[0] == 0) {
+	/* function name is not available */
+	FPRINTF(trace_info.extcalls_fd, "%d @%p %p\n",
+		type, fun, fun);
     } else {
-	FPRINTF(trace_info.extcalls_fd, "%d %s %s %p\n",
-		type, buf, name ? name : "?NULL?" , fun);
+	FPRINTF(trace_info.extcalls_fd, "%d %s %p\n",
+		type, funcname, fun);
     }
 }
