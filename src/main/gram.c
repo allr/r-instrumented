@@ -97,6 +97,8 @@
 #include "Fileio.h"
 #include "Parse.h"
 #include <R_ext/Print.h>
+#include <Rdebug.h>
+
 
 #if !defined(__STDC_ISO_10646__) && (defined(__APPLE__) || defined(__FreeBSD__))
 /* This may not be 100% true (see the comment in rlocales.h),
@@ -3610,6 +3612,7 @@ static int buffer_getc(void)
 attribute_hidden
 SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status, const char *sourcename)
 {
+    DEBUGSCOPE_START("R_Parse1Buffer");
     Rboolean keepSource = FALSE; 
     int savestack;
     SEXP srcname;
@@ -3655,6 +3658,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status, const ch
     }
     R_PPStackTop = savestack;
     R_FinalizeSrcRefState();
+    DEBUGSCOPE_END("R_Parse1Buffer");
     return R_CurrentExpr;
 }
 

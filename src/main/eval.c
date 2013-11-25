@@ -1195,8 +1195,10 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
 
-    if ((SETJMP(cntxt.cjmpbuf))) {
-        DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+    int jumpValue = SETJMP(cntxt.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+
+    if (jumpValue) {
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
@@ -1206,7 +1208,6 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	    PROTECT(tmp = R_ReturnedValue);
     }
     else {
-        DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
 	PROTECT(tmp = eval(body, newrho));
     }
 
@@ -1505,7 +1506,9 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    switch (SETJMP(cntxt.cjmpbuf)) {
+    int jumpValue = SETJMP(cntxt.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+    switch (jumpValue) {
         case CTXT_BREAK:
             DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
             goto for_break;
@@ -1602,14 +1605,13 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
-        DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+    int jumpValue = SETJMP(cntxt.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+    if (jumpValue != CTXT_BREAK) {
 	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
 	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
 	    eval(body, rho);
 	}
-    }else{
-            DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
     }
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
@@ -1637,14 +1639,13 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
-        DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+    int jumpValue = SETJMP(cntxt.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+    if (jumpValue != CTXT_BREAK) {
 	for (;;) {
 	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
 	    eval(body, rho);
 	}
-    }else{
-        DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
     }
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
@@ -3488,12 +3489,21 @@ static void intStackOverflow()
 
 static SEXP bytecodeExpr(SEXP e)
 {
+    DEBUGSCOPE_START("bytecodeExpr");
     if (isByteCode(e)) {
-	if (LENGTH(BCCONSTS(e)) > 0)
+	if (LENGTH(BCCONSTS(e)) > 0){
+	    DEBUGSCOPE_END("bytecodeExpr");
 	    return VECTOR_ELT(BCCONSTS(e), 0);
-	else return R_NilValue;
+	}
+	else{
+	    DEBUGSCOPE_END("bytecodeExpr");
+	    return R_NilValue;
+	}
     }
-    else return e;
+    else{
+        DEBUGSCOPE_END("bytecodeExpr");
+        return e;
+    }
 }
 
 SEXP R_PromiseExpr(SEXP p)
@@ -4365,7 +4375,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   int which = 0;
 #endif
   Rboolean has_prologue = FALSE;
-
+  DEBUGSCOPE_PRINT("BC_CHECK_SIGINT..");
   BC_CHECK_SIGINT();
 
   INITIALIZE_MACHINE();
@@ -4373,8 +4383,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   constants = BCCONSTS(body);
 
   /* allow bytecode to be disabled for testing */
-  if (R_disable_bytecode)
+  if (R_disable_bytecode){
+      DEBUGSCOPE_PRINT("eval bytecodeexpr...");
+      DEBUGSCOPE_END("bcEval");
       return eval(bytecodeExpr(body), rho);
+  }
 
   /* check version */
   {
@@ -4395,6 +4408,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
   }
 
+  DEBUGSCOPE_PRINT("checked version...");
   R_binding_cache_t vcache = NULL;
   Rboolean smallcache = TRUE;
 #ifdef USE_BINDING_CACHE
@@ -4409,8 +4423,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 # ifdef CACHE_ON_STACK
       /* initialize binding cache on the stack */
       vcache = R_BCNodeStackTop;
-      if (R_BCNodeStackTop + n > R_BCNodeStackEnd)
+      if (R_BCNodeStackTop + n > R_BCNodeStackEnd){
+          DEBUGSCOPE_PRINT("nodeStaackOverFlow");
 	  nodeStackOverflow();
+      }
       while (n > 0) {
 	  *R_BCNodeStackTop = R_NilValue;
 	  R_BCNodeStackTop++;
@@ -4424,6 +4440,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   }
 #endif
 
+  DEBUGSCOPE_PRINT("Begin Machine");
   BEGIN_MACHINE {
     OP(BCMISMATCH, 0): error(_("byte code version mismatch"));
     OP(RETURN, 0): value = GETSTACK(-1); goto done;
