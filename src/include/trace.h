@@ -19,10 +19,12 @@
 #  define TRACE_NAME      "trace.gz"
 #  define SRC_MAP_NAME    "source.map.gz"
 #  define MEMORY_MAP_FILE "memory.map.gz"
+#  define EXTCALLS_NAME   "external_calls.txt.gz"
 #else
 #  define TRACE_NAME      "trace"
 #  define SRC_MAP_NAME    "source.map"
 #  define MEMORY_MAP_FILE "memory.map"
+#  define EXTCALLS_NAME   "external_calls.txt"
 #endif
 #define SUMMARY_NAME      "trace_summary"
 
@@ -53,6 +55,7 @@ typedef struct {
 /* Warning: All vars here are defined in main.c because Defn.h includes trace.h! */
 extern int traceR_is_active;
 extern unsigned int fatal_err_cnt; // FIXME: Rename or remove
+extern Rboolean     traceR_TraceExternalCalls;
 
 // counters for the three classes of arguments
 // (implicit parameters for trcR_count_closure_args and emit_closure)
@@ -213,5 +216,18 @@ static inline void trcR_goto_top_context(void) {
 }
 
 static inline void trace_cnt_fatal_err() { fatal_err_cnt++; }
+
+
+/* external call tracing */
+void traceR_report_external_int(int /*NativeSymbolType*/ type,
+				char *funcname,
+				void /*DL_FUNC*/ *fun);
+
+static inline void traceR_report_external(int /*NativeSymbolType*/ type,
+					  char *funcname,
+					  void /*DL_FUNC*/ *fun) {
+    if (traceR_TraceExternalCalls)
+	traceR_report_external_int(type, funcname, fun);
+}
 
 #endif /* TRACE_H_ */

@@ -43,11 +43,10 @@ typedef struct TraceInfo_ {
     char trace_file_name[MAX_FNAME];
 
     TRACEFILE src_map_file;
-
-    char trace_version[12];
+    TRACEFILE extcalls_fd;
 } TraceInfo;
 
-TraceInfo *trace_info;
+static TraceInfo trace_info;
 
 static TRACEFILE bin_trace_file;
 
@@ -660,24 +659,19 @@ static void goto_abs_top_context() {
     return;
 }
 
-//
-// Trace maintenance functions
-//
-static void initialize_trace_defaults(TR_TYPE mode) {
-    char str[MAX_DNAME];
-    FILE *fd;
-    FUNTAB *func;
 
-    if (mode == TR_DISABLED)
+/*
+ * tracing directory init/cleanup
+ */
+static void create_tracedir() {
+    char str[MAX_DNAME];
+
+    if (!traceR_TraceExternalCalls && R_TraceLevel == TR_DISABLED)
 	return;
 
-    trace_info = malloc(sizeof(TraceInfo));
-    if (trace_info = NULL)
-	abort();
-
-    //set the trace directory name
+    /* generate or copy the trace directory name */
     if (R_TraceDir) {
-	strcpy(trace_info->directory, R_TraceDir);
+	strcpy(trace_info.directory, R_TraceDir);
     } else {
 	int written;
 	time_t t = time (0);
@@ -686,32 +680,42 @@ static void initialize_trace_defaults(TR_TYPE mode) {
 	char *lst = strrchr(fname, '/');
 	lst = lst ? lst + 1 : fname;
 	strftime(str, 15, "%y%m%d_%H%M%S", current_time);
-	written = sprintf(trace_info->directory, "data_%s_%s",
+	written = sprintf(trace_info.directory, "data_%s_%s",
 			  str, lst);
 	if (R_InputFileName)
-	    trace_info->directory[written - 2] = 0;
+	    trace_info.directory[written - 2] = 0;
     }
-    // create directory for results if needed
-    if (mkdir(trace_info->directory, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) && errno != EEXIST)
-	print_error_msg("Can't create directory: %s\n", trace_info->directory);
+
+    /* create the directory */
+    if (mkdir(trace_info.directory, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
+	&& errno != EEXIST)
+	print_error_msg("Can't create directory: %s\n", trace_info.directory);
+}
+
+static void initialize_trace_defaults(TR_TYPE mode) {
+    char str[MAX_DNAME];
+    FILE *fd;
+    FUNTAB *func;
+
+    if (mode == TR_DISABLED)
+	return;
 
     //initialize
     R_KeepSource = TRUE;
     traceR_is_active = 0;
-    strncpy(trace_info->trace_version, HG_ID, 12);
     //set the trace file name
-    sprintf(trace_info->trace_file_name, "%s/%s", trace_info->directory, TRACE_NAME);
+    sprintf(trace_info.trace_file_name, "%s/%s", trace_info.directory, TRACE_NAME);
 
     //copy the R source file into the trace dir
     if (R_InputFileName) {
-	sprintf(str, "cp %s %s/source.R", R_InputFileName, trace_info->directory);
+	sprintf(str, "cp %s %s/source.R", R_InputFileName, trace_info.directory);
 	if (system(str))
 	    print_error_msg("Problem copying input file: %s\n", R_InputFileName);
 	// TODO instead of copying grab what's the parser read
     }
 
     // dump function table into a file
-    sprintf(str, "%s/R_function_table.txt", trace_info->directory);
+    sprintf(str, "%s/R_function_table.txt", trace_info.directory);
     fd = fopen(str, "w");
     if (fd == NULL)
 	print_error_msg("Can't open %s for writing: %s", str, strerror(errno));
@@ -723,10 +727,25 @@ static void initialize_trace_defaults(TR_TYPE mode) {
     fclose(fd);
 
     //open src map file for writing
-    sprintf(str, "%s/%s", trace_info->directory, SRC_MAP_NAME);
-    trace_info->src_map_file = FOPEN (str);
-    if (!trace_info->src_map_file) {
+    sprintf(str, "%s/%s", trace_info.directory, SRC_MAP_NAME);
+    trace_info.src_map_file = FOPEN (str);
+    if (!trace_info.src_map_file) {
 	print_error_msg ("Couldn't open file '%s' for writing", str);
+	abort();
+    }
+}
+
+static void init_externalcalls() {
+    char str[MAX_DNAME];
+
+    if (!traceR_TraceExternalCalls)
+	return;
+
+    /* open the externalcalls file for writing */
+    sprintf(str, "%s/%s", trace_info.directory, EXTCALLS_NAME);
+    trace_info.extcalls_fd = FOPEN(str);
+    if (trace_info.extcalls_fd == NULL) {
+	print_error_msg("Could not open file '%s' for writing", str);
 	abort();
     }
 }
@@ -736,14 +755,14 @@ static void start_tracing() {
 	traceR_is_active = 1;
 
 	//open output file
-	bin_trace_file = FOPEN(trace_info->trace_file_name);
+	bin_trace_file = FOPEN(trace_info.trace_file_name);
 	if (!bin_trace_file) {
-	    print_error_msg ("Couldn't open file '%s' for writing", trace_info->trace_file_name);
+	    print_error_msg ("Couldn't open file '%s' for writing", trace_info.trace_file_name);
 	    abort();
 	}
 
 	//Write trace header
-	bytes_written = FPRINTF(bin_trace_file, "%.12s", trace_info->trace_version);
+	bytes_written = FPRINTF(bin_trace_file, "%.12s", HG_ID);
 
 	// init context stack
 	cstack_top = alloc_cstack_node(CNTXT);
@@ -863,7 +882,7 @@ static void write_trace_summary(FILE *out) {
 static void write_summary() {
     FILE *summary_fp;
     char str[MAX_DNAME];
-    sprintf(str, "%s/%s", trace_info->directory, SUMMARY_NAME);
+    sprintf(str, "%s/%s", trace_info.directory, SUMMARY_NAME);
 
     // Write a summary file
     summary_fp = fopen(str, "w");
@@ -871,7 +890,7 @@ static void write_summary() {
 	print_error_msg ("Couldn't open file '%s' for writing", str);
 	return;
     }
-    fprintf(summary_fp, "TraceDir: %s\n", trace_info->directory);
+    fprintf(summary_fp, "TraceDir: %s\n", trace_info.directory);
     fprintf(summary_fp, "FatalErrors: %u\n", fatal_err_cnt);
     fprintf(summary_fp, "TraceStackErrors: %u\n", stack_err_cnt);
     fprintf(summary_fp, "FinalContextStackHeight: %d\n", get_cstack_height());
@@ -892,10 +911,12 @@ static void write_summary() {
  */
 static void terminate_tracing() {
     // Stop tracing
-    FCLOSE(bin_trace_file);
-    traceR_is_active = 0;
-    FCLOSE(trace_info->src_map_file);
-    write_summary();
+    if (traceR_is_active) {
+	FCLOSE(bin_trace_file);
+	traceR_is_active = 0;
+	FCLOSE(trace_info.src_map_file);
+	write_summary();
+    }
 }
 
 
@@ -905,7 +926,7 @@ static void terminate_tracing() {
 
 static inline void print_ref(SEXP src, const char * file, long line, long col, long more1, long more2, long more3, long more4) {
     // TODO rename this 'moreX' in an more appropriate way
-    FPRINTF(trace_info->src_map_file, "%#010lx %p %s %#lx %#lx %#lx %#lx %#lx %#lx\n",
+    FPRINTF(trace_info.src_map_file, "%#010lx %p %s %#lx %#lx %#lx %#lx %#lx %#lx\n",
 	    bytes_written, src, file,
 	    line, col,
 	    more1, more2,
@@ -915,7 +936,7 @@ static inline void print_ref(SEXP src, const char * file, long line, long col, l
 void print_src_addr (SEXP src) {
     SEXP srcref, srcfile, filename;
 
-    if (trace_info) {
+    if (R_TraceLevel != TR_DISABLED) {
 	srcref = getAttrib(src, R_SrcrefSymbol);
 	if (SXPEXISTS(srcref)) {
 	    srcfile = getAttrib (srcref, R_SrcfileSymbol);
@@ -956,7 +977,9 @@ void print_src_addr (SEXP src) {
 
 /* early initialisation, just after the command line was parsed */
 void traceR_initialize(void) {
+    create_tracedir();
     initialize_trace_defaults(R_TraceLevel);
+    init_externalcalls();
 
     if (R_TraceLevel == TR_ALL || R_TraceLevel == TR_BOOTSTRAP)
 	start_tracing();
@@ -980,6 +1003,10 @@ void traceR_finish_clean(void) {
 	    write_trace_summary(stderr);
 	}
     }
+
+    if (traceR_TraceExternalCalls) {
+	FCLOSE(trace_info.extcalls_fd);
+    }
 }
 
 /* called when R is about to abort after a segfault or similar */
@@ -989,5 +1016,19 @@ void traceR_finish_abort(void) {
 	/* Trace instrumentation */
 	trace_cnt_fatal_err();
 	terminate_tracing();
+    }
+}
+
+/* log calls to external code */
+void traceR_report_external_int(int /*NativeSymbolType*/ type,
+				char *funcname,
+				void /*DL_FUNC*/ *fun) {
+    if (funcname[0] == 0) {
+	/* function name is not available */
+	FPRINTF(trace_info.extcalls_fd, "%d @%p %p\n",
+		type, fun, fun);
+    } else {
+	FPRINTF(trace_info.extcalls_fd, "%d %s %p\n",
+		type, funcname, fun);
     }
 }
