@@ -130,6 +130,9 @@ void debugScope_start(char* scopeName){
   }
 }
  
+//#define TERMINATE_ON_SCOPING_PROBLEM
+#undef TERMINATE_ON_SCOPING_PROBLEM 
+
 void debugScope_end(char* scopeName){
   if (NULL == currentScope){
     printf("Trying to exit scope %s but current Scope is NULL - this should not happen!\n",scopeName);
@@ -140,6 +143,17 @@ void debugScope_end(char* scopeName){
         scopeName, 
         currentScope->scopeName
         );
+      #ifdef TERMINATE_ON_SCOPING_PROBLEM
+      {
+        static unsigned int scopingerrorcounter=0;
+        if (scopingerrorcounter > 200){
+          exit(EXIT_FAILURE);
+        }else{
+          scopingerrorcounter++;
+        }
+      }
+      #endif // TERMINATE_ON_SCOPING_PROBLEM
+      
     }else{ // scopenames match
       if (currentScope->enabled){
         printf("[%u] <- EXIT: %s\n",currentScope->depth, scopeName);
