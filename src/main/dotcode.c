@@ -179,6 +179,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     SEXP op;
     const char *p; char *q;
     DllReference dll;
+    buf[0] = 0; // ensure buf is initialized
     /* This is used as shorthand for 'all' in R_FindSymbol, but
        should never be supplied */
     strcpy(dll.DLLname, ""); 
