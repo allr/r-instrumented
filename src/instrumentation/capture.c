@@ -28,7 +28,7 @@
 
 #define MAX_DNAME 1024
 #define CAP_FILENAME "capture"
-#define CUTOFF 512
+#define CUTOFF 500
 #define MAX_NUM_LINES 10
 
 extern TraceInfo *trace_info;
@@ -80,6 +80,8 @@ void capR_capture_primitive(SEXP fun, SEXP args, SEXP ret) {
             exit(1);
         }
         if (!on_blacklist(fun)) {
+            PROTECT(args);
+            PROTECT(ret);
             char type = PRIMINTERNAL(fun) ? 'I' : 'P';
             fprintf(capture_fp, "func: %s\n", PRIMNAME(fun));
             fprintf(capture_fp, "type: %c\n", type);
@@ -92,9 +94,10 @@ void capR_capture_primitive(SEXP fun, SEXP args, SEXP ret) {
             } else {
                 fprintf(capture_fp, "args: <arguments too long, ignored>\n");
             }
-            UNPROTECT(1);
-            PROTECT(t);
+            UNPROTECT(3);
+            PROTECT(ret);
             t = deparse4capture(ret, CUTOFF);
+            PROTECT(t);
             if (shouldKeep(t)) {
                 for (int i = 0; i < LENGTH(t); i++) {
                     fprintf(capture_fp, "retn: %s\n", CHAR(STRING_ELT(t, i)));
@@ -102,7 +105,7 @@ void capR_capture_primitive(SEXP fun, SEXP args, SEXP ret) {
             } else {
                 fprintf(capture_fp, "retn: <returns too long, ignored>\n");
             }
-            UNPROTECT(1);
+            UNPROTECT(2);
         }
         depth--;
     }
