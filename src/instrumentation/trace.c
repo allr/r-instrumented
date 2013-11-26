@@ -833,7 +833,6 @@ static void write_allocation_summary(FILE *out) {
     fprintf(out, "DefineUserDb: %lu\n", define_user_db);
     fprintf(out, "ErrCountAssign: %lu\n", err_count_assign);
     fprintf(out, "ErrorEvalSet: %lu %lu\n", do_set_allways - do_set_unique, do_super_set_allways - do_super_set_unique );
-    fprintf(out, "AvoidedDup: %lu %lu\n", avoided_dup, need_dup);
 }
 
 static void write_trace_summary(FILE *out) {

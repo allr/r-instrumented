@@ -1385,11 +1385,8 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* over always duplicating. */
     /* Shouldn't x be protected?  It is (as args is)! */
 
-    if (NAMED(CAR(args)) == 2) {
-	need_dup++;
+    if (NAMED(CAR(args)) == 2)
 	x = SETCAR(args, duplicate(CAR(args)));
-    } else
-	avoided_dup++;
 
     SubAssignArgs(args, &x, &subs, &y);
     S4 = IS_S4_OBJECT(x);
@@ -1541,11 +1538,8 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Ensure that the LHS is a local variable. */
     /* If it is not, then make a local copy. */
 
-    if (NAMED(x) == 2) {
-	need_dup++;
+    if (NAMED(x) == 2)
 	SETCAR(args, x = duplicate(x));
-    } else
-	avoided_dup++;
 
     xtop = xup = x; /* x will be the element which is assigned to */
 
@@ -1746,10 +1740,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case 1919:      /* vector     <- vector     */
 	case 2020:	/* expression <- expression */
 
-	    if( NAMED(y) ) {
-		need_dup++;
-		y = duplicate(y);
-	    } else avoided_dup++;
+	    if( NAMED(y) ) y = duplicate(y);
 	    SET_VECTOR_ELT(x, offset, y);
 	    break;
 
@@ -1885,11 +1876,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
     PROTECT_WITH_INDEX(val, &pvalidx);
     S4 = IS_S4_OBJECT(x);
 
-    if (NAMED(x) == 2) {
-	need_dup++;
+    if (NAMED(x) == 2)
 	REPROTECT(x = duplicate(x), pxidx);
-    } else
-	avoided_dup++;
 
     /* If we aren't creating a new entry and NAMED>0
        we need to duplicate to prevent cycles.
@@ -1898,11 +1886,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
        not if NAMED==2 */
     if (NAMED(val) == 2)
 	maybe_duplicate=TRUE;
-    else if (NAMED(val)==1) {
-	need_dup++;
+    else if (NAMED(val)==1)
 	REPROTECT(val = duplicate(val), pvalidx);
-    } else
-	avoided_dup++;
     /* code to allow classes to extend ENVSXP */
     if(TYPEOF(x) == S4SXP) {
 	xS4 = x;
@@ -1913,11 +1898,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 
     if ((isList(x) || isLanguage(x)) && !isNull(x)) {
 	/* Here we do need to duplicate */
-	if (maybe_duplicate) {
-	    need_dup++;
+	if (maybe_duplicate)
 	    REPROTECT(val = duplicate(val), pvalidx);
-	} else
-	    avoided_dup++;
 	if (TAG(x) == nlist) {
 	    if (val == R_NilValue) {
 		SET_ATTRIB(CDR(x), ATTRIB(x));
@@ -2019,11 +2001,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 	    }
 	    if (imatch >= 0) {
 		/* We are just replacing an element */
-		if (maybe_duplicate) {
-		    need_dup++;
+		if (maybe_duplicate)
 		    REPROTECT(val = duplicate(val), pvalidx);
-		} else
-		    avoided_dup++;
 		SET_VECTOR_ELT(x, imatch, val);
 	    }
 	    else {

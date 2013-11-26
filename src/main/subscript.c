@@ -315,24 +315,16 @@ vectorIndex(SEXP x, SEXP thesub, int start, int stop, int pok, SEXP call,
 #endif
 	    cx = nthcdr(x, (int) offset);
 	    x = CAR(cx);
-	    if (dup) {
-		if (NAMED(x) > 1) {
-		    x = duplicate(x);
-		    SETCAR(cx, x);
-		    need_dup++;
-		} else
-		    avoided_dup++;
+	    if (dup && NAMED(x) > 1) {
+		x = duplicate(x);
+		SETCAR(cx, x);
 	    }
 	} else {
 	    cx = x;
 	    x = VECTOR_ELT(x, offset);
-	    if (dup) {
-		if (NAMED(x) > 1) {
-		    x = duplicate(x);
-		    SET_VECTOR_ELT(cx, offset, x);
-		    need_dup++;
-		} else
-		    avoided_dup++;
+	    if (dup && NAMED(x) > 1) {
+		x = duplicate(x);
+		SET_VECTOR_ELT(cx, offset, x);
 	    }
     	}
     }

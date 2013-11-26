@@ -1309,10 +1309,6 @@ static SEXP NewWeakRef(SEXP key, SEXP val, SEXP fin, Rboolean onexit)
     }
 
     PROTECT(key);
-    if (NAMED(val)) {
-	need_dup++;
-    } else
-	avoided_dup++;
     PROTECT(val = NAMED(val) ? duplicate(val) : val);
     PROTECT(fin);
     w = allocVector(VECSXP, WEAKREF_SIZE);

@@ -1600,7 +1600,6 @@ SEXP R_do_new_object(SEXP class_def)
 	      translateChar(asChar(e)));
     }
     e = R_do_slot(class_def, s_className);
-    // FIXME: Why no duplicate counting here?
     value = duplicate(R_do_slot(class_def, s_prototype));
     if(TYPEOF(value) == S4SXP || getAttrib(e, R_PackageSymbol) != R_NilValue)
     { /* Anything but an object from a base "class" (numeric, matrix,..) */
@@ -1661,11 +1660,8 @@ SEXP asS4(SEXP s, Rboolean flag, int complete)
     if(flag == IS_S4_OBJECT(s))
 	return s;
     PROTECT(s);
-    if(NAMED(s) == 2) {
-	need_dup++;
+    if(NAMED(s) == 2)
 	s = duplicate(s);
-    } else
-	avoided_dup++;
     UNPROTECT(1);
     if(flag) SET_S4_OBJECT(s);
     else {
