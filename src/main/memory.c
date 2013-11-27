@@ -84,17 +84,6 @@
 
 #define ADD_ALLOC(type) allocated_##type += sizeof(SEXPREC)
 #define ADD_ALLOC_BY(type, val) allocated_##type += val
-#define ADD_ALLOC_VECTOR(type, elements_, size_, asize_)	\
-    do {							\
-	vecstats_total.allocs++;				\
-	vecstats_total.elements     += elements_;		\
-	vecstats_total.size         += size_;			\
-	vecstats_total.asize        += asize_;			\
-	vecstats_ ## type.allocs++;				\
-	vecstats_ ## type.elements  += elements_;		\
-	vecstats_ ## type.size      += size_;			\
-	vecstats_ ## type.asize     += asize_;			\
-    } while (0)
 
 #if defined(Win32) && defined(LEA_MALLOC)
 /*#include <stddef.h> */
@@ -2437,7 +2426,9 @@ static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_a
 #endif
 #endif
             if (count_allocation)
-		ADD_ALLOC_VECTOR(one, length, alloc_size * sizeof(VECREC), actual_size);
+		traceR_count_vector_alloc(TR_VECCLASS_ONE, length,
+					  alloc_size * sizeof(VECREC),
+					  actual_size);
 
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SET_NODE_CLASS(s, node_class);
@@ -2590,7 +2581,9 @@ static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_a
 	    SET_NODE_CLASS(s, node_class);
 	    R_SmallVallocSize += alloc_size;
             if (count_allocation)
-		ADD_ALLOC_VECTOR(small, length, size * sizeof(VECREC), actual_size);
+		traceR_count_vector_alloc(TR_VECCLASS_SMALL, length,
+					  size * sizeof(VECREC),
+					  actual_size);
 	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
 	}
 	else {
@@ -2651,9 +2644,9 @@ static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_a
 			      dsize);
 	    }
 	    if (count_allocation)
-		ADD_ALLOC_VECTOR(large, length,
-				 size * sizeof(VECREC),
-				 (sizeof(SEXPREC_ALIGN) + size * sizeof(VECREC)));
+		traceR_count_vector_alloc(TR_VECCLASS_LARGE, length,
+					  size * sizeof(VECREC),
+					  sizeof(SEXPREC_ALIGN) + size * sizeof(VECREC));
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SET_NODE_CLASS(s, LARGE_NODE_CLASS);
 	    R_LargeVallocSize += size;
@@ -2668,7 +2661,8 @@ static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_a
     else {
 	GC_PROT(s = allocSExpNonCons(type));
 	if (count_allocation)
-	    ADD_ALLOC_VECTOR(zero, 0, sizeof(SEXPREC), sizeof(SEXPREC));
+	    traceR_count_vector_alloc(TR_VECCLASS_ZERO, 0,
+				      sizeof(SEXPREC), sizeof(SEXPREC));
         /* do not count this as a noncons allocation to avoid double counting */
         allocated_noncons -= sizeof(SEXPREC);
 	SET_SHORT_VEC_LENGTH(s, (R_len_t) length);

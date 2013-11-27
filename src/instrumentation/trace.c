@@ -65,10 +65,6 @@ extern unsigned long allocated_cons, allocated_prom, allocated_env; // bytes
 extern unsigned long allocated_external, allocated_sexp, allocated_noncons; // bytes
 extern unsigned long allocated_cons_current, allocated_cons_peak; // count
 
-// Vector count
-extern vec_alloc_stats_t vecstats_total, vecstats_zero,
-    vecstats_one, vecstats_small, vecstats_large;
-
 // String buffers count
 extern unsigned long allocated_sb, allocated_sb_size, allocated_sb_elts;
 
@@ -779,15 +775,10 @@ static void start_tracing() {
  * Summary output
  */
 
-extern void close_memory_map();
-extern void display_unused(FILE *);
+void close_memory_map();
+void display_unused(FILE *);
 void write_missing_results(FILE *out);
-
-static void report_vectorstats(FILE *out, const char *name, vec_alloc_stats_t *stats) {
-    fprintf(out, "Allocated%sVectors: %lu %lu %lu %lu\n", name,
-	    stats->allocs, stats->elements,
-	    stats->size,   stats->asize);
-}
+static void write_vector_allocs(FILE *out);
 
 static void write_allocation_summary(FILE *out) {
     fprintf(out, "SizeOfSEXP: %ld\n", sizeof(SEXPREC));
@@ -809,12 +800,7 @@ static void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
     fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
 
-    report_vectorstats(out, "",      &vecstats_total);
-    report_vectorstats(out, "Zero",  &vecstats_zero);
-    report_vectorstats(out, "One",   &vecstats_one);
-    report_vectorstats(out, "Small", &vecstats_small);
-    report_vectorstats(out, "Large", &vecstats_large);
-
+    write_vector_allocs(out);
     /* allocation counts per node class */
     for (unsigned int i = 0; i < allocated_cell_len; i++) {
       fprintf(out, "Class%uAllocs: %lu\n", i, allocated_cell[i]);
@@ -1026,4 +1012,39 @@ void traceR_report_external_int(int /*NativeSymbolType*/ type,
 	FPRINTF(trace_info.extcalls_fd, "%d %s %p\n",
 		type, funcname, fun);
     }
+}
+
+
+/*
+ * vector allocation logginc
+ */
+static vec_alloc_stats_t vectors_byclass[TR_VECCLASS_TOTAL + 1];
+
+void traceR_count_vector_alloc(traceR_vector_class_t type,
+			       size_t elements,
+			       size_t size,
+			       size_t asize) {
+    vectors_byclass[TR_VECCLASS_TOTAL].allocs++;
+    vectors_byclass[TR_VECCLASS_TOTAL].elements += elements;
+    vectors_byclass[TR_VECCLASS_TOTAL].size     += size;
+    vectors_byclass[TR_VECCLASS_TOTAL].asize    += asize;
+
+    vectors_byclass[type].allocs++;
+    vectors_byclass[type].elements += elements;
+    vectors_byclass[type].size     += size;
+    vectors_byclass[type].asize    += asize;
+}
+
+static void report_vectorstats(FILE *out, const char *name, vec_alloc_stats_t *stats) {
+    fprintf(out, "Allocated%sVectors: %lu %lu %lu %lu\n", name,
+	    stats->allocs, stats->elements,
+	    stats->size,   stats->asize);
+}
+
+static void write_vector_allocs(FILE *out) {
+    report_vectorstats(out, "",      &vectors_byclass[TR_VECCLASS_TOTAL]);
+    report_vectorstats(out, "Zero",  &vectors_byclass[TR_VECCLASS_ZERO]);
+    report_vectorstats(out, "One",   &vectors_byclass[TR_VECCLASS_ONE]);
+    report_vectorstats(out, "Small", &vectors_byclass[TR_VECCLASS_SMALL]);
+    report_vectorstats(out, "Large", &vectors_byclass[TR_VECCLASS_LARGE]);
 }
