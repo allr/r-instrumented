@@ -8,18 +8,11 @@
 
 #ifdef ENABLE_SCOPING_DEBUG
 //#undef ENABLE_SCOPING_DEBUG
-/* 
- * this should move somewhere else
- *
- * Disabling this macro means that this file doesn't really has to be 
- * compiled
- */
-
-
 
 static debugScope* currentScope = (debugScope*)NULL;
 static activeScopesLinList* activeScopes = (activeScopesLinList*)NULL;
 static jumpInfos_linlist* jumpInfos = (jumpInfos_linlist*)NULL;
+static int globalEnable = (0!=0);
 
 void debugScope_activate(char* scopeName){
   activeScopesLinList* newScope = malloc(sizeof(activeScopesLinList));
@@ -29,8 +22,21 @@ void debugScope_activate(char* scopeName){
   
   activeScopes = newScope;
 }
+void debugScope_enableOutput(){
+  globalEnable= (1==1);
+}
+
+void debugScope_disableOutput(){
+  DEBUGSCOPE_START("debugScope_disableOutput");
+  globalEnable = (0!=0);
+  DEBUGSCOPE_END("debugScope_disableOutput");
+}
+
 
 int debugScope_isActive(char* scopeName){
+  if ((0!=0)==globalEnable){ // globally disabled
+    return (0!=0);
+  }
   // this function just iterates the linked list. There may be faster solutions
   activeScopesLinList* scopeSearcher = activeScopes;
   while(NULL != scopeSearcher){ // still some list left
@@ -44,6 +50,23 @@ int debugScope_isActive(char* scopeName){
   return (0!=0);
 }
   
+int debugScope_isCurrentActive(){
+  if ((0!=0)==globalEnable){ // globally disabled, so stop at once
+    return (0!=0);
+  }
+  if (NULL == currentScope){ // no current scope - should not happen
+    // but just return "no"
+    return (0!=0);
+  }
+  if (1==currentScope->enabled){ // enabled
+    return (1==1);
+  }else{ // not enabled
+    return (0!=0);
+  }
+  
+  
+}
+
   
   
 
@@ -126,7 +149,7 @@ void debugScope_start(char* scopeName){
   currentScope = newScope;
   
   if (currentScope->enabled){
-    printf("[%u] -> ENTER: %s\n",newScope->depth, scopeName);
+    debugScope_print("[%u] -> ENTER: %s\n",newScope->depth, scopeName);
   }
 }
  
@@ -155,9 +178,7 @@ void debugScope_end(char* scopeName){
       #endif // TERMINATE_ON_SCOPING_PROBLEM
       
     }else{ // scopenames match
-      if (currentScope->enabled){
-        printf("[%u] <- EXIT: %s\n",currentScope->depth, scopeName);
-      }
+      debugScope_print("[%u] <- EXIT: %s\n",currentScope->depth, scopeName);
       debugScope* endingScope = currentScope;
       if (NULL == endingScope->parent){
         printf("This was root Scope!\n");
@@ -270,9 +291,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo){
       // currentScope == targetScope
       break;
     }
-    if (currentScope->enabled){
-      printf("[%u] <-- ENTER via longjump: %s\n",currentScope->depth, currentScope->scopeName);
-    }
+    debugScope_print("[%u] <-- ENTER via longjump: %s\n",currentScope->depth, currentScope->scopeName);
   }else{ // NULL
     printf("Current Scope is NULL - this should not happen!\n");
   }
@@ -280,7 +299,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo){
 
 void debugScope_print(char* output,...){
   if (NULL != currentScope){ // safety check
-    if ((1==1)==currentScope->enabled){
+    if ((1==1)==debugScope_isCurrentActive()){
       va_list argumentpointer;
       va_start(argumentpointer,output);
       vprintf(output,argumentpointer);

@@ -852,6 +852,7 @@ void setup_Rmainloop(void)
     /* make sure srand is called before R_tmpnam, PR#14381 */
     srand(TimeToSeed());
 
+    DEBUGSCOPE_DISABLEOUTPUT();
     
     InitTempDir(); /* must be before InitEd */
     InitMemory();
@@ -1073,6 +1074,18 @@ static void end_Rmainloop(void)
 void run_Rmainloop(void)
 {
     DEBUGSCOPE_START("run_Rmainloop");
+    
+    /*
+     * As the initialisation runs a lot of evals and stuff, it
+     * is useful to disable all output before the first "real" R
+     * command is run. Of course, at that point (here) it should be
+     * reactivated.
+     *
+     * it would be really, really nice if we were able to enable
+     * and disable debugscope-output via commands in R - but
+     * let's not get ahead of ourselves..
+     */
+    DEBUGSCOPE_ENABLEOUTPUT();
     /* Here is the real R read-eval-loop. */
     /* We handle the console until end-of-file. */
     SETJMP(R_Toplevel.cjmpbuf);
