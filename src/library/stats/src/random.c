@@ -311,10 +311,7 @@ SEXP Rmultinom(SEXP args)
     prob = CAR(args);
     prob = coerceVector(prob, REALSXP);
     k = length(prob);/* k = #{components or classes} = X-vector length */
-    if (NAMED(prob)) {
-	need_dup++;
-	prob = duplicate(prob);/*as `do_sample' -- need this line? */
-    } else avoided_dup++;
+    if (NAMED(prob)) prob = duplicate(prob);/*as `do_sample' -- need this line? */
     PROTECT(prob);
     /* check and make sum = 1: */
     FixupProb(REAL(prob), k, /*require_k = */ 0, TRUE);

@@ -67,10 +67,6 @@ extern unsigned long allocated_cons, allocated_prom, allocated_env; // bytes
 extern unsigned long allocated_external, allocated_sexp, allocated_noncons; // bytes
 extern unsigned long allocated_cons_current, allocated_cons_peak; // count
 
-// Vector count
-extern vec_alloc_stats_t vecstats_total, vecstats_zero,
-    vecstats_one, vecstats_small, vecstats_large;
-
 // String buffers count
 extern unsigned long allocated_sb, allocated_sb_size, allocated_sb_elts;
 
@@ -783,15 +779,10 @@ static void start_tracing() {
  * Summary output
  */
 
-extern void close_memory_map();
-extern void display_unused(FILE *);
+void close_memory_map();
+void display_unused(FILE *);
 void write_missing_results(FILE *out);
-
-static void report_vectorstats(FILE *out, const char *name, vec_alloc_stats_t *stats) {
-    fprintf(out, "Allocated%sVectors: %lu %lu %lu %lu\n", name,
-	    stats->allocs, stats->elements,
-	    stats->size,   stats->asize);
-}
+static void write_vector_allocs(FILE *out);
 
 static void write_allocation_summary(FILE *out) {
     fprintf(out, "SizeOfSEXP: %ld\n", sizeof(SEXPREC));
@@ -813,12 +804,7 @@ static void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
     fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
 
-    report_vectorstats(out, "",      &vecstats_total);
-    report_vectorstats(out, "Zero",  &vecstats_zero);
-    report_vectorstats(out, "One",   &vecstats_one);
-    report_vectorstats(out, "Small", &vecstats_small);
-    report_vectorstats(out, "Large", &vecstats_large);
-
+    write_vector_allocs(out);
     /* allocation counts per node class */
     for (unsigned int i = 0; i < allocated_cell_len; i++) {
       fprintf(out, "Class%uAllocs: %lu\n", i, allocated_cell[i]);
@@ -837,7 +823,6 @@ static void write_allocation_summary(FILE *out) {
     fprintf(out, "DefineUserDb: %lu\n", define_user_db);
     fprintf(out, "ErrCountAssign: %lu\n", err_count_assign);
     fprintf(out, "ErrorEvalSet: %lu %lu\n", do_set_allways - do_set_unique, do_super_set_allways - do_super_set_unique );
-    fprintf(out, "AvoidedDup: %lu %lu\n", avoided_dup, need_dup);
 }
 
 static void write_trace_summary(FILE *out) {
@@ -1030,5 +1015,82 @@ void traceR_report_external_int(int /*NativeSymbolType*/ type,
     } else {
 	FPRINTF(trace_info.extcalls_fd, "%d %s %p\n",
 		type, funcname, fun);
+    }
+}
+
+
+/*
+ * vector allocation logginc
+ */
+
+/* exact number of elements are counted up to (1 << this) - 1 */
+#define VECTOR_EXACT_LIMIT_LD 5
+
+/* total number of bins, 64 should be sufficient for LIMIT_LD=5 on a x86_64 machine */
+#define VECTOR_BYELEMENT_BINS 64
+
+static vec_alloc_stats_t vectors_byclass[TR_VECCLASS_TOTAL + 1];
+static vec_alloc_stats_t vectors_byelements[VECTOR_BYELEMENT_BINS];
+
+static void count_vecalloc(vec_alloc_stats_t *stat,
+			   size_t elements,
+			   size_t size,
+			   size_t asize) {
+    stat->allocs++;
+    stat->elements += elements;
+    stat->size     += size;
+    stat->asize    += asize;
+}
+
+void traceR_count_vector_alloc(traceR_vector_class_t type,
+			       size_t elements,
+			       size_t size,
+			       size_t asize) {
+    /* add to per-class counts */
+    count_vecalloc(&vectors_byclass[TR_VECCLASS_TOTAL], elements, size, asize);
+    count_vecalloc(&vectors_byclass[type],              elements, size, asize);
+
+    /* add to per-size histogram */
+    if (elements < (1 << VECTOR_EXACT_LIMIT_LD)) {
+	/* exact counts for 0 to 15 */
+	count_vecalloc(&vectors_byelements[elements], elements, size, asize);
+    } else {
+	/* use one bin per binary power */
+	size_t e = elements;
+	unsigned int ld_e = 0;
+
+	while (e > 0) {
+	    e >>= 1;
+	    ld_e++;
+	}
+
+	/* skip first k bins, put first batch bin directly after that */
+	count_vecalloc(&vectors_byelements[ld_e +
+					   (1 << (VECTOR_EXACT_LIMIT_LD - 1)) -
+					   VECTOR_EXACT_LIMIT_LD], elements, size, asize);
+    }
+}
+
+static void report_vectorstats(FILE *out, const char *name, vec_alloc_stats_t *stats) {
+    fprintf(out, "%s: %lu %lu %lu %lu\n", name,
+	    stats->allocs, stats->elements,
+	    stats->size,   stats->asize);
+}
+
+static void write_vector_allocs(FILE *out) {
+    report_vectorstats(out, "AllocatedVectors",      &vectors_byclass[TR_VECCLASS_TOTAL]);
+    report_vectorstats(out, "AllocatedZeroVectors",  &vectors_byclass[TR_VECCLASS_ZERO]);
+    report_vectorstats(out, "AllocatedOneVectors",   &vectors_byclass[TR_VECCLASS_ONE]);
+    report_vectorstats(out, "AllocatedSmallVectors", &vectors_byclass[TR_VECCLASS_SMALL]);
+    report_vectorstats(out, "AllocatedLargeVectors", &vectors_byclass[TR_VECCLASS_LARGE]);
+
+    char numberbuf[30];
+    unsigned int i;
+
+    fprintf(out,"VectorAllocExactLimit: %d\n", (1 << (VECTOR_EXACT_LIMIT_LD - 1)) - 1);
+
+    for (i = 0; i < VECTOR_BYELEMENT_BINS; i++) {
+	sprintf(numberbuf, "VectorAllocBin%d", i);
+	report_vectorstats(out, numberbuf, &vectors_byelements[i]);
     }
 }

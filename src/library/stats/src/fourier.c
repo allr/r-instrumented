@@ -48,10 +48,7 @@ SEXP fft(SEXP z, SEXP inverse)
 	z = coerceVector(z, CPLXSXP);
 	break;
     case CPLXSXP:
-	if (NAMED(z)) {
-	    need_dup++;
-	    z = duplicate(z);
-	} else avoided_dup++;
+	if (NAMED(z)) z = duplicate(z);
 	break;
     default:
 	error(_("non-numeric argument"));
@@ -138,10 +135,7 @@ SEXP mvfft(SEXP z, SEXP inverse)
 	z = coerceVector(z, CPLXSXP);
 	break;
     case CPLXSXP:
-	if (NAMED(z)) {
-	    need_dup++;
-	    z = duplicate(z);
-	} else avoided_dup++;
+	if (NAMED(z)) z = duplicate(z);
 	break;
     default:
 	error(_("non-numeric argument"));

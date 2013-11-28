@@ -299,12 +299,9 @@ SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    isNull(env))) {
 	if (isNull(env))
 	    error(_("use of NULL environment is defunct"));
-	if(NAMED(s) > 1) {
-	    need_dup++;
+	if(NAMED(s) > 1)
 	    /* this copies but does not duplicate args or code */
 	    s = duplicate(s);
-	} else
-	    avoided_dup++;
 	if (TYPEOF(BODY(s)) == BCODESXP)
 	    /* switch to interpreted version if compiled */
 	    SET_BODY(s, R_ClosureExpr(CAR(args)));
@@ -687,13 +684,10 @@ SEXP attribute_hidden do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else {
 	    SET_STRING_ELT(names, i, R_BlankString);
 	}
-	if (NAMED(CAR(args))) {
-	    need_dup++;
+	if (NAMED(CAR(args)))
 	    SET_VECTOR_ELT(list, i, duplicate(CAR(args)));
-	} else {
-	    avoided_dup++;
+	else
 	    SET_VECTOR_ELT(list, i, CAR(args));
-	}
 	args = CDR(args);
     }
     if (havenames) {
@@ -713,13 +707,10 @@ SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(EXPRSXP, n));
     a = args;
     for (i = 0; i < n; i++) {
-	if(NAMED(CAR(a))) {
-	    need_dup++;
+	if(NAMED(CAR(a)))
 	    SET_VECTOR_ELT(ans, i, duplicate(CAR(a)));
-	} else {
-	    avoided_dup++;
+	else
 	    SET_VECTOR_ELT(ans, i, CAR(a));
-	}
 	if (TAG(a) != R_NilValue) named = 1;
 	a = CDR(a);
     }

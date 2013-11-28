@@ -52,6 +52,15 @@ typedef struct {
     unsigned long asize;
 } vec_alloc_stats_t;
 
+/* vector allocation classes */
+typedef enum {
+  TR_VECCLASS_ZERO = 0,
+  TR_VECCLASS_ONE,
+  TR_VECCLASS_SMALL,
+  TR_VECCLASS_LARGE,
+  TR_VECCLASS_TOTAL  // must be the last entry
+} traceR_vector_class_t;
+
 /* Warning: All vars here are defined in main.c because Defn.h includes trace.h! */
 extern int traceR_is_active;
 extern unsigned int fatal_err_cnt; // FIXME: Rename or remove
@@ -229,5 +238,9 @@ static inline void traceR_report_external(int /*NativeSymbolType*/ type,
     if (traceR_TraceExternalCalls)
 	traceR_report_external_int(type, funcname, fun);
 }
+
+/* vector allocation logging */
+void traceR_count_vector_alloc(traceR_vector_class_t type, size_t elements,
+			       size_t size, size_t asize);
 
 #endif /* TRACE_H_ */

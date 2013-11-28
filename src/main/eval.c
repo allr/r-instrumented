@@ -1309,13 +1309,11 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     if ((vl = findVarInFrame3(rho, symbol, TRUE)) != R_UnboundValue) {
 	vl = eval(symbol, rho);	/* for promises */
 	if(NAMED(vl) == 2) {
-	    need_dup++;
 	    PROTECT(vl = duplicate(vl));
 	    defineVar(symbol, vl, rho);
 	    UNPROTECT(1);
 	    SET_NAMED(vl, 1);
-	} else
-	    avoided_dup++;
+	}
 	return vl;
     }
 
@@ -1797,11 +1795,10 @@ static void tmp_cleanup(void *data)
 	SEXP __lhs__ = (lhs); \
 	SEXP __v__ = CAR(__lhs__); \
 	if (NAMED(__v__) == 2) { \
-	    need_dup++; \
 	    __v__ = duplicate(__v__); \
 	    SET_NAMED(__v__, 1); \
 	    SETCAR(__lhs__, __v__); \
-	} else avoided_dup++; \
+	} \
 	R_SetVarLocValue(loc, __v__); \
     } while(0)
 
@@ -2021,9 +2018,7 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 		t = duplicate(s);
 		UNPROTECT(1);
 		s = t;
-		need_dup++;
-	    } else
-		avoided_dup++;
+	    }
 	    PROTECT(s);
 	    need_count_assign = 1;
 	    defineVar(CAR(args), s, rho);
@@ -2063,11 +2058,8 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    do_super_set_allways++;
 	    s = eval(CADR(args), rho);
 	    do_super_set_unique++;
-	    if (NAMED(s)) {
-		need_dup++;
+	    if (NAMED(s))
 		s = duplicate(s);
-	    } else
-		avoided_dup++;
 	    PROTECT(s);
 	    need_count_assign = 1;
 	    setVar(CAR(args), s, ENCLOS(rho));
@@ -3931,11 +3923,10 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   SEXP lhs = GETSTACK(-2); \
   SEXP rhs = GETSTACK(-1); \
   if (NAMED(lhs) == 2) { \
-    need_dup++; \
     lhs = duplicate(lhs); \
     SETSTACK(-2, lhs); \
     SET_NAMED(lhs, 1); \
-  } else avoided_dup++; \
+  } \
   if (isObject(lhs) && \
       tryAssignDispatch(generic, call, lhs, rhs, rho, &value)) { \
     R_BCNodeStackTop--;	\
@@ -3991,11 +3982,10 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 	SEXP call = VECTOR_ELT(constants, callidx); \
 	SEXP rhs = GETSTACK(-1); \
 	if (NAMED(lhs) == 2) { \
-	    need_dup++; \
 	    lhs = duplicate(lhs); \
 	    SETSTACK(-2, lhs); \
 	    SET_NAMED(lhs, 1); \
-	} else avoided_dup++; \
+	} \
 	if (tryAssignDispatch(generic, call, lhs, rhs, rho, &value)) { \
 	    R_BCNodeStackTop--; \
 	    SETSTACK(-1, value); \
@@ -4210,15 +4200,11 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     SEXP vec = GETSTACK_PTR(sx);
 
     if (NAMED(vec) == 2) {
-        need_dup++;
 	vec = duplicate(vec);
 	SETSTACK_PTR(sx, vec);
     }
-    else {
-	avoided_dup++;
-	if (NAMED(vec) == 1)
-	    SET_NAMED(vec, 0);
-    }
+    else if (NAMED(vec) == 1)
+	SET_NAMED(vec, 0);
 
     if (ATTRIB(vec) == R_NilValue) {
 	int i = bcStackIndex(si);
@@ -4258,15 +4244,11 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
     SEXP mat = GETSTACK(-4);
 
     if (NAMED(mat) > 1) {
-	need_dup++;
 	mat = duplicate(mat);
 	SETSTACK(-4, mat);
     }
-    else {
-	avoided_dup++;
-	if (NAMED(mat) == 1)
-	    SET_NAMED(mat, 0);
-    }
+    else if (NAMED(mat) == 1)
+	SET_NAMED(mat, 0);
 
     dim = getMatrixDim(mat);
 
@@ -5078,11 +5060,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP x = GETSTACK(-2);
 	SEXP rhs = GETSTACK(-1);
 	if (NAMED(x) == 2) {
-	    need_dup++;
 	    x = duplicate(x);
 	    SETSTACK(-2, x);
 	    SET_NAMED(x, 1);
-	} else avoided_dup++;
+	}
 	if (isObject(x)) {
 	    SEXP ncall, prom;
 	    PROTECT(ncall = duplicate(call));
@@ -5170,10 +5151,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = GETSTACK(-1);
 	if (NAMED(value)) {
-	    need_dup++;
 	    value = duplicate(value);
 	    SETSTACK(-1, value);
-	} else avoided_dup++;
+	}
 	need_count_assign = 1;
 	setVar(symbol, value, ENCLOS(rho));
 	if (need_count_assign) {
@@ -5221,11 +5201,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP vexpr = VECTOR_ELT(constants, GETOP());
 	SEXP args, prom, last;
 	if (NAMED(lhs) == 2) {
-	  need_dup++;
 	  lhs = duplicate(lhs);
 	  SETSTACK(-5, lhs);
 	  SET_NAMED(lhs, 1);
-	} else avoided_dup++;
+	}
 	switch (ftype) {
 	case BUILTINSXP:
 	  /* push RHS value onto arguments with 'value' tag */

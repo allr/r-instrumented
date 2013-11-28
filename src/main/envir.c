@@ -2707,10 +2707,8 @@ SEXP attribute_hidden do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     for(i = 0; i < k2; i++) {
 	INTEGER(ind)[0] = i+1;
 	SEXP tmp = eval(R_fcall, rho);
-	if (NAMED(tmp)) {
-	    need_dup++;
+	if (NAMED(tmp))
 	    tmp = duplicate(tmp);
-	} else avoided_dup++;
 	SET_VECTOR_ELT(ans, i, tmp);
     }
 

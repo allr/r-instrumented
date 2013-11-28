@@ -391,11 +391,7 @@ SEXP attribute_hidden do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 	for (i = 0; i < n; i++)
 	    if (INTEGER(xdims)[i] == 1) shorten = 1;
 	if (shorten) {
-	    if (NAMED(x)) {
-		need_dup++;
-		x = duplicate(x);
-	    } else
-		avoided_dup++;
+	    if (NAMED(x)) x = duplicate(x);
 	    x = DropDims(x);
 	}
     }

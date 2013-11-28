@@ -81,8 +81,6 @@
  *
  */
 
-SEXP attribute_hidden do_sizeof (SEXP call, SEXP op, SEXP args, SEXP env);
-
 FUNTAB R_FunTab[] =
 {
 
@@ -940,8 +938,6 @@ FUNTAB R_FunTab[] =
 {"La_svd",	do_lapack,     	400,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"La_svd_cmplx",do_lapack,     	401,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"sizeof",      do_sizeof,      0,      1,      1,      {PP_FOREIGN, PREC_FN,   0}},
-
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
 };
 
@@ -1220,48 +1216,6 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     vmaxset(vmax);
     return (ans);
 }
-
-int count_obj(SEXP s) {
-    int size = 0;
-    if (ATTRIB(s) && ATTRIB(s) != R_NilValue) {
-	size += count_obj(ATTRIB(s));
-    }
-    int eltsize = 0;
-    switch (TYPEOF(s)) {
-    case LISTSXP:
-	while (TYPEOF(s) == LISTSXP) {
-	    size += sizeof(SEXPREC) + count_obj(CAR(s));
-	    s = CDR(s);
-	}
-	break;
-    case CPLXSXP:
-	eltsize += sizeof(double);
-    case REALSXP:
-	eltsize += sizeof(int);
-    case LGLSXP:
-    case INTSXP:
-	eltsize += sizeof(int);
-	size += LENGTH(s) * eltsize + sizeof(struct VECTOR_SEXPREC);
-	break;
-    case VECSXP:
-	size += LENGTH(s) * sizeof(void*) + sizeof(struct VECTOR_SEXPREC);
-	for (int i = 0 ; i < LENGTH(s); i++)
-	    size += count_obj(VECTOR_ELT(s, i));
-	break;
-    case STRSXP:
-	size += LENGTH(s) * sizeof(void*) + sizeof(struct VECTOR_SEXPREC);
-	for (int i = 0 ; i < LENGTH(s); i++)
-	    size += strlen(CHAR(STRING_ELT(s, i)));
-    }
-    return size;
-}
-
-SEXP attribute_hidden do_sizeof(SEXP call, SEXP op, SEXP args, SEXP env) {
-    SEXP rv = allocVector(INTSXP, 1);
-    INTEGER(rv)[0] = count_obj(CAR(args));
-    return rv;
-}
-
 #undef __R_Names__
 
 	/* Internal code for the ~ operator */
