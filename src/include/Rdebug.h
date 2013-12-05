@@ -1,3 +1,16 @@
+/*
+ * ------------------------------------------------------------------
+ * This material is distributed under the GNU General Public License
+ * Version 2. You may review the terms of this license at
+ * http://www.gnu.org/licenses/gpl-2.0.html
+ * 
+ * Copyright (c) 2013, Markus Kuenne
+ * TU Dortmund University
+ * 
+ * All rights reserved.
+ * ------------------------------------------------------------------
+ */
+
 #ifndef _RDEBUG_H
 #define _RDEBUG_H
 
