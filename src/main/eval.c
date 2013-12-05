@@ -1508,13 +1508,10 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
     switch (jumpValue) {
         case CTXT_BREAK:
-            DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
             goto for_break;
         case CTXT_NEXT: 
-            DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
             goto for_next;
     }
-    DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
     for (i = 0; i < n; i++) {
 	DO_LOOP_RDEBUG(call, op, args, rho, bgn);
 
@@ -2110,6 +2107,7 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
  */
 SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 {
+    DEBUGSCOPE_START("evalList");
     SEXP head, tail, ev, h;
     bparam = bparam_ldots = 0; // counters
 
@@ -2167,6 +2165,7 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
     if (head!=R_NilValue)
 	UNPROTECT(1);
 
+    DEBUGSCOPE_END("evalList");
     return head;
 
 } /* evalList() */
@@ -2406,11 +2405,11 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (TYPEOF(expr) == LANGSXP || TYPEOF(expr) == SYMSXP || isByteCode(expr)) {
 	PROTECT(expr);
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
-	if (!SETJMP(cntxt.cjmpbuf)){ 
-	    DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+	int jumpValue = SETJMP(cntxt.cjmpbuf);
+	DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+	if (!jumpValue){ 
 	    expr = eval(expr, env);
 	}else {
-	    DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
 	    expr = R_ReturnedValue;
 	    if (expr == R_RestartToken) {
 		cntxt.callflag = CTXT_RETURN;  /* turn restart off */

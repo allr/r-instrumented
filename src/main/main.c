@@ -380,7 +380,9 @@ static unsigned char DLLbuf[CONSOLE_BUFFER_SIZE+1], *DLLbufp;
 
 void R_ReplDLLinit(void)
 {
-    SETJMP(R_Toplevel.cjmpbuf);
+    int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf,jumpValue);
+    // value is not used for program flow differations.
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     trcR_change_top_context(); /* Trace instrumentation */
     R_IoBufferWriteReset(&R_ConsoleIob);
@@ -1088,7 +1090,8 @@ void run_Rmainloop(void)
     DEBUGSCOPE_ENABLEOUTPUT();
     /* Here is the real R read-eval-loop. */
     /* We handle the console until end-of-file. */
-    SETJMP(R_Toplevel.cjmpbuf);
+    int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf,jumpValue);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     trcR_change_top_context(); /* Trace instrumentation */
     R_ReplConsole(R_GlobalEnv, 0, 0);
@@ -1235,10 +1238,14 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&returncontext, CTXT_BROWSER, call, rho,
 		 R_BaseEnv, argList, R_NilValue);
-    if (!SETJMP(returncontext.cjmpbuf)) {
+    int jumpValue =SETJMP(returncontext.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(returncontext.cjmpbuf,jumpValue);
+    if (! jumpValue) {
 	begincontext(&thiscontext, CTXT_RESTART, R_NilValue, rho,
 		     R_BaseEnv, R_NilValue, R_NilValue);
-	if (SETJMP(thiscontext.cjmpbuf)) {
+	int jumpValue2 = SETJMP(thiscontext.cjmpbuf);
+	DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf,jumpValue2);
+	if (jumpValue2) {
 	    SET_RESTART_BIT_ON(thiscontext.callflag);
 	    R_ReturnedValue = R_NilValue;
 	    R_Visible = FALSE;
