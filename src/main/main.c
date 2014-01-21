@@ -233,6 +233,13 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 		              }
 	    state->bufp = state->buf;
     }
+    DEBUGSCOPE_PRINT("given from console: %s\n",state->buf);
+    if (0==strcmp(state->buf,"debugbla\n")){ // zero return -> strings are equal
+        DEBUGSCOPE_PRINT("Ich habe ein debugbla gefunden!\n");
+        state->buf[0]="\0"; // necessary to prevent firther parsing tries?
+        DEBUGSCOPE_END("Rf_ReplIteration");
+        return(0);
+    } // debugbla detected
 #ifdef SHELL_ESCAPE /* not default */
     if (*state->bufp == '!') {
 	    R_system(&(state->buf[1]));
@@ -855,6 +862,7 @@ void setup_Rmainloop(void)
     srand(TimeToSeed());
 
     DEBUGSCOPE_DISABLEOUTPUT();
+    //DEBUGSCOPE_ENABLEOUTPUT();
     
     InitTempDir(); /* must be before InitEd */
     InitMemory();
