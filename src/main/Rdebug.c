@@ -150,7 +150,10 @@ void debugScope_start(char* scopeName){
     printf("ERROR: Malloc failed for debug scope %s\n",scopeName);
     return;
   }
-  newScope->scopeName = scopeName;
+  newScope->scopeName = malloc(SCOPENAME_MAX_SIZE);
+  strncpy(newScope->scopeName,scopeName,SCOPENAME_MAX_SIZE);
+  (newScope->scopeName)[SCOPENAME_MAX_SIZE]='\0';
+  //newScope->scopeName = scopeName;
   if (NULL == currentScope){ // first Scope
     newScope->parent = NULL;
     newScope->depth  = 0;
@@ -201,6 +204,7 @@ void debugScope_end(char* scopeName){
         currentScope = endingScope->parent;
       }
       // either way: the previous scope has ended
+      free(endingScope->scopeName);
       free(endingScope);
     }
   }
