@@ -1054,6 +1054,15 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, 
 	if(blines != NA_INTEGER && blines > 0)
 	    R_BrowseLines = blines;
 	PrintValueRec(call, rho);
+	{ // enter debug scope
+	    char functionName[SCOPENAME_MAX_SIZE];
+	    extractFunctionName(functionName,call);
+	    //DEBUGSCOPE_ACTIVATE(functionName);
+	    //DEBUGSCOPE_START(functionName);
+	}
+	
+	
+	
 	R_BrowseLines = old_bl;
 
 	/* Is the body a bare symbol (PR#6804) */
@@ -1215,6 +1224,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     if (RDEBUG(op)) {
 	Rprintf("exiting from: ");
+	// note: RHO is not passed further, the function name is in "call"
 	PrintValueRec(call, rho);
     }
     UNPROTECT(1);
