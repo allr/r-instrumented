@@ -803,6 +803,7 @@ static void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedSXP: %lu\n", allocated_sexp);
     fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
     fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
+    fprintf(out, "AllocatedStringBuffer: %lu %lu %lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
 
     write_vector_allocs(out);
     /* allocation counts per node class */
