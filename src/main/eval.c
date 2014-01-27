@@ -1040,6 +1040,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, 
     tmp = R_NilValue;
 
     /* Debugging */
+    char functionName[SCOPENAME_MAX_SIZE+1]; 
 
     SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
     if( RSTEP(op) ) SET_RSTEP(op, 0);
@@ -1055,10 +1056,9 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, 
 	    R_BrowseLines = blines;
 	PrintValueRec(call, rho);
 	{ // enter debug scope
-	    char functionName[SCOPENAME_MAX_SIZE];
-	    //extractFunctionName(functionName,call);
-	    //DEBUGSCOPE_ACTIVATE(functionName);
-	    //DEBUGSCOPE_START(functionName);
+	    extractFunctionName(functionName,call);
+	    DEBUGSCOPE_ACTIVATE(functionName);
+	    DEBUGSCOPE_START(functionName);
 	}
 	
 	
@@ -1125,6 +1125,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, 
     if (RDEBUG(op)) {
 	Rprintf("exiting from: ");
 	PrintValueRec(call, rho);
+        DEBUGSCOPE_END(functionName);
     }
     UNPROTECT(3);
     trcR_emit_function_return(op, tmp); /* Trace instrumentation */
