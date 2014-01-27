@@ -43,7 +43,7 @@
 
   
   typedef struct debugScope_t{
-    char* scopeName;
+    char* scopeName[SCOPENAME_MAX_SIZE+1];
     unsigned int depth;
     struct debugScope_t* parent;
     int enabled; // whether scope is enabled. 1 for yes.
