@@ -1056,7 +1056,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv, 
 	PrintValueRec(call, rho);
 	{ // enter debug scope
 	    char functionName[SCOPENAME_MAX_SIZE];
-	    extractFunctionName(functionName,call);
+	    //extractFunctionName(functionName,call);
 	    //DEBUGSCOPE_ACTIVATE(functionName);
 	    //DEBUGSCOPE_START(functionName);
 	}
