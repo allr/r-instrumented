@@ -309,7 +309,11 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	/* The intention here is to break on CR but not on other
 	   null statements: see PR#9063 */
 	if (browselevel && !R_DisableNLinBrowser
-	    && !strcmp((char *) state->buf, "\n")) return -1;
+	    && !strcmp((char *) state->buf, "\n"))
+	{
+	    DEBUGSCOPE_END("Rf_ReplIteration");
+	    return -1;
+	}
 	R_IoBufferWriteReset(&R_ConsoleIob);
 	state->prompt_type = 1;
         DEBUGSCOPE_END("Rf_ReplIteration");
