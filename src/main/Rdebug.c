@@ -29,6 +29,7 @@ static jumpInfos_linlist* jumpInfos = (jumpInfos_linlist*)NULL;
 static int globalEnable = (0!=0);
 
 void debugScope_activate(char* scopeName){
+  // standard linear list adding
   activeScopesLinList* newScope = malloc(sizeof(activeScopesLinList));
   newScope->next = activeScopes;
   strncpy(newScope->scopeName,scopeName,SCOPENAME_MAX_SIZE);
@@ -44,6 +45,40 @@ void debugScope_disableOutput(){
   DEBUGSCOPE_START("debugScope_disableOutput");
   globalEnable = (0!=0);
   DEBUGSCOPE_END("debugScope_disableOutput");
+}
+
+void debugScope_deactivate(char* scopeName){
+  activeScopesLinList* parent = NULL;
+  activeScopesLinList* scopeIterator = activeScopes;
+  while(1==1){
+    if (NULL==scopeIterator){ // end of list reached, terminate
+      return;
+      // could also be "break" if further stuff is required
+    }
+    if (0!=strcmp(scopeIterator->scopeName,scopeName)){ // scopename mismatch
+      // iterate!
+      parent=scopeIterator;
+      scopeIterator = scopeIterator->next;
+      continue;
+    }
+    // at this point, we found an "active"-entry with this name
+    activeScopesLinList* toDel = scopeIterator; // store the one to del
+    scopeIterator = scopeIterator->next; // iterate to next
+    free(toDel); // delete the found scope
+    
+    /*
+     * next, fix the pointer in the previous entry
+     *
+     * Note: ScopeIterator may be NULL at this point but this is a correct
+     * and sensible "next"-pointer
+     */
+    if (NULL==parent){ // this was first in list
+      activeScopes = scopeIterator; // so set the head
+    }else{ // not first in list
+      parent->next = scopeIterator; // so fix in the last entry
+    }
+    continue; // iterate!
+  }
 }
 
 

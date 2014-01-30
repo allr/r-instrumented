@@ -28,6 +28,7 @@
   #define DEBUGSCOPE_ENABLEOUTPUT() do{} while(0)
   #define DEBUGSCOPE_DISABLEOUTPUT() do{} while(0)
   #define DEBUGSCOPE_ACTIVATE(scopeName) do {} while(0)
+  #define DEBUGSCOPE_DEACTIVATE(scopeName) do{} while(0)
   #define DEBUGSCOPE_READFILE(fileName) do {} while(0)
   #define DEBUGSCOPE_START(scopeName) do {} while(0)
   #define DEBUGSCOPE_END(scopeName) do {} while(0)
@@ -43,7 +44,7 @@
 
   
   typedef struct debugScope_t{
-    char* scopeName[SCOPENAME_MAX_SIZE+1];
+    char scopeName[SCOPENAME_MAX_SIZE+1];
     unsigned int depth;
     struct debugScope_t* parent;
     int enabled; // whether scope is enabled. 1 for yes.
@@ -64,6 +65,7 @@
   #define DEBUGSCOPE_DISABLEOUTPUT(){debugScope_disableOutput();}
   #define DEBUGSCOPE_ISACTIVE(scopeName) (debugScope_isActive(scopeName))
   #define DEBUGSCOPE_ACTIVATE(scopeName){ debugScope_activate(scopeName); }
+  #define DEBUGSCOPE_DEACTIVATE(scopeName){ debugScope_deactivate(scopeName);}
   #define DEBUGSCOPE_READFILE(fileName){ debugScope_readFile(fileName); }
   #define DEBUGSCOPE_START(scopeName) { debugScope_start(scopeName); }
   #define DEBUGSCOPE_END(scopeName) { debugScope_end(scopeName); }
@@ -106,8 +108,39 @@
    */
   void debugScope_disableOutput();  
   
-  //! Marks the given Scope as active - as in "print info from it"
+  /*! 
+   * \brief Marks the given Scope as active - as in "print info from it"
+   *
+   * This function activates the given scope. This is to be read as 
+   * "print messages from this" (especially entering and exiting). 
+   * Note that this doesn't start the scope.
+   *
+   * It is possible to activate the same scope several times. Depending
+   * on the implementation, additional memory may be allocated in a tradeoff
+   * for speed. There is no error it the given scopeName already has been
+   * activated, before
+   *
+   * \param[in] scopeName   name of the scope to activate
+   */
   void debugScope_activate(char* scopeName);
+
+  /*! 
+   * \brief Marks the given Scope as inactive - as in "do not print info from it"
+   *
+   * This function disactivates the given scope. This is to be read as 
+   * "print no debug messages from this". Note that this doesn't end the scope.
+   *
+   * If this function is called, the scope will be deactivated even if it
+   * has been activated several times. Depending on the implementation,
+   * a larger list has to be iterated and checked.
+   *
+   * Note: this is a silent function. There is no error if the given scopeName
+   * was found (and deleted) more or less than once.
+   *
+   * \param[in] scopeName   name of the scope to deactivate
+   */
+  void debugScope_deactivate(char* scopeName);
+
   
   //! Read the given file as config and activate all scopes in it.
   void debugScope_readFile(char* fileName);
