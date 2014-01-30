@@ -233,10 +233,55 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 		              }
 	    state->bufp = state->buf;
     }
+    char* readCommand = state->buf; 
     DEBUGSCOPE_PRINT("given from console: %s\n",state->buf);
+    if (0==strncmp(readCommand,"debugscope_",11)){ // found debug command
+        DEBUGSCOPE_PRINT("debug command: ");
+        readCommand=readCommand+11;
+        DEBUGSCOPE_PRINT("%s ",readCommand);
+        if(0==strncmp(readCommand,"activate(\"",10)){ // activate command found
+            readCommand=readCommand+10;
+            DEBUGSCOPE_PRINT(" -> activating ");
+            char scopeName[SCOPENAME_MAX_SIZE+1];
+            strncpy(scopeName,readCommand,SCOPENAME_MAX_SIZE);
+            scopeName[SCOPENAME_MAX_SIZE]='\0'; // safety, again
+            char* endOfScopeName = strchr(scopeName,'\"'); // search for quote sign
+            if (NULL == endOfScopeName){
+                DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
+            }else{
+                (*endOfScopeName)='\0'; // terminate string at quote
+                DEBUGSCOPE_ACTIVATE(scopeName);
+                DEBUGSCOPE_PRINT(" (should be %s )",scopeName);
+            }
+            state->buf[0]='\0'; // prevent further processing
+            DEBUGSCOPE_END("Rf_ReplIteration");
+            return(0);
+        }
+        else if(0==strncmp(readCommand,"deactivate(\"",12)){ // deactivate command found
+            readCommand=readCommand+12;
+            DEBUGSCOPE_PRINT(" -> deactivating ");
+            char scopeName[SCOPENAME_MAX_SIZE+1];
+            strncpy(scopeName,readCommand,SCOPENAME_MAX_SIZE);
+            scopeName[SCOPENAME_MAX_SIZE]='\0'; // safety, again
+            char* endOfScopeName = strchr(scopeName,'\"'); // search for quote sign
+            if (NULL == endOfScopeName){
+                DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
+            }else{
+                (*endOfScopeName)='\0'; // terminate string at quote
+                DEBUGSCOPE_DEACTIVATE(scopeName);
+                DEBUGSCOPE_PRINT(" (should be %s )",scopeName);
+            }
+            state->buf[0]='\0'; // prevent further processing
+            DEBUGSCOPE_END("Rf_ReplIteration");
+            return(0);
+        }            
+    }
+      
+    
+    
     if (0==strcmp(state->buf,"debugbla\n")){ // zero return -> strings are equal
         DEBUGSCOPE_PRINT("Ich habe ein debugbla gefunden!\n");
-        state->buf[0]="\0"; // necessary to prevent firther parsing tries?
+        state->buf[0]='\0'; // necessary to prevent further parsing tries?
         DEBUGSCOPE_END("Rf_ReplIteration");
         return(0);
     } // debugbla detected

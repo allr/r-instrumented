@@ -1343,6 +1343,9 @@ SEXP findFun(SEXP symbol, SEXP rho)
 	}
 	rho = ENCLOS(rho);
     }
+    if (0==strcmp("debugscope_activate",CHAR(PRINTNAME(symbol)))){
+        printf("activatescope-found\n");
+    }
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
     /* NOT REACHED */
     return R_UnboundValue;
