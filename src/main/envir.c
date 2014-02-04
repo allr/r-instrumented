@@ -1343,9 +1343,13 @@ SEXP findFun(SEXP symbol, SEXP rho)
 	}
 	rho = ENCLOS(rho);
     }
+    /*
     if (0==strcmp("debugscope_activate",CHAR(PRINTNAME(symbol)))){
         printf("activatescope-found\n");
     }
+    // note: this was scrapped. debugscopes in R in R --file and in Rscript work,
+    //       so "source" was not big an issue
+    */
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
     /* NOT REACHED */
     return R_UnboundValue;

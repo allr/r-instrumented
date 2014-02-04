@@ -26,6 +26,8 @@
 
 #include "statsR.h"
 
+#include "Rdebug.h"
+
 /* inline-able versions, used just once! */
 static R_INLINE Rboolean isUnordered_int(SEXP s)
 {
@@ -880,6 +882,7 @@ static SEXP ExpandDots(SEXP object, SEXP value)
 
 SEXP updateform(SEXP old, SEXP new)
 {
+    DEBUGSCOPE_START("updateform");
     SEXP _new;
 
     /* Always fetch these values rather than trying */
@@ -947,6 +950,7 @@ SEXP updateform(SEXP old, SEXP new)
     setAttrib(_new, DotEnvSymbol, getAttrib(old, DotEnvSymbol));
 
     UNPROTECT(1);
+    DEBUGSCOPE_END("updateform");
     return _new;
 }
 
