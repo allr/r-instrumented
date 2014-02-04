@@ -85,6 +85,7 @@ void write_commandArgs(FILE* out) { /* Trace instrumentation */
     int i;
     Rboolean args_seen = FALSE;
 
+    fprintf(out, "\"");
     for (i = 0; i < NumCommandLineArgs; i++) {
         if (args_seen)
             fprintf(out, "%s ", CommandLineArgs[i]);
@@ -92,7 +93,7 @@ void write_commandArgs(FILE* out) { /* Trace instrumentation */
         if (!strcmp (CommandLineArgs[i], "--args"))
             args_seen = TRUE;
     }
-    fprintf(out, "\n");
+    fprintf(out, "\"\n");
 }
 
 #ifdef Win32

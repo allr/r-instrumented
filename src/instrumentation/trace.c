@@ -151,14 +151,15 @@ void trcR_count_closure_args(SEXP op) {
 static void write_arg_histogram(FILE *fd) {
     if (argcount_failed) {
 	fprintf(fd, "# argument count histogram calculation failed\n");
-	fprintf(fd, "ArgHistogramFailed 1\n");
+	fprintf(fd, "ArgHistogramFailed\t1\n");
 	return;
     }
 
     fprintf(fd, "# argument count histogram\n");
-    fprintf(fd, "# count calls by_position by_keyword by_dots npos_calls nkey_calls ndots_calls\n");
+    fprintf(fd, "#!LABEL\tcount\tcalls\tby_position\tby_keyword\tby_dots\tnpos_calls\tnkey_calls\tndots_calls\n");
+    fprintf(fd, "#!TABLE\tArgCount\tArgumentCounts\n"); // FIXME: Enough parameters?
     for (int i = 0; i <= max_hist_args; i++) {
-	fprintf(fd, "ArgCount %d %u %u %u %u %u %u %u\n", i,
+	fprintf(fd, "ArgCount\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\n", i,
 		arg_histogram[i].calls,
 		arg_histogram[i].by_position,
 		arg_histogram[i].by_keyword,
@@ -785,45 +786,52 @@ void write_missing_results(FILE *out);
 static void write_vector_allocs(FILE *out);
 
 static void write_allocation_summary(FILE *out) {
-    fprintf(out, "SizeOfSEXP: %ld\n", sizeof(SEXPREC));
-    fprintf(out, "Interp: %lu\n", allocated_cons);
-    fprintf(out, "Context: %lu\n", context_opened);
-    fprintf(out, "Calls: %lu %lu %lu %lu\n", clos_call, spec_call, builtin_call, clos_call + spec_call+ builtin_call);
+    fprintf(out, "SizeOfSEXP\t%ld\n", sizeof(SEXPREC));
+    fprintf(out, "Interp\t%lu\n", allocated_cons);
+    fprintf(out, "Context\t%lu\n", context_opened);
+    fprintf(out, "#!LABEL\tclos_call\tspec_call\tbuiltin_call\tsum\n");
+    fprintf(out, "Calls\t%lu\t%lu\t%lu\t%lu\n",
+            clos_call, spec_call, builtin_call,
+            clos_call + spec_call + builtin_call);
 
-
-    /* seems to be ignored by the Java tool, kept anyway */
-    fprintf(out, "Allocated: %lu %lu %lu %lu %lu %lu %lu\n", allocated_cons, allocated_prom, allocated_env, allocated_external, allocated_sexp, allocated_noncons, allocated_cons + allocated_prom + allocated_env + allocated_external + allocated_sexp + allocated_noncons);
 
     /* this is what the Java tool actually wants to see */
-    fprintf(out, "AllocatedCons: %lu\n", allocated_cons);
-    fprintf(out, "AllocatedConsPeak: %lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
-    fprintf(out, "AllocatedNonCons: %lu\n", allocated_noncons);
-    fprintf(out, "AllocatedEnv: %lu\n", allocated_env);
-    fprintf(out, "AllocatedPromises: %lu\n", allocated_prom);
-    fprintf(out, "AllocatedSXP: %lu\n", allocated_sexp);
-    fprintf(out, "AllocatedExternal: %lu\n", allocated_external);
-    fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
-    fprintf(out, "AllocatedStringBuffer: %lu %lu %lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
+    fprintf(out, "AllocatedCons\t%lu\n", allocated_cons);
+    fprintf(out, "AllocatedConsPeak\t%lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
+    fprintf(out, "AllocatedNonCons\t%lu\n", allocated_noncons);
+    fprintf(out, "AllocatedEnv\t%lu\n", allocated_env);
+    fprintf(out, "AllocatedPromises\t%lu\n", allocated_prom);
+    fprintf(out, "AllocatedSXP\t%lu\n", allocated_sexp);
+    fprintf(out, "AllocatedExternal\t%lu\n", allocated_external);
+    fprintf(out, "#!LABEL\tallocs\telements\n");
+    fprintf(out, "AllocatedList\t%lu\t%lu\n", allocated_list, allocated_list_elts);
+    fprintf(out, "#!LABEL\tallocs\telements\tsize\n");
+    fprintf(out, "AllocatedStringBuffer\t%lu\t%lu\t%lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
 
     write_vector_allocs(out);
     /* allocation counts per node class */
     for (unsigned int i = 0; i < allocated_cell_len; i++) {
-      fprintf(out, "Class%uAllocs: %lu\n", i, allocated_cell[i]);
+      fprintf(out, "Class%uAllocs\t%lu\n", i, allocated_cell[i]);
     }
 
-    fprintf(out, "GC: %d\n", gc_count);
+    fprintf(out, "GC\t%d\n", gc_count);
 
-    //fprintf(out, "AllocatedList: %lu %lu\n", allocated_list, allocated_list_elts);
-
-    fprintf(out, "Dispatch: %lu %lu\n", dispatchs, dispatchFailed);
-    fprintf(out, "Duplicate: %lu %lu %lu\n", duplicate_object, duplicate_elts, duplicate1_elts);
-    fprintf(out, "Named: %lu %lu %lu %lu\n", named_elts, named_promoted, named_downgraded, named_keeped);
-    fprintf(out, "ApplyDefine: %lu %lu\n", apply_define, super_apply_define);
-    fprintf(out, "DefineVar: %lu %lu\n", define_var, super_define_var);
-    fprintf(out, "SetVar: %lu %lu\n", set_var, super_set_var);
-    fprintf(out, "DefineUserDb: %lu\n", define_user_db);
-    fprintf(out, "ErrCountAssign: %lu\n", err_count_assign);
-    fprintf(out, "ErrorEvalSet: %lu %lu\n", do_set_allways - do_set_unique, do_super_set_allways - do_super_set_unique );
+    fprintf(out, "#!LABEL\tdispatchs\tdispatchFailed\n");
+    fprintf(out, "Dispatch\t%lu\t%lu\n", dispatchs, dispatchFailed);
+    fprintf(out, "#!LABEL\tobject\telements\t1elements\n");
+    fprintf(out, "Duplicate\t%lu\t%lu\t%lu\n", duplicate_object, duplicate_elts, duplicate1_elts);
+    fprintf(out, "#!LABEL\telements\tpromoted\tdowngraded\tkeeped\n");
+    fprintf(out, "Named\t%lu\t%lu\t%lu\t%lu\n", named_elts, named_promoted, named_downgraded, named_keeped);
+    fprintf(out, "#!LABEL\tnormal\tsuper\n");
+    fprintf(out, "ApplyDefine\t%lu\t%lu\n", apply_define, super_apply_define);
+    fprintf(out, "#!LABEL\tnormal\tsuper\n");
+    fprintf(out, "DefineVar\t%lu\t%lu\n", define_var, super_define_var);
+    fprintf(out, "#!LABEL\tnormal\tsuper\n");
+    fprintf(out, "SetVar\t%lu\t%lu\n", set_var, super_set_var);
+    fprintf(out, "DefineUserDb\t%lu\n", define_user_db);
+    fprintf(out, "ErrCountAssign\t%lu\n", err_count_assign);
+    fprintf(out, "#!LABEL\tnormal\tsuper\n");
+    fprintf(out, "ErrorEvalSet\t%lu\t%lu\n", do_set_allways - do_set_unique, do_super_set_allways - do_super_set_unique );
 }
 
 static void write_trace_summary(FILE *out) {
@@ -832,32 +840,32 @@ static void write_trace_summary(FILE *out) {
     time_t current_time = time(0);
     struct tm *local_time = localtime(&current_time);
     struct rusage my_rusage;
-    fprintf(out, "SourceName: %s\n", R_InputFileName ? R_InputFileName : "stdin");
+    fprintf(out, "SourceName\t%s\n", R_InputFileName ? R_InputFileName : "stdin");
 
     getcwd(str, MAX_DNAME);
-    fprintf(out, "Workdir: %s\n", str);
-    fprintf(out, "File: %s/%s\n", str, R_InputFileName ? R_InputFileName : "stdin");
-    fprintf(out, "Args: "); write_commandArgs(out);
+    fprintf(out, "Workdir\t%s\n", str);
+    fprintf(out, "File\t%s/%s\n", str, R_InputFileName ? R_InputFileName : "stdin");
+    fprintf(out, "Args\t"); write_commandArgs(out);
     // TODO print trace_type all/repl/bootstrap
-    fprintf(out, "TracerVersion: %s\n", HG_ID);
-    fprintf(out, "PtrSize: %lu\n", sizeof(void*));
+    fprintf(out, "TracerVersion\t%s\n", HG_ID);
+    fprintf(out, "PtrSize\t%lu\n", sizeof(void*));
 
     strftime (str, TIME_BUFF, "%c", local_time);
-    fprintf(out, "TraceDate: %s\n", str);
+    fprintf(out, "TraceDate\t%s\n", str);
     getrusage(RUSAGE_SELF, &my_rusage);
-    fprintf(out, "RusageMaxResidentMemorySet: %ld\n", my_rusage.ru_maxrss);
-    fprintf(out, "RusageSharedMemSize: %ld\n", my_rusage.ru_ixrss);
-    fprintf(out, "RusageUnsharedDataSize: %ld\n", my_rusage.ru_idrss);
-    fprintf(out, "RusagePageReclaims: %ld\n", my_rusage.ru_minflt);
-    fprintf(out, "RusagePageFaults: %ld\n", my_rusage.ru_majflt);
-    fprintf(out, "RusageSwaps: %ld\n", my_rusage.ru_nswap);
-    fprintf(out, "RusageBlockInputOps: %ld\n", my_rusage.ru_inblock);
-    fprintf(out, "RusageBlockOutputOps: %ld\n", my_rusage.ru_oublock);
-    fprintf(out, "RusageIPCSends: %ld\n", my_rusage.ru_msgsnd);
-    fprintf(out, "RusageIPCRecv: %ld\n", my_rusage.ru_msgrcv);
-    fprintf(out, "RusageSignalsRcvd: %ld\n", my_rusage.ru_nsignals);
-    fprintf(out, "RusageVolnContextSwitches: %ld\n", my_rusage.ru_nvcsw);
-    fprintf(out, "RusageInvolnContextSwitches: %ld\n", my_rusage.ru_nivcsw);
+    fprintf(out, "RusageMaxResidentMemorySet\t%ld\n", my_rusage.ru_maxrss);
+    fprintf(out, "RusageSharedMemSize\t%ld\n", my_rusage.ru_ixrss);
+    fprintf(out, "RusageUnsharedDataSize\t%ld\n", my_rusage.ru_idrss);
+    fprintf(out, "RusagePageReclaims\t%ld\n", my_rusage.ru_minflt);
+    fprintf(out, "RusagePageFaults\t%ld\n", my_rusage.ru_majflt);
+    fprintf(out, "RusageSwaps\t%ld\n", my_rusage.ru_nswap);
+    fprintf(out, "RusageBlockInputOps\t%ld\n", my_rusage.ru_inblock);
+    fprintf(out, "RusageBlockOutputOps\t%ld\n", my_rusage.ru_oublock);
+    fprintf(out, "RusageIPCSends\t%ld\n", my_rusage.ru_msgsnd);
+    fprintf(out, "RusageIPCRecv\t%ld\n", my_rusage.ru_msgrcv);
+    fprintf(out, "RusageSignalsRcvd\t%ld\n", my_rusage.ru_nsignals);
+    fprintf(out, "RusageVolnContextSwitches\t%ld\n", my_rusage.ru_nvcsw);
+    fprintf(out, "RusageInvolnContextSwitches\t%ld\n", my_rusage.ru_nivcsw);
 
     // :display_unused(out);
     write_allocation_summary(out);
@@ -876,16 +884,16 @@ static void write_summary() {
 	print_error_msg ("Couldn't open file '%s' for writing", str);
 	return;
     }
-    fprintf(summary_fp, "TraceDir: %s\n", trace_info.directory);
-    fprintf(summary_fp, "FatalErrors: %u\n", fatal_err_cnt);
-    fprintf(summary_fp, "TraceStackErrors: %u\n", stack_err_cnt);
-    fprintf(summary_fp, "FinalContextStackHeight: %d\n", get_cstack_height());
-    fprintf(summary_fp, "FinalContextStackFlushed: %d\n", stack_flush_cnt);
-    fprintf(summary_fp, "MaxStackHeight: %d\n", max_stack_height);
-    fprintf(summary_fp, "BytesWritten: %lu\n", bytes_written);
-    fprintf(summary_fp, "EventsTraced: %lu\n", event_cnt);
-    fprintf(summary_fp, "FuncsDecld: %u\n", func_decl_cnt);
-    fprintf(summary_fp, "NullSrcrefs: %u\n", null_srcref_cnt);
+    fprintf(summary_fp, "TraceDir\t%s\n", trace_info.directory);
+    fprintf(summary_fp, "FatalErrors\t%u\n", fatal_err_cnt);
+    fprintf(summary_fp, "TraceStackErrors\t%u\n", stack_err_cnt);
+    fprintf(summary_fp, "FinalContextStackHeight\t%d\n", get_cstack_height());
+    fprintf(summary_fp, "FinalContextStackFlushed\t%d\n", stack_flush_cnt);
+    fprintf(summary_fp, "MaxStackHeight\t%d\n", max_stack_height);
+    fprintf(summary_fp, "BytesWritten\t%lu\n", bytes_written);
+    fprintf(summary_fp, "EventsTraced\t%lu\n", event_cnt);
+    fprintf(summary_fp, "FuncsDecld\t%u\n", func_decl_cnt);
+    fprintf(summary_fp, "NullSrcrefs\t%u\n", null_srcref_cnt);
 
     write_trace_summary(summary_fp);
 
@@ -1025,13 +1033,14 @@ void traceR_report_external_int(int /*NativeSymbolType*/ type,
  */
 
 /* exact number of elements are counted up to (1 << this) - 1 */
-#define VECTOR_EXACT_LIMIT_LD 5
+#define VECTOR_EXACT_LIMIT_LD 4
 
-/* total number of bins, 64 should be sufficient for LIMIT_LD=5 on a x86_64 machine */
+/* total number of bins, 64 should be sufficient for LIMIT_LD=4 on a x86_64 machine */
 #define VECTOR_BYELEMENT_BINS 64
 
 static vec_alloc_stats_t vectors_byclass[TR_VECCLASS_TOTAL + 1];
 static vec_alloc_stats_t vectors_byelements[VECTOR_BYELEMENT_BINS];
+static unsigned int      vecalloc_max_bin;
 
 static void count_vecalloc(vec_alloc_stats_t *stat,
 			   size_t elements,
@@ -1043,6 +1052,44 @@ static void count_vecalloc(vec_alloc_stats_t *stat,
     stat->asize    += asize;
 }
 
+static unsigned int vector_bin_number(size_t elements) {
+    if (elements < (1 << VECTOR_EXACT_LIMIT_LD)) {
+	/* exact count below bound */
+	return elements;
+    } else {
+	/* one bin per binary power above bound */
+	unsigned int ld_e = 0;
+
+	while (elements > 0) {
+	    elements >>= 1;
+	    ld_e++;
+	}
+
+	/* skip first k bins, put first batch bin directly after that */
+	return ld_e +
+	    (1 << VECTOR_EXACT_LIMIT_LD) -
+	    VECTOR_EXACT_LIMIT_LD - 1;
+    }
+}
+
+static size_t vector_bin_lower(unsigned int bin) {
+    if (bin < (1 << VECTOR_EXACT_LIMIT_LD)) {
+	return bin;
+    } else {
+	return 1 << (bin - (1 << VECTOR_EXACT_LIMIT_LD) +
+		     VECTOR_EXACT_LIMIT_LD);
+    }
+}
+
+static size_t vector_bin_upper(unsigned int bin) {
+    if (bin < (1 << VECTOR_EXACT_LIMIT_LD)) {
+	return bin;
+    } else {
+	return (1 << (bin - (1 << VECTOR_EXACT_LIMIT_LD) +
+		      VECTOR_EXACT_LIMIT_LD + 1)) - 1;
+    }
+}
+
 void traceR_count_vector_alloc(traceR_vector_class_t type,
 			       size_t elements,
 			       size_t size,
@@ -1052,46 +1099,37 @@ void traceR_count_vector_alloc(traceR_vector_class_t type,
     count_vecalloc(&vectors_byclass[type],              elements, size, asize);
 
     /* add to per-size histogram */
-    if (elements < (1 << VECTOR_EXACT_LIMIT_LD)) {
-	/* exact counts for 0 to 15 */
-	count_vecalloc(&vectors_byelements[elements], elements, size, asize);
-    } else {
-	/* use one bin per binary power */
-	size_t e = elements;
-	unsigned int ld_e = 0;
+    unsigned int bin = vector_bin_number(elements);
 
-	while (e > 0) {
-	    e >>= 1;
-	    ld_e++;
-	}
+    if (bin > vecalloc_max_bin)
+	vecalloc_max_bin = bin;
 
-	/* skip first k bins, put first batch bin directly after that */
-	count_vecalloc(&vectors_byelements[ld_e +
-					   (1 << (VECTOR_EXACT_LIMIT_LD - 1)) -
-					   VECTOR_EXACT_LIMIT_LD], elements, size, asize);
-    }
+    count_vecalloc(&vectors_byelements[bin], elements, size, asize);
 }
 
 static void report_vectorstats(FILE *out, const char *name, vec_alloc_stats_t *stats) {
-    fprintf(out, "%s: %lu %lu %lu %lu\n", name,
+    fprintf(out, "%s\t%lu\t%lu\t%lu\t%lu\n", name,
 	    stats->allocs, stats->elements,
 	    stats->size,   stats->asize);
 }
 
 static void write_vector_allocs(FILE *out) {
+    fprintf(out, "#!LABEL\tallocs\telements\tsize\tasize\n");
     report_vectorstats(out, "AllocatedVectors",      &vectors_byclass[TR_VECCLASS_TOTAL]);
     report_vectorstats(out, "AllocatedZeroVectors",  &vectors_byclass[TR_VECCLASS_ZERO]);
     report_vectorstats(out, "AllocatedOneVectors",   &vectors_byclass[TR_VECCLASS_ONE]);
     report_vectorstats(out, "AllocatedSmallVectors", &vectors_byclass[TR_VECCLASS_SMALL]);
     report_vectorstats(out, "AllocatedLargeVectors", &vectors_byclass[TR_VECCLASS_LARGE]);
 
-    char numberbuf[30];
     unsigned int i;
 
-    fprintf(out,"VectorAllocExactLimit: %d\n", (1 << (VECTOR_EXACT_LIMIT_LD - 1)) - 1);
+    fprintf(out, "VectorAllocExactLimit\t%d\n", (1 << (VECTOR_EXACT_LIMIT_LD - 1)) - 1);
 
-    for (i = 0; i < VECTOR_BYELEMENT_BINS; i++) {
-	sprintf(numberbuf, "VectorAllocBin%d", i);
-	report_vectorstats(out, numberbuf, &vectors_byelements[i]);
+    fprintf(out, "#!LABEL\tbin_id\tlower_limit\tupper_limit\tallocs\telements\tsize\tasize\n");
+    fprintf(out, "#!TABLE\tVectorAllocBin\tVectorAllocationHistogram\n");
+    for (i = 0; i <= vecalloc_max_bin; i++) {
+	fprintf(out,"VectorAllocBin\t%u\t%lu\t%lu", i,
+		vector_bin_lower(i), vector_bin_upper(i));
+	report_vectorstats(out, "", &vectors_byelements[i]);
     }
 }

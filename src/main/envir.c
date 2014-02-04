@@ -1968,19 +1968,25 @@ long non_missing_val, non_missing_non_symbol;
 long invalid_use_missing, missing_non_arg;
 
 void write_missing_results(FILE *out){
-    fprintf(out, "isMissing: %lu\n", nb_is_missing);
-    fprintf(out, "isMissingMissing: %lu %lu %lu %lu %lu\n", nb_direct_missing,
+    fprintf(out, "isMissing\t%lu\n", nb_is_missing);
+    fprintf(out, "#!LABEL\tnb_direct_missing\tldots_to_small_im\targ_missing_im\tprseen_missing\trec_call_0\n");
+    fprintf(out, "isMissingMissing\t%lu\t%lu\t%lu\t%lu\t%lu\n", nb_direct_missing,
 	    ldots_to_small_im, arg_missing_im, prseen_missing, rec_call[0]);
-    fprintf(out, "isMissingPresent: %lu %lu %lu %lu %lu (%lu)\n", toplevel_no_missing,
+    fprintf(out, "#!LABEL\ttoplevel_no_missing\tactive_binding\tnot_missing_im\twas_not_is_missing\trec_call_1\twas_not_is_missing_was_null\n");
+    fprintf(out, "isMissingPresent\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", toplevel_no_missing,
 	    active_binding, not_missing_im, was_not_is_missing, rec_call[1],
 	    was_not_is_missing_was_null);
 
-    fprintf(out, "do_IsMissing: %lu (%lu)\n", nb_do_missing, do_missing_is_missing);
-    fprintf(out, "do_IsMissingMissing: %lu %lu %lu\n", ldots_to_small, arg_missing,
+    fprintf(out, "#!LABEL\tnb_do_missing\tdo_missing_is_missing\n");
+    fprintf(out, "do_IsMissing\t%lu\t%lu\n", nb_do_missing, do_missing_is_missing);
+    fprintf(out, "#!LABEL\tldot_to_small\targ_missing\tedo_missing_is_missing_res_0\n");
+    fprintf(out, "do_IsMissingMissing\t%lu\t%lu\t%lu\n", ldots_to_small, arg_missing,
 	    do_missing_is_missing_res[0]);
-    fprintf(out, "do_IsMissingPresent: %lu %lu %lu\n", non_missing_val, non_missing_non_symbol,
+    fprintf(out, "#!LABEL\tnon_missing_val\tnon_missing_non_symbol\tdo_missing_is_missing_res_1\n");
+    fprintf(out, "do_IsMissingPresent\t%lu\t%lu\t%lu\n", non_missing_val, non_missing_non_symbol,
 	    do_missing_is_missing_res[1]);
-    fprintf(out, "do_IsMissingError: %lu %lu\n", invalid_use_missing, missing_non_arg);
+    fprintf(out, "#!LABEL\tinvalid_use_missing\tmissing_non_arg\n");
+    fprintf(out, "do_IsMissingError\t%lu\t%lu\n", invalid_use_missing, missing_non_arg);
 }
 
 int attribute_hidden
