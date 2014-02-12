@@ -768,16 +768,11 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     UNPROTECT(1);
 
-    trcR_emit_prologue_start(); /* Trace instrumentation */
     PROTECT(op = findFun(install("range.default"), env));
-    trcR_emit_prologue_end(op); /* Trace instrumentation */
     PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
-    for (a = args, b = prargs; a != R_NilValue; a = CDR(a), b = CDR(b)) {
-	trcR_emit_unbnd_promise(CAR(b)); /* Trace instrumentation */
+    for (a = args, b = prargs; a != R_NilValue; a = CDR(a), b = CDR(b))
 	SET_PRVALUE(CAR(b), CAR(a));
-	trcR_emit_unbnd_promise_return(CAR(b)); /* Trace instrumentation */
-    }
-    ans = applyClosure(call, op, prargs, env, R_BaseEnv, TRUE);
+    ans = applyClosure(call, op, prargs, env, R_BaseEnv);
     UNPROTECT(3);
     return(ans);
 }

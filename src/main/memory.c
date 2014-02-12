@@ -2360,11 +2360,6 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRVALUE(s) = R_UnboundValue;
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
-    /* Trace Instrumentation */
-    /* mark the promise as new to ensure it'll be written to the trace file */
-    SET_NEW_PROMISE(s, 1);
-    trcR_emit_simple_type(s);
-    /* Trace Instrumentation End */
     return s;
 }
 

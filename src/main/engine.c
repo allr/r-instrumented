@@ -2766,9 +2766,7 @@ void GEplayDisplayList(pGEDevDesc dd)
 	    SEXP op = CAR(theOperation);
 	    SEXP args = CADR(theOperation);
 	    if (TYPEOF(op) == BUILTINSXP || TYPEOF(op) == SPECIALSXP) {
-		trcR_emit_primitive_function(theOperation, BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE, 1, 0);  /* Trace Instrumentation */
 	    	PRIMFUN(op) (R_NilValue, op, args, R_NilValue);
-		trcR_emit_function_return(theOperation, NULL); /* Trace Instrumentation */
 		/* Check with each graphics system that the plotting went ok
 		 */
 		if (!GEcheckState(dd)) {

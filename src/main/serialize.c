@@ -2810,7 +2810,6 @@ do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
 	SET_NAMED(val, 2);
     }
     UNPROTECT(1);
-    print_src_addr(val);
     return val;
 }
 

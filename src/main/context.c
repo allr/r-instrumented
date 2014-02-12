@@ -245,9 +245,6 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->srcref = R_Srcref;
     cptr->nextcontext = R_GlobalContext;
     R_GlobalContext = cptr;
-
-    if (traceR_is_active)
-	trace_context_add(); /* Trace Instrumentation */
     context_opened++;
 }
 
@@ -268,8 +265,6 @@ void endcontext(RCNTXT * cptr)
 	R_Visible = savevis;
     }
     R_GlobalContext = cptr->nextcontext;
-
-    trcR_trace_context_drop(); /* Trace Instrumentation */
 }
 
 
@@ -282,21 +277,17 @@ void attribute_hidden findcontext(int mask, SEXP env, SEXP val)
     if (mask & CTXT_LOOP) {		/* break/next */
 	for (cptr = R_GlobalContext;
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	     cptr = cptr->nextcontext) {
+	     cptr = cptr->nextcontext)
 	    if (cptr->callflag & CTXT_LOOP && cptr->cloenv == env )
 		jumpfun(cptr, mask, val);
-	    trcR_trace_context_drop(); /* Trace Instrumentation */
-        }
 	error(_("no loop for break/next, jumping to top level"));
     }
     else {				/* return; or browser */
 	for (cptr = R_GlobalContext;
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	     cptr = cptr->nextcontext) {
+	     cptr = cptr->nextcontext)
 	    if ((cptr->callflag & mask) && cptr->cloenv == env)
 		jumpfun(cptr, mask, val);
-	    trcR_trace_context_drop(); /* Trace Instrumentation */
-	}
 	error(_("no function to return from, jumping to top level"));
     }
 }
@@ -306,11 +297,9 @@ void attribute_hidden R_JumpToContext(RCNTXT *target, int mask, SEXP val)
     RCNTXT *cptr;
     for (cptr = R_GlobalContext;
 	 cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	 cptr = cptr->nextcontext) {
+	 cptr = cptr->nextcontext)
 	if (cptr == target)
 	    jumpfun(cptr, mask, val);
-	trcR_trace_context_drop(); /* Trace Instrumentation */
-    }
     error(_("target context is not on the stack"));
 }
 
