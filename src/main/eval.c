@@ -765,7 +765,7 @@ static void loadCompilerNamespace(void)
     UNPROTECT(3);
 }
 
-static int R_disable_bytecode = 1;
+static int R_disable_bytecode = 0;
 
 void attribute_hidden R_init_jit_enabled(void)
 {
