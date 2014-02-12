@@ -303,7 +303,6 @@ static void start_tracing() {
  */
 
 void close_memory_map();
-void display_unused(FILE *);
 void write_missing_results(FILE *out);
 static void write_vector_allocs(FILE *out);
 
@@ -389,7 +388,6 @@ static void write_trace_summary(FILE *out) {
     fprintf(out, "RusageVolnContextSwitches\t%ld\n", my_rusage.ru_nvcsw);
     fprintf(out, "RusageInvolnContextSwitches\t%ld\n", my_rusage.ru_nivcsw);
 
-    // :display_unused(out);
     write_allocation_summary(out);
     write_arg_histogram(out);
     write_missing_results(out);
