@@ -916,7 +916,6 @@ static void jump_to_top_ex(Rboolean traceback,
     R_GlobalContext = R_ToplevelContext;
     R_restore_globals(R_GlobalContext);
     trcR_goto_top_context(); /* Trace Instrumentation */
-    
     LONGJMP(R_ToplevelContext->cjmpbuf, 0);
     /* not reached
     endcontext(&cntxt);
