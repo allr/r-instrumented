@@ -977,11 +977,6 @@ int StrToInternal(const char *s)
     return NA_INTEGER;
 }
 
-FUNTAB* get_entry (int i)
-{
-    return &R_FunTab[i];
-}
-
 static void installFunTab(int i)
 {
     SEXP prim;
@@ -1115,7 +1110,6 @@ SEXP install(const char *name)
 }
 
 
-extern unsigned int bparam, bparam_ldots; // Instrumentation
 /*  do_internal - This is the code for .Internal(). */
 
 SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1169,35 +1163,12 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
     args = CDR(s);
-    if (TYPEOF(INTERNAL(fun)) == BUILTINSXP) {
-	unsigned int bparam_tmp = bparam, bparam_ldots_tmp = bparam_ldots;
+    if (TYPEOF(INTERNAL(fun)) == BUILTINSXP)
 	args = evalList(args, env, call, 0);
-	trcR_emit_primitive_function(INTERNAL(fun), BINTRACE_BLTIN_ID | BINTRACE_NO_PROLOGUE,
-                                     bparam, bparam_ldots);  /* Trace Instrumentation */
-	bparam = bparam_tmp;
-	bparam_ldots = bparam_ldots_tmp;
-    }
-    else {
-	if (traceR_is_active) {
-	    /* Trace Instrumentation */
-	    unsigned int sparam = 0, sparam_ldots = 0;
-	    SEXP targs = args;
-	    while (targs != R_NilValue) {
-		if (CAR(targs) == R_DotsSymbol)
-		    sparam_ldots++;
-		else
-		    sparam++;
-		targs = CDR(targs);
-	    }
-	    trcR_emit_primitive_function(INTERNAL(fun), BINTRACE_SPEC_ID | BINTRACE_NO_PROLOGUE,
-                                         sparam, sparam_ldots);
-	}
-    }
     PROTECT(args);
     flag = PRIMPRINT(INTERNAL(fun));
     R_Visible = flag != 1;
     ans = PRIMFUN(INTERNAL(fun)) (s, INTERNAL(fun), args, env);
-    trcR_emit_function_return(INTERNAL(fun), ans); /* Trace Instrumentation */
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;

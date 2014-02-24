@@ -1383,7 +1383,7 @@ attribute_hidden
 SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status, const char *sourcename)
 {
     Rboolean keepSource = FALSE; 
-    int savestack;
+    int savestack;    
     SEXP srcname;
 
     R_InitSrcRefState(&ParseState);
@@ -1396,8 +1396,8 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status, const ch
 	    REPROTECT(ParseState.Original = ParseState.SrcFile, ParseState.OriginalProt);
 	    PROTECT_WITH_INDEX(SrcRefs = NewList(), &srindex);
 
-            PROTECT(srcname = mkString(sourcename));
-            setParseFilename(srcname);
+	    PROTECT(srcname = mkString(sourcename));
+	    setParseFilename(srcname);
 	}
     }
     ParseInit();

@@ -1468,14 +1468,10 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if(DispatchOrEval(call, op, "xtfrm", args, rho, &ans, 0, 1)) return ans;
     /* otherwise dispatch the default method */
-    trcR_emit_prologue_start(); /* Trace instrumentation */
     PROTECT(fn = findFun(install("xtfrm.default"), rho));
-    trcR_emit_prologue_end(fn); /* Trace instrumentation */
     PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
-    trcR_emit_unbnd_promise(CAR(prargs)); /* Trace instrumentation */
     SET_PRVALUE(CAR(prargs), CAR(args));
-    trcR_emit_unbnd_promise_return(CAR(prargs)); /* Trace instrumentation */
-    ans = applyClosure(call, fn, prargs, rho, R_NilValue, TRUE);
+    ans = applyClosure(call, fn, prargs, rho, R_NilValue);
     UNPROTECT(2);
     return ans;
 

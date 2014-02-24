@@ -106,67 +106,6 @@ extern void *Rm_realloc(void * p, size_t n);
    length on a 64-bit system.
 */
 
-enum SEXPMAP { INT_SM, LGL_SM, CPLX_SM, REAL_SM, EXPR_SM, STR_SM, VECTOR_SM, MAX_SM };
-unsigned long scalarvector[MAX_SM];
-unsigned long zerovector[MAX_SM];
-unsigned long vector_collected[MAX_SM];
-
-static long int unused_tag, unused_attrb, gced_conslike, gced_obj;
-
-void display_unused(FILE *out) {
-    fprintf(out, "UnusedTag: %lu\n", unused_tag);
-    fprintf(out, "UnusedAttr: %lu\n", unused_attrb);
-    fprintf(out, "GCObj: %lu\n", gced_obj);
-    fprintf(out, "GCCons: %lu\n", gced_conslike);
-    fprintf(out, "ScalarVector: %lu %lu %lu %lu %lu %lu %lu %lu\n",
-	    scalarvector[INT_SM],
-	    scalarvector[LGL_SM],
-	    scalarvector[CPLX_SM],
-	    scalarvector[REAL_SM],
-	    scalarvector[STR_SM],
-	    scalarvector[EXPR_SM],
-	    scalarvector[VECTOR_SM],
-	    (scalarvector[INT_SM]  + scalarvector[LGL_SM] +
-	     scalarvector[CPLX_SM] + scalarvector[REAL_SM] +
-	     scalarvector[STR_SM]  + scalarvector[EXPR_SM] +
-	     scalarvector[VECTOR_SM]) );
-    fprintf(out, "Zerovector: %lu %lu %lu %lu %lu %lu %lu %lu\n",
-	    zerovector[INT_SM],
-	    zerovector[LGL_SM],
-	    zerovector[CPLX_SM],
-	    zerovector[REAL_SM],
-	    zerovector[STR_SM],
-	    zerovector[EXPR_SM],
-	    zerovector[VECTOR_SM],
-	    (zerovector[INT_SM]  + zerovector[LGL_SM]  +
-	     zerovector[CPLX_SM] + zerovector[REAL_SM] +
-	     zerovector[STR_SM]  + zerovector[EXPR_SM] +
-	     zerovector[VECTOR_SM]) );
-    fprintf(out, "VectorCollected: %lu %lu %lu %lu %lu %lu %lu %lu\n",
-	    vector_collected[INT_SM],
-	    vector_collected[LGL_SM],
-	    vector_collected[CPLX_SM],
-	    vector_collected[REAL_SM],
-	    vector_collected[STR_SM],
-	    vector_collected[EXPR_SM],
-	    vector_collected[VECTOR_SM],
-	    (vector_collected[INT_SM]  + vector_collected[LGL_SM]  +
-	     vector_collected[CPLX_SM] + vector_collected[REAL_SM] +
-	     vector_collected[STR_SM]  + vector_collected[EXPR_SM] +
-	     vector_collected[VECTOR_SM]));
-
-#define AVGSCALAR(x) (((double)scalarvector[x])/(double)vector_collected[x])
-    fprintf(out, "AvgScalar: %g %g %g %g %g %g %g\n",
-	    AVGSCALAR(INT_SM),
-	    AVGSCALAR(LGL_SM),
-	    AVGSCALAR(CPLX_SM),
-	    AVGSCALAR(REAL_SM),
-	    AVGSCALAR(STR_SM),
-	    AVGSCALAR(EXPR_SM),
-	    AVGSCALAR(VECTOR_SM));
-#undef AVGSCALAR
-}
-
 /* forward declaration */
 static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_allocation);
 
@@ -715,40 +654,25 @@ static R_size_t R_NodesInUse = 0;
 #define FREE_FORWARD_CASE
 #endif
 #define DO_CHILDREN(__n__,dc__action__,dc__extra__) do { \
-  gced_obj++; \
-  int __t__; \
   if (HAS_GENUINE_ATTRIB(__n__)) \
     dc__action__(ATTRIB(__n__), dc__extra__); \
-  if (ATTRIB(__n__) == R_NilValue) \
-    unused_attrb++; \
-  switch (__t__ = TYPEOF(__n__)) { \
+  switch (TYPEOF(__n__)) { \
   case NILSXP: \
   case BUILTINSXP: \
   case SPECIALSXP: \
   case CHARSXP: \
-  case WEAKREFSXP: \
-  case RAWSXP: \
-  case S4SXP: \
-    break; \
   case LGLSXP: \
   case INTSXP: \
   case REALSXP: \
   case CPLXSXP: \
-    if (LENGTH(__n__) == 1) \
-      scalarvector[ (__t__ == INTSXP) ? INT_SM : (__t__ == LGLSXP) ?  LGL_SM: (__t__ == CPLXSXP) ? CPLX_SM : REAL_SM] ++; \
-    if (LENGTH(__n__) == 0) \
-      zerovector[ (__t__ == INTSXP) ? INT_SM : (__t__ == LGLSXP) ?  LGL_SM: (__t__ == CPLXSXP) ? CPLX_SM : REAL_SM] ++; \
-    vector_collected[ (__t__ == INTSXP) ? INT_SM : (__t__ == LGLSXP) ?  LGL_SM: (__t__ == CPLXSXP) ? CPLX_SM : REAL_SM] ++; \
+  case WEAKREFSXP: \
+  case RAWSXP: \
+  case S4SXP: \
     break; \
   case STRSXP: \
   case EXPRSXP: \
   case VECSXP: \
     { \
-      if (LENGTH(__n__) == 1) \
-        scalarvector[ (__t__ == STRSXP) ? STR_SM : (__t__ == EXPRSXP) ?  EXPR_SM : VECTOR_SM] ++; \
-      if (LENGTH(__n__) == 0) \
-        zerovector[ (__t__ == STRSXP) ? STR_SM : (__t__ == EXPRSXP) ?  EXPR_SM : VECTOR_SM] ++; \
-      vector_collected[ (__t__ == STRSXP) ? STR_SM : (__t__ == EXPRSXP) ?  EXPR_SM : VECTOR_SM] ++; \
       int i; \
       for (i = 0; i < LENGTH(__n__); i++) \
 	dc__action__(STRING_ELT(__n__, i), dc__extra__); \
@@ -766,10 +690,7 @@ static R_size_t R_NodesInUse = 0;
   case DOTSXP: \
   case SYMSXP: \
   case BCODESXP: \
-    if (TAG(__n__) == R_NilValue) \
-      unused_tag ++; \
     dc__action__(TAG(__n__), dc__extra__); \
-    gced_conslike++; \
     dc__action__(CAR(__n__), dc__extra__); \
     dc__action__(CDR(__n__), dc__extra__); \
     break; \
@@ -2363,11 +2284,6 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRVALUE(s) = R_UnboundValue;
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
-    /* Trace Instrumentation */
-    /* mark the promise as new to ensure it'll be written to the trace file */
-    SET_NEW_PROMISE(s, 1);
-    trcR_emit_simple_type(s);
-    /* Trace Instrumentation End */
     return s;
 }
 
@@ -3735,14 +3651,6 @@ R_FreeStringBufferL(R_StringBuffer *buf)
 	buf->bufsize = 0;
 	buf->data = NULL;
     }
-}
-
-void flush_gc(){
-    R_PPStackTop = 0;
-    R_PreciousList = NULL;
-    R_VStack = NULL;
-    R_GlobalContext = R_ToplevelContext;
-    R_gc();
 }
 
 /* ======== This needs direct access to gp field for efficiency ======== */

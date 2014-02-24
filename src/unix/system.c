@@ -86,7 +86,6 @@ extern void display_unused(FILE *);
 extern void write_trace_summary(FILE *);
 void R_CleanUp(SA_TYPE saveact, int status, int runLast) {
     ptr_R_CleanUp(saveact, status, runLast);
-    flush_gc();
     traceR_finish_clean();
     exit(0);
 }

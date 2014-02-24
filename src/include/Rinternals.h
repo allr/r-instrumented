@@ -185,9 +185,8 @@ struct sxpinfo_struct {
     unsigned int spare :  1;  /* currently unused */
     unsigned int gcgen :  1;  /* old generation number */
     unsigned int gccls :  3;  /* node class */
-    unsigned int newpromise: 1; /* for tracing: promise is not in trace file yet */
-    unsigned int is_cons   : 1; /* for tracing: this SEXP was allocated as a cons */
-}; /*		    Tot: 32 +2 */
+    unsigned int is_cons: 1;  /* for tracing: this SEXP was allocated as a cons */
+}; /*		    Tot: 32 +1 */
 
 struct vecsxp_struct {
     R_len_t	length;
@@ -231,7 +230,7 @@ struct promsxp_struct {
 /* Every node must start with a set of sxpinfo flags and an attribute
    field. Under the generational collector these are followed by the
    fields used to maintain the collector's linked list structures. */
-# define SEXPREC_HEADER \
+#define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
     struct SEXPREC *attrib; \
     struct SEXPREC *gengc_next_node, *gengc_prev_node
@@ -383,9 +382,6 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define SET_RDEBUG(x,v)	(((x)->sxpinfo.debug)=(v))
 #define RSTEP(x)	((x)->sxpinfo.spare)
 #define SET_RSTEP(x,v)	(((x)->sxpinfo.spare)=(v))
-
-#define NEW_PROMISE(x)       ((x)->sxpinfo.newpromise)
-#define SET_NEW_PROMISE(x,v) (((x)->sxpinfo.newpromise)=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	((x)->u.symsxp.pname)
@@ -659,7 +655,7 @@ SEXP Rf_allocSExp(SEXPTYPE);
 SEXP Rf_allocVector(SEXPTYPE, R_xlen_t);
 int  Rf_any_duplicated(SEXP x, Rboolean from_last);
 int  Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
-SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP, Rboolean);
+SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP Rf_arraySubscript(int, SEXP, SEXP, SEXP (*)(SEXP,SEXP),
                        SEXP (*)(SEXP, int), SEXP);
 SEXP Rf_classgets(SEXP, SEXP);
