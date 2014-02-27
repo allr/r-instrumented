@@ -84,7 +84,6 @@ typedef struct {
 /* Warning: All vars here are defined in main.c because Defn.h includes trace.h! */
 extern traceR_promise_stats_t traceR_promise_stats;
 extern int                    traceR_is_active;
-extern unsigned int           fatal_err_cnt; // FIXME: Rename or remove
 extern Rboolean               traceR_TraceExternalCalls;
 
 // counters for the three classes of arguments
@@ -107,13 +106,10 @@ extern unsigned int trcR_by_position, trcR_by_keyword, trcR_by_dots;
 void traceR_initialize(void);
 void traceR_start_repl(void);
 void traceR_finish_clean(void);
-void traceR_finish_abort(void);
 
 /* Note: The arg counters are implicitly passed via globals: */
 /*   trcR_by_position, trcR_by_keyword, trcR_by_dots         */
 void trcR_count_closure_args(SEXP op);
-
-static inline void trace_cnt_fatal_err() { fatal_err_cnt++; }
 
 
 /* external call tracing */

@@ -624,7 +624,6 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	}
     }
     REprintf("aborting ...\n");
-    traceR_finish_abort();
     R_CleanTempDir();
     /* now do normal behaviour, e.g. core dump */
     signal(signum, SIG_DFL);

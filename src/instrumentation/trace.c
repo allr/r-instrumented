@@ -46,7 +46,6 @@ typedef struct TraceInfo_ {
 static TraceInfo trace_info;
 
 // Trace counters
-//unsigned int fatal_err_cnt; -> main.c via Defn.h->trace.h
 static unsigned int func_decl_cnt, null_srcref_cnt;
 static unsigned int stack_err_cnt, stack_flush_cnt;
 static unsigned int stack_height, max_stack_height;
@@ -439,7 +438,6 @@ static void write_summary() {
 	return;
     }
     fprintf(summary_fp, "TraceDir\t%s\n", trace_info.directory);
-    fprintf(summary_fp, "FatalErrors\t%u\n", fatal_err_cnt);
     fprintf(summary_fp, "TraceStackErrors\t%u\n", stack_err_cnt);
     fprintf(summary_fp, "FuncsDecld\t%u\n", func_decl_cnt);
     fprintf(summary_fp, "NullSrcrefs\t%u\n", null_srcref_cnt);
@@ -496,16 +494,6 @@ void traceR_finish_clean(void) {
 
     if (traceR_TraceExternalCalls) {
 	FCLOSE(trace_info.extcalls_fd);
-    }
-}
-
-/* called when R is about to abort after a segfault or similar */
-void traceR_finish_abort(void) {
-    // FIXME: Replace with small "drop everything" implementation: called from a signal handler!
-    if (traceR_is_active) {
-	/* Trace instrumentation */
-	trace_cnt_fatal_err();
-	terminate_tracing();
     }
 }
 
