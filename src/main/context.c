@@ -244,6 +244,13 @@ void begincontext(RCNTXT * cptr, int flags,
 #endif
     cptr->srcref = R_Srcref;
     cptr->nextcontext = R_GlobalContext;
+    /* update function call depth for promise tracing */
+    if ((flags & CTXT_FUNCTION) ||
+	(flags & CTXT_BUILTIN)) {
+	cptr->func_depth = R_GlobalContext->func_depth + 1;
+    } else {
+	cptr->func_depth = R_GlobalContext->func_depth;
+    }
     R_GlobalContext = cptr;
     context_opened++;
 }

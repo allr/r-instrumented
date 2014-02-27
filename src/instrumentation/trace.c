@@ -305,6 +305,7 @@ static void start_tracing() {
 void close_memory_map();
 void write_missing_results(FILE *out);
 static void write_vector_allocs(FILE *out);
+void traceR_count_all_promises(void);
 
 static void write_allocation_summary(FILE *out) {
     fprintf(out, "SizeOfSEXP\t%ld\n", sizeof(SEXPREC));
@@ -315,8 +316,7 @@ static void write_allocation_summary(FILE *out) {
             clos_call, spec_call, builtin_call,
             clos_call + spec_call + builtin_call);
 
-
-    /* this is what the Java tool actually wants to see */
+    /* memory allocations */
     fprintf(out, "AllocatedCons\t%lu\n", allocated_cons);
     fprintf(out, "AllocatedConsPeak\t%lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
     fprintf(out, "AllocatedNonCons\t%lu\n", allocated_noncons);
@@ -337,6 +337,40 @@ static void write_allocation_summary(FILE *out) {
 
     fprintf(out, "GC\t%d\n", gc_count);
 
+    /* promises */
+    traceR_count_all_promises();
+
+    fprintf(out, "#!LABEL\tallocated\tcollected\tunevaled\n");
+    fprintf(out, "Promises\t%lu\t%lu\t%lu\n",
+	    traceR_promise_stats.created,
+	    traceR_promise_stats.collected,
+	    traceR_promise_stats.created - traceR_promise_stats.collected_evaled);
+
+    fprintf(out, "#!LABEL\tsame\tlower\thigher\tfail\treset\n");
+    fprintf(out, "PromiseSetval\t%lu\t%lu\t%lu\t%lu\t%lu\n",
+	    traceR_promise_stats.same,
+	    traceR_promise_stats.lower,
+	    traceR_promise_stats.higher,
+	    traceR_promise_stats.fail,
+	    traceR_promise_stats.reset);
+
+    fprintf(out, "#!LABEL\tlower\thigher\n");
+    fprintf(out, "PromiseMaxDiff\t%u\t%u\n",
+	    traceR_promise_stats.maxdiff_lower,
+	    traceR_promise_stats.maxdiff_higher);
+
+    fprintf(out, "#!LABEL\tlevel_difference\tcount\n");
+    fprintf(out, "#!TABLE\tPromiseLevelDifference\tPromiseLevelDifference\n");
+
+    for (unsigned int i = 0;
+	 i < TRACER_PROMISE_LOWER_LIMIT + TRACER_PROMISE_HIGHER_LIMIT + 1;
+	 i++) {
+	fprintf(out, "PromiseLevelDifference\t%d\t%lu\n",
+		(int)i - TRACER_PROMISE_LOWER_LIMIT,
+		traceR_promise_stats.diff_plain[i]);
+    }
+
+    /* misc */
     fprintf(out, "#!LABEL\tdispatchs\tdispatchFailed\n");
     fprintf(out, "Dispatch\t%lu\t%lu\n", dispatchs, dispatchFailed);
     fprintf(out, "#!LABEL\tobject\telements\t1elements\n");
