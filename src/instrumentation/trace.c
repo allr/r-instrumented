@@ -28,8 +28,6 @@
 #include <stdarg.h>
 #include <zlib.h>
 
-#define HG_ID "000000000000+"  // dummy, don't change length
-
 #ifdef TRACE_ZIPPED
   typedef gzFile TRACEFILE;
 #else
@@ -307,7 +305,10 @@ static void write_vector_allocs(FILE *out);
 void traceR_count_all_promises(void);
 
 static void write_allocation_summary(FILE *out) {
-    fprintf(out, "SizeOfSEXP\t%ld\n", sizeof(SEXPREC));
+    fprintf(out, "#!LABEL\tSEXPREC\tSEXPREC_ALIGN\n");
+    fprintf(out, "StructSize\t%u\t%u\n",
+	    (unsigned int)sizeof(SEXPREC),
+	    (unsigned int)sizeof(SEXPREC_ALIGN));
     fprintf(out, "Interp\t%lu\n", allocated_cons);
     fprintf(out, "Context\t%lu\n", context_opened);
     fprintf(out, "#!LABEL\tclos_call\tspec_call\tbuiltin_call\tsum\n");
@@ -401,7 +402,6 @@ static void write_trace_summary(FILE *out) {
     fprintf(out, "File\t%s/%s\n", str, R_InputFileName ? R_InputFileName : "stdin");
     fprintf(out, "Args\t"); write_commandArgs(out);
     // TODO print trace_type all/repl/bootstrap
-    fprintf(out, "TracerVersion\t%s\n", HG_ID);
     fprintf(out, "PtrSize\t%lu\n", sizeof(void*));
 
     strftime (str, TIME_BUFF, "%c", local_time);
