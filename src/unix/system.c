@@ -258,6 +258,7 @@ int Rf_initialize_R(int ac, char **av)
        If run from the shell script, only Tk|tk|X11|x11 are allowed.
      */
     for(i = 0, avv = av; i < ac; i++, avv++) {
+        DEBUGSCOPE_PRINT("Command line: %s\n",*avv);
 	if(!strncmp(*avv, "--gui", 5) || !strncmp(*avv, "-g", 2)) {
 	    if(!strncmp(*avv, "--gui", 5) && strlen(*avv) >= 7)
 		p = &(*avv)[6];
@@ -385,7 +386,28 @@ int Rf_initialize_R(int ac, char **av)
 	    } else if(!strcmp(*av, "--interactive")) {
 		force_interactive = TRUE;
 		break;
-	    } else {
+	    #ifdef ENABLE_SCOPING_DEBUG
+	    } else if (strncmp(*av, "--debugscope-file",17) == 0){ // 0 = match
+	        char *param=NULL;
+	        if (strlen(*av) < 19){ // there is no "=bla" behind this
+	            // so filename should be next parameter
+	            if(ac > 1){
+	                ac--; // reduce remaining number of parameters
+	                av++; // switch to next parameter
+	                param=*av; // and let param be the complete one
+	            }else{
+	                /* param stays NULL - no file given */
+	            }
+	        }else{ // strlen >= 19
+	            // move forward and check part after the (assumed) '='
+	            param = ((*av)+18); 
+	        }
+	        if (NULL != param){
+	            DEBUGSCOPE_READFILE(param);	            
+                }
+	    } // --debugscope-file
+	    #endif // ENABLE_SCOPING_DEBUG
+	    else {
 #ifdef HAVE_AQUA
 		// r27492: in 2003 launching from 'Finder OSX' passed this
 		if(!strncmp(*av, "-psn", 4)) break; else

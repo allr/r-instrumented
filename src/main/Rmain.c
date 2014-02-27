@@ -27,8 +27,13 @@ extern int R_running_as_main_program;   /* in ../unix/system.c */
 
 int main(int ac, char **av)
 {
+    //DEBUGSCOPE_ENABLEOUTPUT();
     DEBUGSCOPE_ACTIVATE("debugScope_readFile");
+    /*
     DEBUGSCOPE_READFILE("debug.conf");
+    This has been moved to a command line option (--debugscope-file)
+    see system.c for more information
+    */
     DEBUGSCOPE_START("main");
     R_running_as_main_program = 1;
     DEBUGSCOPE_PRINT("Number of Arguments: %d\n",ac);
