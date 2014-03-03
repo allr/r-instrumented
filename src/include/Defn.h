@@ -472,6 +472,7 @@ typedef struct RCNTXT {
     IStackval *intstack;
 #endif
     SEXP srcref;	        /* The source line in effect */
+    unsigned int func_depth;    /* for tracing: function call depth of this context */
 } RCNTXT, *context;
 
 /* The Various Context Types.

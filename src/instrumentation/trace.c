@@ -30,8 +30,6 @@
 
 #include <Rdebug.h>
 
-#define HG_ID "000000000000+"  // dummy, don't change length
-
 #ifdef TRACE_ZIPPED
   typedef gzFile TRACEFILE;
 #else
@@ -48,7 +46,6 @@ typedef struct TraceInfo_ {
 static TraceInfo trace_info;
 
 // Trace counters
-//unsigned int fatal_err_cnt; -> main.c via Defn.h->trace.h
 static unsigned int func_decl_cnt, null_srcref_cnt;
 static unsigned int stack_err_cnt, stack_flush_cnt;
 static unsigned int stack_height, max_stack_height;
@@ -307,9 +304,13 @@ static void start_tracing() {
 void close_memory_map();
 void write_missing_results(FILE *out);
 static void write_vector_allocs(FILE *out);
+void traceR_count_all_promises(void);
 
 static void write_allocation_summary(FILE *out) {
-    fprintf(out, "SizeOfSEXP\t%ld\n", sizeof(SEXPREC));
+    fprintf(out, "#!LABEL\tSEXPREC\tSEXPREC_ALIGN\n");
+    fprintf(out, "StructSize\t%u\t%u\n",
+	    (unsigned int)sizeof(SEXPREC),
+	    (unsigned int)sizeof(SEXPREC_ALIGN));
     fprintf(out, "Interp\t%lu\n", allocated_cons);
     fprintf(out, "Context\t%lu\n", context_opened);
     fprintf(out, "#!LABEL\tclos_call\tspec_call\tbuiltin_call\tsum\n");
@@ -317,8 +318,7 @@ static void write_allocation_summary(FILE *out) {
             clos_call, spec_call, builtin_call,
             clos_call + spec_call + builtin_call);
 
-
-    /* this is what the Java tool actually wants to see */
+    /* memory allocations */
     fprintf(out, "AllocatedCons\t%lu\n", allocated_cons);
     fprintf(out, "AllocatedConsPeak\t%lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
     fprintf(out, "AllocatedNonCons\t%lu\n", allocated_noncons);
@@ -339,6 +339,40 @@ static void write_allocation_summary(FILE *out) {
 
     fprintf(out, "GC\t%d\n", gc_count);
 
+    /* promises */
+    traceR_count_all_promises();
+
+    fprintf(out, "#!LABEL\tallocated\tcollected\tunevaled\n");
+    fprintf(out, "Promises\t%lu\t%lu\t%lu\n",
+	    traceR_promise_stats.created,
+	    traceR_promise_stats.collected,
+	    traceR_promise_stats.created - traceR_promise_stats.collected_evaled);
+
+    fprintf(out, "#!LABEL\tsame\tlower\thigher\tfail\treset\n");
+    fprintf(out, "PromiseSetval\t%lu\t%lu\t%lu\t%lu\t%lu\n",
+	    traceR_promise_stats.same,
+	    traceR_promise_stats.lower,
+	    traceR_promise_stats.higher,
+	    traceR_promise_stats.fail,
+	    traceR_promise_stats.reset);
+
+    fprintf(out, "#!LABEL\tlower\thigher\n");
+    fprintf(out, "PromiseMaxDiff\t%u\t%u\n",
+	    traceR_promise_stats.maxdiff_lower,
+	    traceR_promise_stats.maxdiff_higher);
+
+    fprintf(out, "#!LABEL\tlevel_difference\tcount\n");
+    fprintf(out, "#!TABLE\tPromiseLevelDifference\tPromiseLevelDifference\n");
+
+    for (unsigned int i = 0;
+	 i < TRACER_PROMISE_LOWER_LIMIT + TRACER_PROMISE_HIGHER_LIMIT + 1;
+	 i++) {
+	fprintf(out, "PromiseLevelDifference\t%d\t%lu\n",
+		(int)i - TRACER_PROMISE_LOWER_LIMIT,
+		traceR_promise_stats.diff_plain[i]);
+    }
+
+    /* misc */
     fprintf(out, "#!LABEL\tdispatchs\tdispatchFailed\n");
     fprintf(out, "Dispatch\t%lu\t%lu\n", dispatchs, dispatchFailed);
     fprintf(out, "#!LABEL\tobject\telements\t1elements\n");
@@ -370,7 +404,6 @@ static void write_trace_summary(FILE *out) {
     fprintf(out, "File\t%s/%s\n", str, R_InputFileName ? R_InputFileName : "stdin");
     fprintf(out, "Args\t"); write_commandArgs(out);
     // TODO print trace_type all/repl/bootstrap
-    fprintf(out, "TracerVersion\t%s\n", HG_ID);
     fprintf(out, "PtrSize\t%lu\n", sizeof(void*));
 
     strftime (str, TIME_BUFF, "%c", local_time);
@@ -407,7 +440,6 @@ static void write_summary() {
 	return;
     }
     fprintf(summary_fp, "TraceDir\t%s\n", trace_info.directory);
-    fprintf(summary_fp, "FatalErrors\t%u\n", fatal_err_cnt);
     fprintf(summary_fp, "TraceStackErrors\t%u\n", stack_err_cnt);
     fprintf(summary_fp, "FuncsDecld\t%u\n", func_decl_cnt);
     fprintf(summary_fp, "NullSrcrefs\t%u\n", null_srcref_cnt);
@@ -464,16 +496,6 @@ void traceR_finish_clean(void) {
 
     if (traceR_TraceExternalCalls) {
 	FCLOSE(trace_info.extcalls_fd);
-    }
-}
-
-/* called when R is about to abort after a segfault or similar */
-void traceR_finish_abort(void) {
-    // FIXME: Replace with small "drop everything" implementation: called from a signal handler!
-    if (traceR_is_active) {
-	/* Trace instrumentation */
-	trace_cnt_fatal_err();
-	terminate_tracing();
     }
 }
 

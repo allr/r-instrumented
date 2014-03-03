@@ -1736,6 +1736,13 @@ static void RunGenCollect(R_size_t size_needed)
 	    s->sxpinfo.is_cons = 0;
 	    allocated_cons_current--;
 	}
+	if (s->sxpinfo.promise_gc) {
+	    s->sxpinfo.promise_gc = 0;
+	    traceR_promise_stats.collected++;
+	    if (PRVALUE(s) != R_UnboundValue) {
+		traceR_promise_stats.collected_evaled++;
+	    }
+	}
     }
 
     /* reset Free pointers */
@@ -1788,6 +1795,36 @@ static void RunGenCollect(R_size_t size_needed)
 	    REprintf("+%d", gen_gc_counts[i + 1]);
 	REprintf(" (level %d) ... ", gens_collected);
 	DEBUG_GC_SUMMARY(gens_collected == NUM_OLD_GENERATIONS);
+    }
+}
+
+/* count all not-yet-counted promises */
+void traceR_count_all_promises(void) {
+    SEXP s;
+    PAGE_HEADER *page = R_GenHeap[0].pages;
+    char *data;
+    int node_size, page_count, i;
+
+    node_size = NODE_SIZE(0);
+    page_count = (R_PAGE_SIZE - sizeof(PAGE_HEADER)) / node_size;
+
+    while (page != NULL) {
+	data = PAGE_DATA(page);
+
+	for (i = 0; i < page_count; i++, data += node_size) {
+	    s = (SEXP) data;
+
+	    if (TYPEOF(s) == PROMSXP &&
+		s->sxpinfo.promise_gc) {
+		s->sxpinfo.promise_gc = 0;
+		traceR_promise_stats.collected++;
+		if (PRVALUE(s) != R_UnboundValue) {
+		    traceR_promise_stats.collected_evaled++;
+		}
+	    }
+	}
+
+	page = page->next;
     }
 }
 
@@ -2267,6 +2304,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 	    mem_err_cons();
     }
     GET_FREE_NODE(s);
+    traceR_promise_stats.created++;
     ADD_ALLOC(prom);
 #if VALGRIND_LEVEL > 2
     VALGRIND_MAKE_WRITABLE(&ATTRIB(s), sizeof(void *));
@@ -2284,6 +2322,14 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRVALUE(s) = R_UnboundValue;
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
+
+    /* mark promise as not yet counted for tracing */
+    s->sxpinfo.promise_gc = 1;
+    if (R_GlobalContext->func_depth < 65535)
+	s->sxpinfo.promise_level = R_GlobalContext->func_depth;
+    else
+	s->sxpinfo.promise_level = 65535;
+
     return s;
 }
 
@@ -3422,9 +3468,47 @@ SEXP (PRVALUE)(SEXP x) { return CHK(PRVALUE(CHK(x))); }
 int (PRSEEN)(SEXP x) { return PRSEEN(CHK(x)); }
 
 void (SET_PRENV)(SEXP x, SEXP v){ CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
-void (SET_PRVALUE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRVALUE(x) = v; }
 void (SET_PRCODE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
+
+
+void (SET_PRVALUE)(SEXP x, SEXP v) {
+    CHECK_OLD_TO_NEW(x, v);
+    if (PRVALUE(x) != R_UnboundValue) {
+	traceR_promise_stats.reset++;
+    } else {
+	/* tracing: check function depth now vs. creation time */
+	// FIXME: Counts only current difference, but ignores how much
+	//        that has changed inbetween
+	if (R_GlobalContext->func_depth >= 65535) {
+	    traceR_promise_stats.fail++;
+	} else {
+	    int depth_diff = (int)R_GlobalContext->func_depth - x->sxpinfo.promise_level;
+
+	    // FIXME: Remove and calculate from histogram?
+	    if (depth_diff == 0) {
+		traceR_promise_stats.same++;
+	    } else if (depth_diff < 0) {
+		traceR_promise_stats.lower++;
+		if (-depth_diff > traceR_promise_stats.maxdiff_lower)
+		    traceR_promise_stats.maxdiff_lower = -depth_diff;
+	    } else {
+		traceR_promise_stats.higher++;
+		if (depth_diff > traceR_promise_stats.maxdiff_higher)
+		    traceR_promise_stats.maxdiff_higher = depth_diff;
+	    }
+
+	    /* clip value */
+	    if (depth_diff > TRACER_PROMISE_HIGHER_LIMIT)
+		depth_diff = TRACER_PROMISE_HIGHER_LIMIT;
+	    if (depth_diff < -TRACER_PROMISE_LOWER_LIMIT)
+		depth_diff = -TRACER_PROMISE_LOWER_LIMIT;
+
+	    traceR_promise_stats.diff_plain[TRACER_PROMISE_LOWER_LIMIT + depth_diff]++;
+	}
+    }
+    PRVALUE(x) = v;
+}
 
 /* Hashing Accessors */
 #ifdef TESTING_WRITE_BARRIER

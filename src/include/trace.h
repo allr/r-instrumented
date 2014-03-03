@@ -50,17 +50,41 @@ typedef struct {
 
 /* vector allocation classes */
 typedef enum {
-  TR_VECCLASS_ZERO = 0,
-  TR_VECCLASS_ONE,
-  TR_VECCLASS_SMALL,
-  TR_VECCLASS_LARGE,
-  TR_VECCLASS_TOTAL  // must be the last entry
+    TR_VECCLASS_ZERO = 0,
+    TR_VECCLASS_ONE,
+    TR_VECCLASS_SMALL,
+    TR_VECCLASS_LARGE,
+    TR_VECCLASS_TOTAL  // must be the last entry
 } traceR_vector_class_t;
 
+/* lower and higher function call depth limit for the promise eval histogram */
+#define TRACER_PROMISE_LOWER_LIMIT  20
+#define TRACER_PROMISE_HIGHER_LIMIT 20
+
+typedef struct {
+    unsigned long created;
+    unsigned long collected;
+    unsigned long collected_evaled;
+
+    // FIXME: same, lower, higher are redundant (data is in the histogram)
+    unsigned long same;
+    unsigned long lower;
+    unsigned long higher;
+    unsigned long fail;
+    unsigned long reset;
+    /* histogram for level differences */
+    unsigned long diff_plain[TRACER_PROMISE_LOWER_LIMIT + TRACER_PROMISE_HIGHER_LIMIT + 1];
+    // FIXME: Use a separate histogram for delayedAssign/makeLazy?
+
+    unsigned int  maxdiff_higher;
+    unsigned int  maxdiff_lower;
+} traceR_promise_stats_t;
+
+
 /* Warning: All vars here are defined in main.c because Defn.h includes trace.h! */
-extern int traceR_is_active;
-extern unsigned int fatal_err_cnt; // FIXME: Rename or remove
-extern Rboolean     traceR_TraceExternalCalls;
+extern traceR_promise_stats_t traceR_promise_stats;
+extern int                    traceR_is_active;
+extern Rboolean               traceR_TraceExternalCalls;
 
 // counters for the three classes of arguments
 // (implicit parameters for trcR_count_closure_args and emit_closure)
@@ -82,13 +106,10 @@ extern unsigned int trcR_by_position, trcR_by_keyword, trcR_by_dots;
 void traceR_initialize(void);
 void traceR_start_repl(void);
 void traceR_finish_clean(void);
-void traceR_finish_abort(void);
 
 /* Note: The arg counters are implicitly passed via globals: */
 /*   trcR_by_position, trcR_by_keyword, trcR_by_dots         */
 void trcR_count_closure_args(SEXP op);
-
-static inline void trace_cnt_fatal_err() { fatal_err_cnt++; }
 
 
 /* external call tracing */
