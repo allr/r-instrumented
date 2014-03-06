@@ -141,20 +141,28 @@ static char BrowsePrompt[20];
 
 static const char *R_PromptString(int browselevel, int type)
 {
+    DEBUGSCOPE_START("R_PromptString");
     if (R_Slave) {
 	BrowsePrompt[0] = '\0';
+	DEBUGSCOPE_END("R_PromptString");
 	return BrowsePrompt;
     }
     else {
 	if(type == 1) {
 	    if(browselevel) {
+	        DEBUGSCOPE_PRINT("with Browselevel != 0\n");
 		snprintf(BrowsePrompt, 20, "Browse[%d]> ", browselevel);
+		DEBUGSCOPE_END("R_PromptString");
 		return BrowsePrompt;
 	    }
-	    return CHAR(STRING_ELT(GetOption1(install("prompt")), 0));
+	    const char* returnValue = CHAR(STRING_ELT(GetOption1(install("prompt")), 0));
+	    DEBUGSCOPE_END("R_PromptString");
+	    return returnValue;
 	}
 	else {
-	    return CHAR(STRING_ELT(GetOption1(install("continue")), 0));
+	    const char* returnValue = CHAR(STRING_ELT(GetOption1(install("continue")), 0));
+	    DEBUGSCOPE_END("R_PromptString");
+	    return returnValue;
 	}
     }
 }
@@ -1199,6 +1207,9 @@ static int ParseBrowser(SEXP CExpr, SEXP rho)
 /* browser(text = "", condition = NULL, expr = TRUE, skipCalls = 0L) */
 SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    DEBUGSCOPE_START("do_browser");
+    
+    
     RCNTXT *saveToplevelContext;
     RCNTXT *saveGlobalContext;
     RCNTXT thiscontext, returncontext, *cptr;
@@ -1227,6 +1238,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* return if 'expr' is not TRUE */
     if( !asLogical(CADDR(argList)) ) {
         UNPROTECT(1);
+        DEBUGSCOPE_END("do_browser");
         return R_NilValue;
     }
 
@@ -1280,7 +1292,14 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	R_GlobalContext = &thiscontext;
 	R_InsertRestartHandlers(&thiscontext, TRUE);
-	R_ReplConsole(rho, savestack, browselevel+1);
+	DEBUGSCOPE_PRINT("R_Interactive is %d\n",R_Interactive);
+	if (R_Interactive){
+            /*
+             * in non-interactive-setups, input from the file should
+             * be ignored until browsing is finished
+             */
+	    R_ReplConsole(rho, savestack, browselevel+1);
+	}
 	endcontext(&thiscontext);
     }
     endcontext(&returncontext);
@@ -1294,6 +1313,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_CurrentExpr = topExp;
     R_ToplevelContext = saveToplevelContext;
     R_GlobalContext = saveGlobalContext;
+    DEBUGSCOPE_END("do_browser");
     return R_ReturnedValue;
 }
 
