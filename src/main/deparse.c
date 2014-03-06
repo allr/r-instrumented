@@ -104,6 +104,7 @@
 /* ----- MAX_Cutoff  <	BUFSIZE !! */
 
 #include "RBufferUtils.h"
+#include "Rdebug.h"
 
 typedef R_StringBuffer DeparseBuffer;
 
@@ -575,14 +576,22 @@ static Rboolean needsparens(PPinfo mainop, SEXP arg, unsigned int left)
 /* check for attributes other than function source */
 static Rboolean hasAttributes(SEXP s)
 {
+    DEBUGSCOPE_START("hasAttributes");
     SEXP a = ATTRIB(s);
     if (length(a) > 2) return(TRUE);
     while(!isNull(a)) {
-	if(TAG(a) != R_SrcrefSymbol
-	   && (TYPEOF(s) != CLOSXP || TAG(a) != R_SourceSymbol))
+	if(
+	    (TAG(a) != R_SrcrefSymbol) && 
+	    (TYPEOF(s) != CLOSXP || TAG(a) != R_SourceSymbol)
+	    )
+	{
+	    DEBUGSCOPE_PRINT("returning TRUE\n");
+            DEBUGSCOPE_END("hasAttributes");
 	    return(TRUE);
+	}
 	a = CDR(a);
     }
+    DEBUGSCOPE_END("hasAttributes");
     return(FALSE);
 }
 
