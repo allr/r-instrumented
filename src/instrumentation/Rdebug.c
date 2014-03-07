@@ -58,11 +58,11 @@ void debugScope_deactivate(char* scopeName) {
     activeScopesLinList* parent = NULL;
     activeScopesLinList* scopeIterator = activeScopes;
     while (1) {
-	if (NULL == scopeIterator) { // end of list reached, terminate
+	if (scopeIterator == NULL) { // end of list reached, terminate
 	    return;
 	    // could also be "break" if further stuff is required
 	}
-	if (0 != strcmp(scopeIterator->scopeName, scopeName)) { // scopename mismatch
+	if (strcmp(scopeIterator->scopeName, scopeName) != 0) { // scopename mismatch
 	    // iterate!
 	    parent = scopeIterator;
 	    scopeIterator = scopeIterator->next;
@@ -79,7 +79,7 @@ void debugScope_deactivate(char* scopeName) {
 	 * Note: ScopeIterator may be NULL at this point but this is a correct
 	 * and sensible "next"-pointer
 	 */
-	if (NULL == parent) { // this was first in list
+	if (parent == NULL) { // this was first in list
 	    activeScopes = scopeIterator; // so set the head
 	} else { // not first in list
 	    parent->next = scopeIterator; // so fix in the last entry
@@ -95,8 +95,8 @@ Rboolean debugScope_isActive(char* scopeName) {
     }
     // this function just iterates the linked list. There may be faster solutions
     activeScopesLinList* scopeSearcher = activeScopes;
-    while (NULL != scopeSearcher) { // still some list left
-	if (0 == strcmp(scopeSearcher->scopeName, scopeName)) { // found
+    while (scopeSearcher != NULL) { // still some list left
+	if (strcmp(scopeSearcher->scopeName, scopeName) == 0) { // found
 	    return TRUE;
 	} else { // not (yet) found
 	    scopeSearcher = scopeSearcher->next;
@@ -110,7 +110,7 @@ Rboolean debugScope_isCurrentActive() {
     if (!globalEnable) { // globally disabled, so stop at once
 	return FALSE;
     }
-    if (NULL == currentScope) { // no current scope - should not happen
+    if (currentScope == NULL) { // no current scope - should not happen
 	// but just return "no"
 	return FALSE;
     }
@@ -125,7 +125,7 @@ void debugScope_readFile(char* fileName) {
     DEBUGSCOPE_START("debugScope_readFile");
     FILE* configFile;
     configFile = fopen(fileName,"r");
-    if (NULL == configFile) { // config file missing
+    if (configFile == NULL) { // config file missing
 	// only report if debug is on for this function
 	DEBUGSCOPE_PRINT("Config File ");
 	DEBUGSCOPE_PRINT(fileName);
@@ -137,7 +137,7 @@ void debugScope_readFile(char* fileName) {
 	    if (feof(configFile)) { // reached end of file
 		break;
 	    }
-	    if (0 == strncmp(extractedLine, "//", 2)){ // comment line
+	    if (strncmp(extractedLine, "//", 2) == 0) { // comment line
 		/*
 		 * scope names starting with "//" are considered
 		 * "commented out" and not to be activated!
@@ -182,14 +182,14 @@ void debugScope_readFile(char* fileName) {
 
 void debugScope_start(char* scopeName) {
     debugScope* newScope = malloc(sizeof(debugScope));
-    if (NULL == newScope) { // malloc failed
+    if (newScope == NULL) { // malloc failed
 	printf("ERROR: Malloc failed for debug scope %s\n",scopeName);
 	return;
     }
     strncpy(newScope->scopeName, scopeName, SCOPENAME_MAX_SIZE);
     (newScope->scopeName)[SCOPENAME_MAX_SIZE] = '\0';
     //newScope->scopeName = scopeName;
-    if (NULL == currentScope) { // first Scope
+    if (currentScope == NULL) { // first Scope
 	newScope->parent = NULL;
 	newScope->depth  = 0;
     } else {
@@ -209,10 +209,10 @@ void debugScope_start(char* scopeName) {
 #undef TERMINATE_ON_SCOPING_PROBLEM
 
 void debugScope_end(char* scopeName) {
-    if (NULL == currentScope){
+    if (currentScope == NULL) {
 	printf("Trying to exit scope %s but current Scope is NULL - this should not happen!\n",scopeName);
     } else { // current scope exists
-	if (0 != strcmp(scopeName, currentScope->scopeName)) { // not equal
+	if (strcmp(scopeName, currentScope->scopeName) != 0) { // not equal
 	    printf(
 		   "Trying to exit scope %s but current Scope is %s - this should not happen!\n",
 		   scopeName,
@@ -232,7 +232,7 @@ void debugScope_end(char* scopeName) {
 	} else { // scopenames match
 	    debugScope_print("[%u] <- EXIT: %s\n", currentScope->depth, scopeName);
 	    debugScope* endingScope = currentScope;
-	    if (NULL == endingScope->parent) {
+	    if (endingScope->parent == NULL) {
 		printf("This was root Scope!\n");
 		currentScope = NULL;
 	    } else {
@@ -245,9 +245,9 @@ void debugScope_end(char* scopeName) {
 }
 
 void debugScope_saveJump(jmp_buf givenJumpInfo) {
-    if (NULL != currentScope) { // safety check
+    if (currentScope != NULL) { // safety check
 	jumpInfos_linlist* newJumpInfo = malloc(sizeof(jumpInfos_linlist));
-	if (NULL == newJumpInfo) {
+	if (newJumpInfo == NULL) {
 	    printf(
 		   "ERROR: malloc failed for jumpinfos in %s\n",
 		   currentScope->scopeName
@@ -269,15 +269,15 @@ void debugScope_saveJump(jmp_buf givenJumpInfo) {
 }
 
 void debugScope_loadJump(jmp_buf givenJumpInfo) {
-    if (NULL != currentScope) { // safety check
+    if (currentScope != NULL) { // safety check
 	unsigned int countedJumpInfos = 0;
 	jumpInfos_linlist* jumpInfoWalker = jumpInfos;
 	while (1) { // forever - until something happens
-	    if (NULL == jumpInfoWalker) { // iterated complete table - but not found
+	    if (jumpInfoWalker == NULL) { // iterated complete table - but not found
 		printf("ERROR: loadJump but target unknown - %d entrys\n",countedJumpInfos);
 		return;
 	    }
-	    if(0 != memcmp(jumpInfoWalker->jumpInfo, givenJumpInfo, sizeof(jmp_buf))) {// not equal
+	    if (memcmp(jumpInfoWalker->jumpInfo, givenJumpInfo, sizeof(jmp_buf)) != 0) { // not equal
 		// not found - yet
 		jumpInfoWalker = jumpInfoWalker->next;
 		countedJumpInfos++;
@@ -324,13 +324,13 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
 	 */
 
 	while (1) {
-	    if (NULL == currentScope) {
+	    if (currentScope == NULL) {
 		printf("ERROR: loadJump-target not found on scope-stack\n");
 		return;
 	    }
 	    if (currentScope != targetScope) {
 		debugScope* endingScope = currentScope;
-		if (NULL == endingScope->parent) {
+		if (endingScope->parent == NULL) {
 		    printf("This was root Scope!\n");
 		    currentScope = NULL;
 		} else {
@@ -350,7 +350,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
 }
 
 void debugScope_print(char* output,...) {
-    if (NULL != currentScope) { // safety check
+    if (currentScope != NULL) { // safety check
 	if (debugScope_isCurrentActive()) {
 	    va_list argumentpointer;
 	    va_start(argumentpointer,output);
@@ -405,7 +405,7 @@ void printJumpInfo(jmp_buf givenJumpInfo) {
 
 void debugScope_saveJump(jmp_buf givenJumpInfo) {
     jumpInfos_linlist* newJumpInfo = malloc(sizeof(jumpInfos_linlist));
-    if (NULL == newJumpInfo) {
+    if (newJumpInfo == NULL) {
 	printf(
 	       "ERROR: malloc failed for jumpinfos\n",
 	       currentScope->scopeName
@@ -432,12 +432,12 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
     unsigned int countedJumpInfos = 0;
     jumpInfos_linlist* jumpInfoWalker = jumpInfos;
     while (1) { // forever - until something happens
-	if(NULL == jumpInfoWalker) { // iterated complete table - but not found
+	if (jumpInfoWalker == NULL) { // iterated complete table - but not found
 	    //printf("ERROR: loadJump - target unknown\n");
 	    printf("ERROR: loadJump but target unknown - %d entrys\n",countedJumpInfos);
 	    return;
 	}
-	if (0 != memcmp(jumpInfoWalker->jumpInfo, givenJumpInfo, sizeof(jmp_buf))) {// not equal
+	if (memcmp(jumpInfoWalker->jumpInfo, givenJumpInfo, sizeof(jmp_buf)) != 0) { // not equal
 	    // not found - yet
 	    jumpInfoWalker = jumpInfoWalker->next;
 	    countedJumpInfos++;
@@ -484,7 +484,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
  */
 
 void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue) {
-    if (0 == jumpValue) { // if setjmp returns 0, the jump was setup
+    if (jumpValue == 0) { // if setjmp returns 0, the jump was setup
 	debugScope_saveJump(givenJumpInfo);
     } else { // for everything else, we returned from jump
 	debugScope_loadJump(givenJumpInfo);
@@ -495,7 +495,7 @@ void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue) {
 void debugScope_printStack() {
     printf("--- START Debug Scope Stack ---\n");
     debugScope* scopeIterator = currentScope;
-    while (NULL != scopeIterator) {
+    while (scopeIterator != NULL) {
 	printf("* %s\n",scopeIterator->scopeName);
 	scopeIterator = scopeIterator->parent;
     }

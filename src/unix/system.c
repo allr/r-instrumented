@@ -402,7 +402,7 @@ int Rf_initialize_R(int ac, char **av)
 		    // move forward and check part after the (assumed) '='
 		    param = ((*av) + 18);
 		}
-		if (NULL != param) {
+		if (param != NULL) {
 		    DEBUGSCOPE_READFILE(param);
 		}
 	    } // --debugscope-file

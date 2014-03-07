@@ -237,18 +237,18 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
     // FIXME: To be removed
     char* readCommand = (char *)state->buf;
     DEBUGSCOPE_PRINT("given from console: %s\n", state->buf);
-    if (0 == strncmp(readCommand,"debugscope_", 11)) { // found debug command
+    if (strncmp(readCommand,"debugscope_", 11) == 0) { // found debug command
 	DEBUGSCOPE_PRINT("debug command: ");
 	readCommand = readCommand + 11;
 	DEBUGSCOPE_PRINT("%s ",readCommand);
-	if (0 == strncmp(readCommand, "activate(\"", 10)) { // activate command found
+	if (strncmp(readCommand, "activate(\"", 10) == 0) { // activate command found
 	    readCommand = readCommand + 10;
 	    DEBUGSCOPE_PRINT(" -> activating ");
 	    char scopeName[SCOPENAME_MAX_SIZE + 1];
 	    strncpy(scopeName, readCommand, SCOPENAME_MAX_SIZE);
 	    scopeName[SCOPENAME_MAX_SIZE] = '\0'; // safety, again
 	    char* endOfScopeName = strchr(scopeName,'\"'); // search for quote sign
-	    if (NULL == endOfScopeName) {
+	    if (endOfScopeName == NULL) {
 		DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
 	    } else {
 		(*endOfScopeName) = '\0'; // terminate string at quote
@@ -259,14 +259,14 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	    DEBUGSCOPE_END("Rf_ReplIteration");
 	    return(0);
 	}
-	else if (0 == strncmp(readCommand, "deactivate(\"", 12)) { // deactivate command found
+	else if (strncmp(readCommand, "deactivate(\"", 12) == 0) { // deactivate command found
 	    readCommand = readCommand + 12;
 	    DEBUGSCOPE_PRINT(" -> deactivating ");
 	    char scopeName[SCOPENAME_MAX_SIZE + 1];
 	    strncpy(scopeName, readCommand, SCOPENAME_MAX_SIZE);
 	    scopeName[SCOPENAME_MAX_SIZE] = '\0'; // safety, again
 	    char* endOfScopeName = strchr(scopeName, '\"'); // search for quote sign
-	    if (NULL == endOfScopeName) {
+	    if (endOfScopeName == NULL) {
 		DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
 	    } else {
 		(*endOfScopeName) = '\0'; // terminate string at quote
@@ -775,7 +775,7 @@ static void R_LoadProfile(FILE *fparg, SEXP env)
     FILE * volatile fp = fparg; /* is this needed? */
     if (fp != NULL) {
         int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-	if (0 == jumpValue){ // setup jump
+	if (jumpValue == 0) { // setup jump
 	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
 	} else {
 	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
@@ -965,7 +965,7 @@ void setup_Rmainloop(void)
     doneit = 0;
     { // save jump target for TopLevel
 	int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-	if (0 == jumpValue) {
+	if (jumpValue == 0) {
 	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
 	} else {
 	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
