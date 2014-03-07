@@ -405,9 +405,8 @@ int Rf_initialize_R(int ac, char **av)
 		if (param != NULL) {
 		    DEBUGSCOPE_READFILE(param);
 		}
-	    } // --debugscope-file
 #endif // ENABLE_SCOPING_DEBUG
-	    else {
+	    } else {
 #ifdef HAVE_AQUA
 		// r27492: in 2003 launching from 'Finder OSX' passed this
 		if(!strncmp(*av, "-psn", 4)) break; else

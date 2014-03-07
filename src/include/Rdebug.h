@@ -26,6 +26,8 @@
      * and (hopefully) discarded during compilation
      */
 
+    #define SCOPENAME_MAX_SIZE 1
+
     #define DEBUGSCOPE_ENABLEOUTPUT()                    do {} while (0)
     #define DEBUGSCOPE_DISABLEOUTPUT()                   do {} while (0)
     #define DEBUGSCOPE_ACTIVATE(scopeName)               do {} while (0)
@@ -37,9 +39,10 @@
     #define DEBUGSCOPE_PRINTSTACK()                      do {} while (0)
     #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                do {} while (0)
     #define DEBUGSCOPE_LOADJUMP(jumpInfo)                do {} while (0)
-    #define DEBUGSCOPE_SAVELOADJUMP(jumpInfo, jumpValue) do {} while (0)
 
-    static inline void extractFunctionName(char *extraction, SEXP environment) { }
+    /* avoid "variable not used" warnings by using empty inline functions */
+    static inline void DEBUGSCOPE_SAVELOADJUMP(jmp_buf jumpInfo, int jumpValue) { }
+    static inline void extractFunctionName(char *extraction, SEXP environment)  { }
 
 #endif
 #ifdef ENABLE_SCOPING_DEBUG
