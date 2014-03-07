@@ -201,11 +201,8 @@ int
 R_ReadConsole(const char *prompt, unsigned char *buf, int len,
 	      int addtohistory)
 {
-    DEBUGSCOPE_START("R_ReadConsole"); // not reached?
     R_ProcessEvents();
-    int returnValue=TrueReadConsole(prompt, (char *) buf, len, addtohistory);
-    DEBUGSCOPE_END("R_ReadConsole");
-    return TrueReadConsole(returnValue);
+    return TrueReadConsole(prompt, (char *) buf, len, addtohistory);
 }
 
 	/* Write a text buffer to the console. */
