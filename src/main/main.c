@@ -279,12 +279,6 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	}
     }
 
-    if (0 == strcmp(readCommand, "debugbla\n")) { // zero return -> strings are equal
-	DEBUGSCOPE_PRINT("Ich habe ein debugbla gefunden!\n");
-	state->buf[0] = '\0'; // necessary to prevent further parsing tries?
-	DEBUGSCOPE_END("Rf_ReplIteration");
-	return(0);
-    } // debugbla detected
 #ifdef SHELL_ESCAPE /* not default */
     if (*state->bufp == '!') {
 	    R_system(&(state->buf[1]));
