@@ -14,6 +14,7 @@
 #ifndef _RDEBUG_H
 #define _RDEBUG_H
 
+#include <R_ext/Boolean.h>
 #include <setjmp.h> // so jumpbuf is known
 
 #define ENABLE_SCOPING_DEBUG
@@ -46,7 +47,7 @@
 	char scopeName[SCOPENAME_MAX_SIZE+1];
 	unsigned int depth;
 	struct debugScope_t* parent;
-	int enabled; // whether scope is enabled. 1 for yes.
+	Rboolean enabled; // whether scope is enabled.
     } debugScope;
 
     typedef struct scopes_linlist_t {
@@ -145,10 +146,10 @@
     void debugScope_readFile(char* fileName);
 
     //! returns whether a given debug Scope is active (enabled)
-    int debugScope_isActive(char* scopeName);
+    Rboolean debugScope_isActive(char* scopeName);
 
     //! returns whether the current debug Scope is active
-    int debugScope_isCurrentActive();
+    Rboolean debugScope_isCurrentActive();
 
     void debugScope_start(char* scopeName);
     void debugScope_end(char* scopeName);

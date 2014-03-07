@@ -12,11 +12,17 @@
  */
 
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h> // for isspace(int)
 #include <stdarg.h> // for va_start, va_end
+
+#include <Defn.h>
 
 #include <Rdebug.h>
 
@@ -26,7 +32,7 @@
 static debugScope* currentScope = (debugScope*)NULL;
 static activeScopesLinList* activeScopes = (activeScopesLinList*)NULL;
 static jumpInfos_linlist* jumpInfos = (jumpInfos_linlist*)NULL;
-static int globalEnable = (0 != 0);
+static Rboolean globalEnable = FALSE;
 
 void debugScope_activate(char* scopeName) {
     // standard linear list adding
@@ -39,19 +45,19 @@ void debugScope_activate(char* scopeName) {
 }
 
 void debugScope_enableOutput() {
-    globalEnable = (1 == 1);
+  globalEnable = TRUE;
 }
 
 void debugScope_disableOutput() {
     DEBUGSCOPE_START("debugScope_disableOutput");
-    globalEnable = (0 != 0);
+    globalEnable = FALSE;
     DEBUGSCOPE_END("debugScope_disableOutput");
 }
 
 void debugScope_deactivate(char* scopeName) {
     activeScopesLinList* parent = NULL;
     activeScopesLinList* scopeIterator = activeScopes;
-    while (1==1) {
+    while (1) {
 	if (NULL == scopeIterator) { // end of list reached, terminate
 	    return;
 	    // could also be "break" if further stuff is required
@@ -83,36 +89,33 @@ void debugScope_deactivate(char* scopeName) {
 }
 
 
-int debugScope_isActive(char* scopeName) {
-    if ((0 != 0) == globalEnable){ // globally disabled
-	return (0 != 0);
+Rboolean debugScope_isActive(char* scopeName) {
+    if (!globalEnable){ // globally disabled
+	return FALSE;
     }
     // this function just iterates the linked list. There may be faster solutions
     activeScopesLinList* scopeSearcher = activeScopes;
     while (NULL != scopeSearcher) { // still some list left
 	if (0 == strcmp(scopeSearcher->scopeName, scopeName)) { // found
-	    return (1 == 1);
+	    return TRUE;
 	} else { // not (yet) found
 	    scopeSearcher = scopeSearcher->next;
 	}
     }
     // not found (finally)
-    return (0 != 0);
+    return FALSE;
 }
 
-int debugScope_isCurrentActive() {
-    if ((0 != 0) == globalEnable) { // globally disabled, so stop at once
-	return (0 != 0);
+Rboolean debugScope_isCurrentActive() {
+    if (!globalEnable) { // globally disabled, so stop at once
+	return FALSE;
     }
     if (NULL == currentScope) { // no current scope - should not happen
 	// but just return "no"
-	return (0 != 0);
+	return FALSE;
     }
-    if (1 == currentScope->enabled) { // enabled
-	return (1 == 1);
-    } else { // not enabled
-	return (0 != 0);
-    }
+
+    return currentScope->enabled;
 }
 
 
@@ -129,7 +132,7 @@ void debugScope_readFile(char* fileName) {
 	DEBUGSCOPE_PRINT(" could not be opened\n");
     } else { // file could be opened
 	char extractedLine[SCOPENAME_MAX_SIZE+1];
-	while (1 == 1) {
+	while (1) {
 	    fgets(extractedLine, SCOPENAME_MAX_SIZE, configFile);
 	    if (feof(configFile)) { // reached end of file
 		break;
@@ -269,7 +272,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
     if (NULL != currentScope) { // safety check
 	unsigned int countedJumpInfos = 0;
 	jumpInfos_linlist* jumpInfoWalker = jumpInfos;
-	while (1 == 1) { // forever - until something happens
+	while (1) { // forever - until something happens
 	    if (NULL == jumpInfoWalker) { // iterated complete table - but not found
 		printf("ERROR: loadJump but target unknown - %d entrys\n",countedJumpInfos);
 		return;
@@ -320,7 +323,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
 	 * (backuping scopes that we presumed "dead" in another data structure?)
 	 */
 
-	while (1 == 1) {
+	while (1) {
 	    if (NULL == currentScope) {
 		printf("ERROR: loadJump-target not found on scope-stack\n");
 		return;
@@ -348,7 +351,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
 
 void debugScope_print(char* output,...) {
     if (NULL != currentScope) { // safety check
-	if ((1 == 1) == debugScope_isCurrentActive()) {
+	if (debugScope_isCurrentActive()) {
 	    va_list argumentpointer;
 	    va_start(argumentpointer,output);
 	    vprintf(output,argumentpointer);
@@ -428,7 +431,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
     printf("\n");
     unsigned int countedJumpInfos = 0;
     jumpInfos_linlist* jumpInfoWalker = jumpInfos;
-    while (1==1) { // forever - until something happens
+    while (1) { // forever - until something happens
 	if(NULL == jumpInfoWalker) { // iterated complete table - but not found
 	    //printf("ERROR: loadJump - target unknown\n");
 	    printf("ERROR: loadJump but target unknown - %d entrys\n",countedJumpInfos);
