@@ -17,10 +17,7 @@
 #include "Rinternals.h"
 #include <setjmp.h> // so jumpbuf is known
 
-#define ENABLE_SCOPING_DEBUG
-//#undef ENABLE_SCOPING_DEBUG
-
-#ifndef ENABLE_SCOPING_DEBUG
+#ifndef HAVE_DEBUGSCOPES
     /*
      * If scoping debug is disabled, all macros are changed to empty loops
      * and (hopefully) discarded during compilation
@@ -45,7 +42,7 @@
     static inline void extractFunctionName(char *extraction, SEXP environment)  { }
 
 #endif
-#ifdef ENABLE_SCOPING_DEBUG
+#ifdef HAVE_DEBUGSCOPES
     #define SCOPENAME_MAX_SIZE (80)
 
     typedef struct debugScope_t {

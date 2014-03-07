@@ -386,7 +386,7 @@ int Rf_initialize_R(int ac, char **av)
 	    } else if(!strcmp(*av, "--interactive")) {
 		force_interactive = TRUE;
 		break;
-#ifdef ENABLE_SCOPING_DEBUG
+#ifdef HAVE_DEBUGSCOPES
 	    } else if (strncmp(*av, "--debugscope-file", 17) == 0) { // 0 = match
 		char *param = NULL;
 		if (strlen(*av) < 19) { // there is no "=bla" behind this
@@ -405,7 +405,7 @@ int Rf_initialize_R(int ac, char **av)
 		if (param != NULL) {
 		    DEBUGSCOPE_READFILE(param);
 		}
-#endif // ENABLE_SCOPING_DEBUG
+#endif // HAVE_DEBUGSCOPES
 	    } else {
 #ifdef HAVE_AQUA
 		// r27492: in 2003 launching from 'Finder OSX' passed this

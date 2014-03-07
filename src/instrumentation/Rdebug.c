@@ -26,8 +26,7 @@
 
 #include <Rdebug.h>
 
-#ifdef ENABLE_SCOPING_DEBUG
-//#undef ENABLE_SCOPING_DEBUG
+#ifdef HAVE_DEBUGSCOPES
 
 void extractFunctionName(char* extraction, SEXP environment){
     int i;
@@ -491,4 +490,4 @@ void debugScope_printStack() {
 }
 
 
-#endif // ENABLE_SCOPING_DEBUG
+#endif // HAVE_DEBUGSCOPES

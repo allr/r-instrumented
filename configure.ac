@@ -194,6 +194,19 @@ AC_SUBST(config_opts)
 
 ### ** Optional features.
 
+## Allow the user to specify support for debug scopes
+AC_ARG_ENABLE([debugscopes],
+[AS_HELP_STRING([--enable-debugscopes],[enable support for debug scopes @<:@no@:>@])],
+[if test "${enableval}" = no; then
+  want_debugscopes=no
+elif test "${enableval}" = yes; then
+  want_debugscopes=yes
+else
+  want_debugscopes=no
+fi],
+[want_debugscopes=no])
+AM_CONDITIONAL(WANT_DEBUGSCOPES, [test "x${want_debugscopes}" = xyes])
+
 ## Allow the user to specify support for R profiling.
 AC_ARG_ENABLE([R-profiling],
 [AS_HELP_STRING([--enable-R-profiling],[attempt to compile support for Rprof() @<:@yes@:>@])],
@@ -2227,6 +2240,14 @@ R_SYS_POSIX_LEAPSECONDS
 ## stat times
 gl_STAT_TIME
  
+## debug scopes.
+if test "${want_debugscopes}" = yes; then
+  AC_DEFINE(HAVE_DEBUGSCOPES, 1, [Define this to enable debug scopes.])
+fi
+
+AC_SUBST(HAVE_DEBUGSCOPES)
+
+
 ## R profiling.
 if test "${want_R_profiling}" = yes; then
   AC_CHECK_FUNCS(setitimer,
@@ -2757,6 +2778,9 @@ elif test "${want_R_static}" = yes; then
 fi
 if test "${use_blas_shlib}" = yes; then
   R_SH_VAR_ADD(r_options, [shared BLAS], [, ])
+fi
+if test "${want_debugscopes}" = yes; then
+  R_SH_VAR_ADD(r_options, [debug scopes], [, ])
 fi
 if test "${want_R_profiling}" = yes; then
   R_SH_VAR_ADD(r_options, [R profiling], [, ])
