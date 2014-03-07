@@ -11,7 +11,7 @@ subdir = src/instrumentation
 include $(top_builddir)/Makeconf
 
 SOURCES = \
-	trace.c
+	trace.c Rdebug.c
 
 DEPENDS = $(SOURCES:.c=.d)
 OBJECTS = $(SOURCES:.c=.o)
