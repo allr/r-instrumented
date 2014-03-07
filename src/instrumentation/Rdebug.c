@@ -311,37 +311,6 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
 	    debugScope_print("[%u] ^ LONGJUMP IN: %s\n",targetScope->depth, targetScope->scopeName);
 	    return;
 	}
-	/*
-	 * A word of warning:
-	 *
-	 * This might explode.
-	 *
-	 * Normally, longjumps are used in an exception-style program flow - and
-	 * therefore used to jump *back* to a *higher* function which (directly or
-	 * via sub-functions) at one time has called the function in which the
-	 * longjump is found.
-	 *
-	 * This means, that the function the longjump jumps to is on our scope
-	 * stack as "has been started and not ended". This should be read as
-	 * "the information exists".
-	 *
-	 * We correct the stack after longjumps - as in "the intermediate scopes which
-	 * have not really ended have been jumped over". We need to resume the
-	 * scope of the aforementioned "parent" function, thus killing the information
-	 * for all the children inbetween.
-	 *
-	 * If, at some point, a long jump is performed to one of these children
-	 * (which doesn't count as "exception and return to higher function" but
-	 * as a "cross-jump"), the jumpInfo-linlist will still have a pointer
-	 * to a debugscope but as the debugscope has been killed, it will point
-	 * into "invalid memory". Segfault may occur.
-	 *
-	 * For now, I simply hope that this never happens and that all longjumps
-	 * are considered exceptions and quick-returns with everthing inbetween
-	 * no longer needed.
-	 * If, however, there are such cross-jumps in the code, we need a new idea.
-	 * (backuping scopes that we presumed "dead" in another data structure?)
-	 */
 
 	while (1) {
 	    if (currentScope == NULL) {
