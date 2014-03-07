@@ -186,27 +186,6 @@ SEXP attribute_hidden do_printfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     return s;
 }
 
-void extractFunctionName(char* extraction, SEXP environment){
-    int i;
-    SEXP t = getAttrib(environment, R_SrcrefSymbol);
-    if (!isInteger(t)) {
-	t = deparse1w(environment, 0, DEFAULTDEPARSE);
-    } else {
-	PROTECT(t = lang2(install("as.character"), t));
-	t = eval(t, R_BaseEnv);
-	UNPROTECT(1);
-    }
-    PROTECT(t);
-    for (i = 0; i < LENGTH(t); i++){
-	//Rprintf("%s\n", CHAR(STRING_ELT(t, i))); /* translated */
-	strncpy(extraction, CHAR(STRING_ELT(t, i)), SCOPENAME_MAX_SIZE);
-	extraction[SCOPENAME_MAX_SIZE] = '\0'; // safety string termination
-    }
-    UNPROTECT(1);
-}
-
-
-
 /* PrintLanguage() or PrintClosure() : */
 static void PrintLanguageEtc(SEXP s, Rboolean useSource, Rboolean isClosure)
 {

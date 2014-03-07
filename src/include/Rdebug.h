@@ -14,7 +14,7 @@
 #ifndef _RDEBUG_H
 #define _RDEBUG_H
 
-#include <R_ext/Boolean.h>
+#include "Rinternals.h"
 #include <setjmp.h> // so jumpbuf is known
 
 #define ENABLE_SCOPING_DEBUG
@@ -38,6 +38,8 @@
     #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                do {} while (0)
     #define DEBUGSCOPE_LOADJUMP(jumpInfo)                do {} while (0)
     #define DEBUGSCOPE_SAVELOADJUMP(jumpInfo, jumpValue) do {} while (0)
+
+    static inline void extractFunctionName(char *extraction, SEXP environment) { }
 
 #endif
 #ifdef ENABLE_SCOPING_DEBUG
@@ -162,6 +164,9 @@
 
     //! depending on jumpValue, save or load a jump
     void debugScope_saveloadJump(jmp_buf jumpInfo, int jumpValue);
+
+    void extractFunctionName(char* extraction, SEXP environment);
+
 #endif
 
 

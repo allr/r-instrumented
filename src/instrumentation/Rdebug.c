@@ -29,6 +29,26 @@
 #ifdef ENABLE_SCOPING_DEBUG
 //#undef ENABLE_SCOPING_DEBUG
 
+void extractFunctionName(char* extraction, SEXP environment){
+    int i;
+    SEXP t = getAttrib(environment, R_SrcrefSymbol);
+    if (!isInteger(t)) {
+	t = deparse1w(environment, 0, DEFAULTDEPARSE);
+    } else {
+	PROTECT(t = lang2(install("as.character"), t));
+	t = eval(t, R_BaseEnv);
+	UNPROTECT(1);
+    }
+    PROTECT(t);
+    for (i = 0; i < LENGTH(t); i++){
+	//Rprintf("%s\n", CHAR(STRING_ELT(t, i))); /* translated */
+	strncpy(extraction, CHAR(STRING_ELT(t, i)), SCOPENAME_MAX_SIZE);
+	extraction[SCOPENAME_MAX_SIZE] = '\0'; // safety string termination
+    }
+    UNPROTECT(1);
+}
+
+
 static debugScope* currentScope = (debugScope*)NULL;
 static activeScopesLinList* activeScopes = (activeScopesLinList*)NULL;
 static jumpInfos_linlist* jumpInfos = (jumpInfos_linlist*)NULL;
