@@ -902,7 +902,6 @@ void setup_Rmainloop(void)
     srand(TimeToSeed());
 
     DEBUGSCOPE_DISABLEOUTPUT();
-    //DEBUGSCOPE_ENABLEOUTPUT();
 
     InitTempDir(); /* must be before InitEd */
     InitMemory();
@@ -1052,7 +1051,6 @@ void setup_Rmainloop(void)
     /* Initial Loading is done.
        At this point we try to invoke the .First Function.
        If there is an error we continue. */
-    //DEBUGSCOPE_PRINT("Initial Loading done; try to invoke '.First'\n");
 
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);

@@ -498,24 +498,19 @@ SEXP attribute_hidden do_restart(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* any closure context with the debug bit set one will be created; so we  */
 /* need to count those as well                                            */
 int countContexts(int ctxttype, int browser) {
-    //DEBUGSCOPE_START("countContexts");
     int n=0;
     RCNTXT *cptr;
 
     cptr = R_GlobalContext;
     while( cptr != R_ToplevelContext) {
-        if( cptr->callflag == ctxttype ) {
-            //DEBUGSCOPE_PRINT("ctxttype.. ")
+        if( cptr->callflag == ctxttype )
             n++;
-        }
         else if( browser ) {
-            //DEBUGSCOPE_PRINT("browser.. ");
            if(cptr->callflag & CTXT_FUNCTION && RDEBUG(cptr->cloenv) )
               n++;
         }
         cptr = cptr->nextcontext;
     }
-    //DEBUGSCOPE_END("countContexts");
     return n;
 }
   

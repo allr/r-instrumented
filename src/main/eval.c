@@ -526,9 +526,6 @@ SEXP eval(SEXP e, SEXP rho)
 #endif
 
     R_Visible = TRUE;
-
-    //DEBUGSCOPE_PRINT("Before Switch %d\n",TYPEOF(e));
-
     switch (TYPEOF(e)) {
     case NILSXP:
     case LISTSXP:

@@ -329,7 +329,7 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
 		free(endingScope);
 		continue;
 	    }
-	    // currentScope == targetScope
+
 	    break;
 	}
 	debugScope_print("[%u] <-- ENTER via longjump: %s\n",currentScope->depth, currentScope->scopeName);
@@ -422,7 +422,6 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
     jumpInfos_linlist* jumpInfoWalker = jumpInfos;
     while (1) { // forever - until something happens
 	if (jumpInfoWalker == NULL) { // iterated complete table - but not found
-	    //printf("ERROR: loadJump - target unknown\n");
 	    printf("ERROR: loadJump but target unknown - %d entrys\n",countedJumpInfos);
 	    return;
 	}
