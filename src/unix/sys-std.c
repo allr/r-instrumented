@@ -843,8 +843,8 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 	    fputs(prompt, stdout);
 	    fflush(stdout); /* make sure prompt is output */
 	}
-	if (fgets((char *)buf, len, ifp ? ifp: stdin) == NULL){
-	    DEBUGSCOPE_PRINT("From Console: %s\n",buf);
+	if (fgets((char *)buf, len, ifp ? ifp: stdin) == NULL) {
+	    DEBUGSCOPE_PRINT("From Console: %s\n", buf);
 	    DEBUGSCOPE_END("Rstd_ReadConsole");
 	    return 0;
 	}
@@ -949,11 +949,11 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 		else
 #endif /* HAVE_LIBREADLINE */
 		{
-		    if(fgets((char *)buf, len, stdin) == NULL){
-		        DEBUGSCOPE_PRINT("Read: %s\n",buf);
+		    if(fgets((char *)buf, len, stdin) == NULL) {
+			DEBUGSCOPE_PRINT("Read: %s\n", buf);
 			DEBUGSCOPE_END("Rstd_ReadConsole");
 			return 0;
-		    }else{
+		    } else {
 			DEBUGSCOPE_END("Rstd_ReadConsole");
 			return 1;
 		    }

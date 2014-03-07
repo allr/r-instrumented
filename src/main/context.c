@@ -214,7 +214,7 @@ static void jumpfun(RCNTXT * cptr, int mask, SEXP val)
 			       perhaps allow loops to be handled with
 			       fewer SETJMP's.  LT */
     R_restore_globals(R_GlobalContext);
-    
+
     LONGJMP(cptr->cjmpbuf, mask);
     DEBUGSCOPE_END("jumpfun");
 }
@@ -504,7 +504,7 @@ int countContexts(int ctxttype, int browser) {
 
     cptr = R_GlobalContext;
     while( cptr != R_ToplevelContext) {
-        if( cptr->callflag == ctxttype ){
+        if( cptr->callflag == ctxttype ) {
             //DEBUGSCOPE_PRINT("ctxttype.. ")
             n++;
         }
@@ -718,10 +718,10 @@ Rboolean R_ToplevelExec(void (*fun)(void *), void *data)
     begincontext(&thiscontext, CTXT_TOPLEVEL, R_NilValue, R_GlobalEnv,
 		 R_BaseEnv, R_NilValue, R_NilValue);
     int jumpValue = SETJMP(thiscontext.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf,jumpValue);
-    if (jumpValue){
+    DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf, jumpValue);
+    if (jumpValue) {
 	result = FALSE;
-    }else {
+    } else {
 	R_GlobalContext = R_ToplevelContext = &thiscontext;
 	fun(data);
 	result = TRUE;

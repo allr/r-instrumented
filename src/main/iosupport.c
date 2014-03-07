@@ -76,9 +76,9 @@ static int NextReadBufferListItem(IoBuffer *iob)
 int attribute_hidden R_IoBufferWriteReset(IoBuffer *iob)
 {
     DEBUGSCOPE_START("R_IoBufferWriteReset");
-    if (iob == NULL || iob->start_buf == NULL){
-        DEBUGSCOPE_END("R_IoBufferWriteReset");
-        return 0;
+    if (iob == NULL || iob->start_buf == NULL) {
+	DEBUGSCOPE_END("R_IoBufferWriteReset");
+	return 0;
     }
     iob->write_buf = iob->start_buf;
     iob->write_ptr = iob->write_buf->buf;
@@ -86,7 +86,7 @@ int attribute_hidden R_IoBufferWriteReset(IoBuffer *iob)
     iob->read_buf = iob->start_buf;
     iob->read_ptr = iob->read_buf->buf;
     iob->read_offset = 0;
-    DEBUGSCOPE_END("R_IoBufferWriteReset");    
+    DEBUGSCOPE_END("R_IoBufferWriteReset");
     return 1;
 }
 

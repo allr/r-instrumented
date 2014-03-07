@@ -23,6 +23,7 @@ int Rf_initialize_R(int ac, char **av); /* in ../unix/system.c */
 #include <Rinterface.h>
 #include <Rdebug.h>
 
+
 extern int R_running_as_main_program;   /* in ../unix/system.c */
 
 int main(int ac, char **av)

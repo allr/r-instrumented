@@ -227,63 +227,62 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
     if(!*state->bufp) {
 	    R_Busy(0);
 	    if (R_ReadConsole(R_PromptString(browselevel, state->prompt_type),
-			      state->buf, CONSOLE_BUFFER_SIZE, 1) == 0){
-	    DEBUGSCOPE_END("Rf_ReplIteration");
+			      state->buf, CONSOLE_BUFFER_SIZE, 1) == 0) {
+		DEBUGSCOPE_END("Rf_ReplIteration");
 		return(-1);
-		              }
+	    }
 	    state->bufp = state->buf;
     }
-    char* readCommand = state->buf; 
-    DEBUGSCOPE_PRINT("given from console: %s\n",state->buf);
-    if (0==strncmp(readCommand,"debugscope_",11)){ // found debug command
-        DEBUGSCOPE_PRINT("debug command: ");
-        readCommand=readCommand+11;
-        DEBUGSCOPE_PRINT("%s ",readCommand);
-        if(0==strncmp(readCommand,"activate(\"",10)){ // activate command found
-            readCommand=readCommand+10;
-            DEBUGSCOPE_PRINT(" -> activating ");
-            char scopeName[SCOPENAME_MAX_SIZE+1];
-            strncpy(scopeName,readCommand,SCOPENAME_MAX_SIZE);
-            scopeName[SCOPENAME_MAX_SIZE]='\0'; // safety, again
-            char* endOfScopeName = strchr(scopeName,'\"'); // search for quote sign
-            if (NULL == endOfScopeName){
-                DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
-            }else{
-                (*endOfScopeName)='\0'; // terminate string at quote
-                DEBUGSCOPE_ACTIVATE(scopeName);
-                DEBUGSCOPE_PRINT(" (should be %s )",scopeName);
-            }
-            state->buf[0]='\0'; // prevent further processing
-            DEBUGSCOPE_END("Rf_ReplIteration");
-            return(0);
-        }
-        else if(0==strncmp(readCommand,"deactivate(\"",12)){ // deactivate command found
-            readCommand=readCommand+12;
-            DEBUGSCOPE_PRINT(" -> deactivating ");
-            char scopeName[SCOPENAME_MAX_SIZE+1];
-            strncpy(scopeName,readCommand,SCOPENAME_MAX_SIZE);
-            scopeName[SCOPENAME_MAX_SIZE]='\0'; // safety, again
-            char* endOfScopeName = strchr(scopeName,'\"'); // search for quote sign
-            if (NULL == endOfScopeName){
-                DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
-            }else{
-                (*endOfScopeName)='\0'; // terminate string at quote
-                DEBUGSCOPE_DEACTIVATE(scopeName);
-                DEBUGSCOPE_PRINT(" (should be %s )",scopeName);
-            }
-            state->buf[0]='\0'; // prevent further processing
-            DEBUGSCOPE_END("Rf_ReplIteration");
-            return(0);
-        }            
+
+    char* readCommand = state->buf;
+    DEBUGSCOPE_PRINT("given from console: %s\n", state->buf);
+    if (0 == strncmp(readCommand,"debugscope_", 11)) { // found debug command
+	DEBUGSCOPE_PRINT("debug command: ");
+	readCommand = readCommand + 11;
+	DEBUGSCOPE_PRINT("%s ",readCommand);
+	if (0 == strncmp(readCommand, "activate(\"", 10)) { // activate command found
+	    readCommand = readCommand + 10;
+	    DEBUGSCOPE_PRINT(" -> activating ");
+	    char scopeName[SCOPENAME_MAX_SIZE + 1];
+	    strncpy(scopeName, readCommand, SCOPENAME_MAX_SIZE);
+	    scopeName[SCOPENAME_MAX_SIZE] = '\0'; // safety, again
+	    char* endOfScopeName = strchr(scopeName,'\"'); // search for quote sign
+	    if (NULL == endOfScopeName) {
+		DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
+	    } else {
+		(*endOfScopeName) = '\0'; // terminate string at quote
+		DEBUGSCOPE_ACTIVATE(scopeName);
+		DEBUGSCOPE_PRINT(" (should be %s )", scopeName);
+	    }
+	    state->buf[0] = '\0'; // prevent further processing
+	    DEBUGSCOPE_END("Rf_ReplIteration");
+	    return(0);
+	}
+	else if (0 == strncmp(readCommand, "deactivate(\"", 12)) { // deactivate command found
+	    readCommand = readCommand + 12;
+	    DEBUGSCOPE_PRINT(" -> deactivating ");
+	    char scopeName[SCOPENAME_MAX_SIZE + 1];
+	    strncpy(scopeName, readCommand, SCOPENAME_MAX_SIZE);
+	    scopeName[SCOPENAME_MAX_SIZE] = '\0'; // safety, again
+	    char* endOfScopeName = strchr(scopeName, '\"'); // search for quote sign
+	    if (NULL == endOfScopeName) {
+		DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
+	    } else {
+		(*endOfScopeName) = '\0'; // terminate string at quote
+		DEBUGSCOPE_DEACTIVATE(scopeName);
+		DEBUGSCOPE_PRINT(" (should be %s )", scopeName);
+	    }
+	    state->buf[0] = '\0'; // prevent further processing
+	    DEBUGSCOPE_END("Rf_ReplIteration");
+	    return(0);
+	}
     }
-      
-    
-    
-    if (0==strcmp(state->buf,"debugbla\n")){ // zero return -> strings are equal
-        DEBUGSCOPE_PRINT("Ich habe ein debugbla gefunden!\n");
-        state->buf[0]='\0'; // necessary to prevent further parsing tries?
-        DEBUGSCOPE_END("Rf_ReplIteration");
-        return(0);
+
+    if (0 == strcmp(state->buf, "debugbla\n")) { // zero return -> strings are equal
+	DEBUGSCOPE_PRINT("Ich habe ein debugbla gefunden!\n");
+	state->buf[0] = '\0'; // necessary to prevent further parsing tries?
+	DEBUGSCOPE_END("Rf_ReplIteration");
+	return(0);
     } // debugbla detected
 #ifdef SHELL_ESCAPE /* not default */
     if (*state->bufp == '!') {
@@ -304,7 +303,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
     switch(state->status) {
 
     case PARSE_NULL:
-        DEBUGSCOPE_PRINT("Status NULL\n");
+	DEBUGSCOPE_PRINT("Status NULL\n");
 
 	/* The intention here is to break on CR but not on other
 	   null statements: see PR#9063 */
@@ -316,24 +315,24 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	}
 	R_IoBufferWriteReset(&R_ConsoleIob);
 	state->prompt_type = 1;
-        DEBUGSCOPE_END("Rf_ReplIteration");
+	DEBUGSCOPE_END("Rf_ReplIteration");
 	return 1;
 
     case PARSE_OK:
-        DEBUGSCOPE_PRINT("Status OK, readreset\n");
-        
+	DEBUGSCOPE_PRINT("Status OK, readreset\n");
+
 	R_IoBufferReadReset(&R_ConsoleIob);
 	DEBUGSCOPE_PRINT("ParselBuffer\n");
 	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status, sourcename);
 	if (browselevel) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
-	    if(browsevalue == 1){
-                DEBUGSCOPE_END("Rf_ReplIteration");
+	    if(browsevalue == 1) {
+		DEBUGSCOPE_END("Rf_ReplIteration");
 	        return -1;
 	    }
 	    if(browsevalue == 2) {
 		R_IoBufferWriteReset(&R_ConsoleIob);
-                DEBUGSCOPE_END("Rf_ReplIteration");
+		DEBUGSCOPE_END("Rf_ReplIteration");
 		return 0;
 	    }
 	}
@@ -358,28 +357,28 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	DEBUGSCOPE_PRINT("Buffer Write Reset\n");
 	R_IoBufferWriteReset(&R_ConsoleIob);
 	state->prompt_type = 1;
-        DEBUGSCOPE_END("Rf_ReplIteration");
+	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(1);
 
     case PARSE_ERROR:
-        DEBUGSCOPE_PRINT("Status ERROR\n");
+	DEBUGSCOPE_PRINT("Status ERROR\n");
 	state->prompt_type = 1;
 	parseError(R_NilValue, 0);
 	R_IoBufferWriteReset(&R_ConsoleIob);
-        DEBUGSCOPE_END("Rf_ReplIteration");
+	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(1);
 
     case PARSE_INCOMPLETE:
-        DEBUGSCOPE_PRINT("Status INCOMPLETE\n");
+	DEBUGSCOPE_PRINT("Status INCOMPLETE\n");
 
 	R_IoBufferReadReset(&R_ConsoleIob);
 	state->prompt_type = 2;
-        DEBUGSCOPE_END("Rf_ReplIteration");
+	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(2);
 
     case PARSE_EOF:
-        DEBUGSCOPE_PRINT("Status EOF\n");
-        DEBUGSCOPE_END("Rf_ReplIteration");
+	DEBUGSCOPE_PRINT("Status EOF\n");
+	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(-1);
 	break;
     }
@@ -419,16 +418,16 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
     if(R_Verbose)
 	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
-      
+
     DEBUGSCOPE_PRINT("Starting forever-loop\n");
     for(;;) {
 	status = Rf_ReplIteration(rho, savestack, browselevel, &state, sourcename); /* Trace instrumentation */
-	if(status < 0){
-	  DEBUGSCOPE_END("R_ReplConsole"); 
-	  return;
+	if(status < 0) {
+	    DEBUGSCOPE_END("R_ReplConsole");
+	    return;
 	}
     }
-    DEBUGSCOPE_END("R_ReplConsole"); 
+    DEBUGSCOPE_END("R_ReplConsole");
 }
 
 
@@ -437,7 +436,7 @@ static unsigned char DLLbuf[CONSOLE_BUFFER_SIZE+1], *DLLbufp;
 void R_ReplDLLinit(void)
 {
     int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf,jumpValue);
+    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf, jumpValue);
     // value is not used for program flow differations.
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     R_IoBufferWriteReset(&R_ConsoleIob);
@@ -781,11 +780,11 @@ static void R_LoadProfile(FILE *fparg, SEXP env)
     FILE * volatile fp = fparg; /* is this needed? */
     if (fp != NULL) {
         int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-        if (0==jumpValue){ // setup jump
-            DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
-        }else{
-            DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
-        }
+	if (0 == jumpValue){ // setup jump
+	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
+	} else {
+	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
+	}
 	if (! jumpValue) {
 	    R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
 	    R_ReplFile(fp, env, "Rprofile");
@@ -828,7 +827,7 @@ void setup_Rmainloop(void)
     volatile int ndeferred_warnings = 0;
     char path[PATH_MAX + 1];
     char base_path[PATH_MAX + 1];
-    
+
     DEBUGSCOPE_START("setup_Rmainloop");
 
     InitConnections(); /* needed to get any output at all */
@@ -909,7 +908,7 @@ void setup_Rmainloop(void)
 
     DEBUGSCOPE_DISABLEOUTPUT();
     //DEBUGSCOPE_ENABLEOUTPUT();
-    
+
     InitTempDir(); /* must be before InitEd */
     InitMemory();
     InitStringHash(); /* must be before InitNames */
@@ -970,12 +969,12 @@ void setup_Rmainloop(void)
 
     doneit = 0;
     { // save jump target for TopLevel
-        int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-        if(0==jumpValue){
-            DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
-        }else{
-            DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
-        }
+	int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
+	if (0 == jumpValue) {
+	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
+	} else {
+	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
+	}
     }
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     if (R_SignalHandlers) init_signal_handlers();
@@ -1124,7 +1123,7 @@ static void end_Rmainloop(void)
 void run_Rmainloop(void)
 {
     DEBUGSCOPE_START("run_Rmainloop");
-    
+
     /*
      * As the initialisation runs a lot of evals and stuff, it
      * is useful to disable all output before the first "real" R
@@ -1139,7 +1138,7 @@ void run_Rmainloop(void)
     /* Here is the real R read-eval-loop. */
     /* We handle the console until end-of-file. */
     int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf,jumpValue);
+    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf, jumpValue);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     R_ReplConsole(R_GlobalEnv, 0, 0);
     end_Rmainloop(); /* must go here */
@@ -1285,13 +1284,13 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&returncontext, CTXT_BROWSER, call, rho,
 		 R_BaseEnv, argList, R_NilValue);
-    int jumpValue =SETJMP(returncontext.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(returncontext.cjmpbuf,jumpValue);
+    int jumpValue = SETJMP(returncontext.cjmpbuf);
+    DEBUGSCOPE_SAVELOADJUMP(returncontext.cjmpbuf, jumpValue);
     if (! jumpValue) {
 	begincontext(&thiscontext, CTXT_RESTART, R_NilValue, rho,
 		     R_BaseEnv, R_NilValue, R_NilValue);
 	int jumpValue2 = SETJMP(thiscontext.cjmpbuf);
-	DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf,jumpValue2);
+	DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf, jumpValue2);
 	if (jumpValue2) {
 	    SET_RESTART_BIT_ON(thiscontext.callflag);
 	    R_ReturnedValue = R_NilValue;

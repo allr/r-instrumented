@@ -483,12 +483,12 @@ SEXP eval(SEXP e, SEXP rho)
     SEXP op, tmp;
     static int evalcount = 0;
 
-    if (!rho){
-        DEBUGSCOPE_PRINT("Error with rho \n");
+    if (!rho) {
+	DEBUGSCOPE_PRINT("Error with rho \n");
 	error("'rho' cannot be C NULL: detected in C-level eval");
     }
-    if (!isEnvironment(rho)){ 
-        DEBUGSCOPE_PRINT("Error with rho-environment \n");
+    if (!isEnvironment(rho)) {
+	DEBUGSCOPE_PRINT("Error with rho-environment \n");
 	error("'rho' must be an environment not %s: detected in C-level eval", 
 	      type2char(TYPEOF(rho)));
     }
@@ -526,10 +526,9 @@ SEXP eval(SEXP e, SEXP rho)
 #endif
 
     R_Visible = TRUE;
-    
+
     //DEBUGSCOPE_PRINT("Before Switch %d\n",TYPEOF(e));
-    
-    
+
     switch (TYPEOF(e)) {
     case NILSXP:
     case LISTSXP:
@@ -610,7 +609,7 @@ SEXP eval(SEXP e, SEXP rho)
 	   end up getting duplicated if NAMED = 2.) LT */
 	break;
     case LANGSXP:
-        DEBUGSCOPE_START("eval::case_LANGSXP");
+	DEBUGSCOPE_START("eval::case_LANGSXP");
 	if (TYPEOF(CAR(e)) == SYMSXP)
 	    /* This will throw an error if the function is not found */
 	    PROTECT(op = findFun(CAR(e), rho));
@@ -630,7 +629,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    R_Visible = flag != 1;
 
             if (traceR_is_active) {
-                DEBUGSCOPE_PRINT("TraceR is active\n");
+		DEBUGSCOPE_PRINT("TraceR is active\n");
 		/* Trace Instrumentation */
 		unsigned int sparam = 0, sparam_ldots = 0;
 		SEXP targs = CDR(e);
@@ -657,7 +656,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
-            DEBUGSCOPE_END("eval::case_LANGSXP::SPECIALSXP");
+	    DEBUGSCOPE_END("eval::case_LANGSXP::SPECIALSXP");
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
 	    DEBUGSCOPE_START("eval::case_LANGSXP::BUILTINSXP");
@@ -703,7 +702,7 @@ SEXP eval(SEXP e, SEXP rho)
 	else
 	    error(_("attempt to apply non-function"));
 	UNPROTECT(1);
-        DEBUGSCOPE_END("eval::case_LANGSXP");
+	DEBUGSCOPE_END("eval::case_LANGSXP");
 	break;
     case DOTSXP:
 	error(_("'...' used in an incorrect context"));
@@ -994,7 +993,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     tmp = R_NilValue;
 
     /* Debugging */
-    char functionName[SCOPENAME_MAX_SIZE+1]; 
+    char functionName[SCOPENAME_MAX_SIZE+1];
 
     SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
     if( RSTEP(op) ) SET_RSTEP(op, 0);
@@ -1010,13 +1009,11 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	    R_BrowseLines = blines;
 	PrintValueRec(call, rho);
 	{ // enter debug scope
-	    extractFunctionName(functionName,call);
+	    extractFunctionName(functionName, call);
 	    DEBUGSCOPE_ACTIVATE(functionName);
 	    DEBUGSCOPE_START(functionName);
 	}
-	
-	
-	
+
 	R_BrowseLines = old_bl;
 
 	/* Is the body a bare symbol (PR#6804) */
@@ -1059,14 +1056,14 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	from the function body.  */
 
     int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
     if (jumpValue) {
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
 	    PROTECT(tmp = eval(body, newrho));
 	}
-	else{
+	else {
 	    PROTECT(tmp = R_ReturnedValue);
 	}
     }
@@ -1079,7 +1076,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     if (RDEBUG(op)) {
 	Rprintf("exiting from: ");
 	PrintValueRec(call, rho);
-        DEBUGSCOPE_END(functionName);
+	DEBUGSCOPE_END(functionName);
     }
     UNPROTECT(3);
     return (tmp);
@@ -1159,7 +1156,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	from the function body.  */
 
     int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
 
     if (jumpValue) {
 	if (R_ReturnedValue == R_RestartToken) {
@@ -1469,11 +1466,11 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
     switch (jumpValue) {
         case CTXT_BREAK:
             goto for_break;
-        case CTXT_NEXT: 
+        case CTXT_NEXT:
             goto for_next;
     }
     for (i = 0; i < n; i++) {
@@ -1565,7 +1562,7 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
     if (jumpValue != CTXT_BREAK) {
 	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
 	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
@@ -1599,7 +1596,7 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
+    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
     if (jumpValue != CTXT_BREAK) {
 	for (;;) {
 	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
@@ -2362,10 +2359,10 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(expr);
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
 	int jumpValue = SETJMP(cntxt.cjmpbuf);
-	DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf,jumpValue);
-	if (!jumpValue){ 
+	DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
+	if (!jumpValue) {
 	    expr = eval(expr, env);
-	}else {
+	} else {
 	    expr = R_ReturnedValue;
 	    if (expr == R_RestartToken) {
 		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
@@ -2384,13 +2381,13 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
 	if (!SETJMP(cntxt.cjmpbuf)){
 	    // return 0 - this setup the jump
-            DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+	    DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
 	    for(i = 0 ; i < n ; i++) {
 		R_Srcref = getSrcref(srcrefs, i);
 		tmp = eval(VECTOR_ELT(expr, i), env);
 	    }
-	}else {
-            DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
+	} else {
+	    DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
 	    tmp = R_ReturnedValue;
 	    if (tmp == R_RestartToken) {
 		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
@@ -3423,18 +3420,18 @@ static SEXP bytecodeExpr(SEXP e)
 {
     DEBUGSCOPE_START("bytecodeExpr");
     if (isByteCode(e)) {
-	if (LENGTH(BCCONSTS(e)) > 0){
+	if (LENGTH(BCCONSTS(e)) > 0) {
 	    DEBUGSCOPE_END("bytecodeExpr");
 	    return VECTOR_ELT(BCCONSTS(e), 0);
 	}
-	else{
+	else {
 	    DEBUGSCOPE_END("bytecodeExpr");
 	    return R_NilValue;
 	}
     }
-    else{
-        DEBUGSCOPE_END("bytecodeExpr");
-        return e;
+    else {
+	DEBUGSCOPE_END("bytecodeExpr");
+	return e;
     }
 }
 
@@ -3961,10 +3958,10 @@ static void loopWithContext(volatile SEXP code, volatile SEXP rho)
     RCNTXT cntxt;
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK){
+    if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
         DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
 	bcEval(code, rho, FALSE);
-    }else{
+    } else {
         DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
     }
     endcontext(&cntxt);
@@ -4299,7 +4296,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   constants = BCCONSTS(body);
 
   /* allow bytecode to be disabled for testing */
-  if (R_disable_bytecode){
+  if (R_disable_bytecode) {
       DEBUGSCOPE_PRINT("eval bytecodeexpr...");
       DEBUGSCOPE_END("bcEval");
       return eval(bytecodeExpr(body), rho);
@@ -4315,7 +4312,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 		  warned = TRUE;
 		  warning(_("bytecode version mismatch; using eval"));
 	      }
-              DEBUGSCOPE_END("bcEval");
+	      DEBUGSCOPE_END("bcEval");
 	      return eval(bytecodeExpr(body), rho);
 	  }
 	  else if (version < R_bcMinVersion)
@@ -4339,8 +4336,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 # ifdef CACHE_ON_STACK
       /* initialize binding cache on the stack */
       vcache = R_BCNodeStackTop;
-      if (R_BCNodeStackTop + n > R_BCNodeStackEnd){
-          DEBUGSCOPE_PRINT("nodeStaackOverFlow");
+      if (R_BCNodeStackTop + n > R_BCNodeStackEnd) {
+	  DEBUGSCOPE_PRINT("nodeStaackOverFlow");
 	  nodeStackOverflow();
       }
       while (n > 0) {
@@ -5237,8 +5234,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 #ifdef BC_PROFILING
   current_opcode = old_current_opcode;
 #endif
-    DEBUGSCOPE_END("bcEval");
-    return value;
+  DEBUGSCOPE_END("bcEval");
+  return value;
 }
 
 #ifdef THREADED_CODE

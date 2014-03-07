@@ -583,14 +583,14 @@ static void restore_inError(void *data)
 static void NORET
 verrorcall_dflt(SEXP call, const char *format, va_list ap)
 {
-  DEBUGSCOPE_START("verrorcall_dflt");
+    DEBUGSCOPE_START("verrorcall_dflt");
     RCNTXT cntxt;
     const char *dcall;
     char *p, *tr;
     int oldInError;
 
     if (inError) {
-      DEBUGSCOPE_PRINT("inError...");
+	DEBUGSCOPE_PRINT("inError...");
 	/* fail-safe handler for recursive errors */
 	if(inError == 3) {
 	     /* Can REprintf generate an error? If so we should guard for it */
@@ -612,7 +612,7 @@ verrorcall_dflt(SEXP call, const char *format, va_list ap)
     /* set up a context to restore inError value on exit */
     begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
 		 R_NilValue, R_NilValue);
-		DEBUGSCOPE_PRINT("began a new context...");
+    DEBUGSCOPE_PRINT("began a new context...");
     cntxt.cend = &restore_inError;
     cntxt.cenddata = &oldInError;
     oldInError = inError;
@@ -701,6 +701,7 @@ verrorcall_dflt(SEXP call, const char *format, va_list ap)
 	REprintf(_("In addition: "));
 	PrintWarnings();
     }
+
     DEBUGSCOPE_PRINT("now, jump to top ex..");
     jump_to_top_ex(TRUE, TRUE, TRUE, TRUE, FALSE);
     DEBUGSCOPE_PRINT("endcontext..");

@@ -170,11 +170,11 @@ static SEXP duplicate1(SEXP s)
     case EXTPTRSXP:
     case BCODESXP:
     case WEAKREFSXP:
-        DEBUGSCOPE_PRINT("Just s\n");
-        DEBUGSCOPE_END("duplicate1");
+	DEBUGSCOPE_PRINT("Just s\n");
+	DEBUGSCOPE_END("duplicate1");
 	return s;
     case CLOSXP:
-        DEBUGSCOPE_PRINT("CLOSXP\n");
+	DEBUGSCOPE_PRINT("CLOSXP\n");
 	PROTECT(s);
 	if (R_jit_enabled > 1 && TYPEOF(BODY(s)) != BCODESXP) {
 	    int old_enabled = R_jit_enabled;
@@ -192,7 +192,7 @@ static SEXP duplicate1(SEXP s)
 	UNPROTECT(2);
 	break;
     case LISTSXP:
-        DEBUGSCOPE_PRINT("LISTSXP\n");
+	DEBUGSCOPE_PRINT("LISTSXP\n");
 	PROTECT(sp = s);
 	PROTECT(h = t = CONS(R_NilValue, R_NilValue));
 	while(sp != R_NilValue) {
@@ -206,7 +206,7 @@ static SEXP duplicate1(SEXP s)
 	UNPROTECT(2);
 	break;
     case LANGSXP:
-        DEBUGSCOPE_PRINT("LANGSXP\n");
+	DEBUGSCOPE_PRINT("LANGSXP\n");
 	PROTECT(sp = s);
 	PROTECT(h = t = CONS(R_NilValue, R_NilValue));
 	while(sp != R_NilValue) {
@@ -222,7 +222,7 @@ static SEXP duplicate1(SEXP s)
 	UNPROTECT(2);
 	break;
     case DOTSXP:
-        DEBUGSCOPE_PRINT("DOTSXP\n");
+	DEBUGSCOPE_PRINT("DOTSXP\n");
 	PROTECT(sp = s);
 	PROTECT(h = t = CONS(R_NilValue, R_NilValue));
 	while(sp != R_NilValue) {
@@ -238,13 +238,13 @@ static SEXP duplicate1(SEXP s)
 	UNPROTECT(2);
 	break;
     case CHARSXP:
-        DEBUGSCOPE_PRINT("CHARSXP\n");
-        DEBUGSCOPE_END("duplicate1");
+	DEBUGSCOPE_PRINT("CHARSXP\n");
+	DEBUGSCOPE_END("duplicate1");
 	return s;
 	break;
     case EXPRSXP:
     case VECSXP:
-        DEBUGSCOPE_PRINT("EXPRSXP or VECSXP\n");
+	DEBUGSCOPE_PRINT("EXPRSXP or VECSXP\n");
 	n = XLENGTH(s);
 	PROTECT(s);
 	PROTECT(t = allocVector(TYPEOF(s), n));
@@ -266,7 +266,7 @@ static SEXP duplicate1(SEXP s)
 	DUPLICATE_ATOMIC_VECTOR(SEXP, STRING_PTR, t, s);
 	break;
     case PROMSXP:
-        DEBUGSCOPE_END("duplicate1");
+	DEBUGSCOPE_END("duplicate1");
 	return s;
 	break;
     case S4SXP:
