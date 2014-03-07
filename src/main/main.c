@@ -234,7 +234,8 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	    state->bufp = state->buf;
     }
 
-    char* readCommand = state->buf;
+    // FIXME: To be removed
+    char* readCommand = (char *)state->buf;
     DEBUGSCOPE_PRINT("given from console: %s\n", state->buf);
     if (0 == strncmp(readCommand,"debugscope_", 11)) { // found debug command
 	DEBUGSCOPE_PRINT("debug command: ");
@@ -278,7 +279,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	}
     }
 
-    if (0 == strcmp(state->buf, "debugbla\n")) { // zero return -> strings are equal
+    if (0 == strcmp(readCommand, "debugbla\n")) { // zero return -> strings are equal
 	DEBUGSCOPE_PRINT("Ich habe ein debugbla gefunden!\n");
 	state->buf[0] = '\0'; // necessary to prevent further parsing tries?
 	DEBUGSCOPE_END("Rf_ReplIteration");
