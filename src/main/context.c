@@ -503,7 +503,7 @@ int countContexts(int ctxttype, int browser) {
 
     cptr = R_GlobalContext;
     while( cptr != R_ToplevelContext) {
-        if( cptr->callflag == ctxttype )
+        if( cptr->callflag == ctxttype ) 
             n++;
         else if( browser ) {
            if(cptr->callflag & CTXT_FUNCTION && RDEBUG(cptr->cloenv) )

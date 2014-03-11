@@ -1465,10 +1465,8 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     int jumpValue = SETJMP(cntxt.cjmpbuf);
     DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
     switch (jumpValue) {
-        case CTXT_BREAK:
-            goto for_break;
-        case CTXT_NEXT:
-            goto for_next;
+    case CTXT_BREAK: goto for_break;
+    case CTXT_NEXT: goto for_next;
     }
     for (i = 0; i < n; i++) {
 	DO_LOOP_RDEBUG(call, op, args, rho, bgn);
@@ -4334,7 +4332,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       /* initialize binding cache on the stack */
       vcache = R_BCNodeStackTop;
       if (R_BCNodeStackTop + n > R_BCNodeStackEnd) {
-	  DEBUGSCOPE_PRINT("nodeStaackOverFlow");
+	  DEBUGSCOPE_PRINT("nodeStackOverFlow");
 	  nodeStackOverflow();
       }
       while (n > 0) {

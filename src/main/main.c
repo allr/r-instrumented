@@ -298,8 +298,8 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
     switch(state->status) {
 
     case PARSE_NULL:
-	DEBUGSCOPE_PRINT("Status NULL\n");
 
+	DEBUGSCOPE_PRINT("Status NULL\n");
 	/* The intention here is to break on CR but not on other
 	   null statements: see PR#9063 */
 	if (browselevel && !R_DisableNLinBrowser
@@ -314,8 +314,8 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	return 1;
 
     case PARSE_OK:
-	DEBUGSCOPE_PRINT("Status OK, readreset\n");
 
+	DEBUGSCOPE_PRINT("Status OK, readreset\n");
 	R_IoBufferReadReset(&R_ConsoleIob);
 	DEBUGSCOPE_PRINT("ParselBuffer\n");
 	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status, sourcename);
@@ -356,6 +356,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	return(1);
 
     case PARSE_ERROR:
+
 	DEBUGSCOPE_PRINT("Status ERROR\n");
 	state->prompt_type = 1;
 	parseError(R_NilValue, 0);
@@ -364,14 +365,15 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	return(1);
 
     case PARSE_INCOMPLETE:
-	DEBUGSCOPE_PRINT("Status INCOMPLETE\n");
 
+	DEBUGSCOPE_PRINT("Status INCOMPLETE\n");
 	R_IoBufferReadReset(&R_ConsoleIob);
 	state->prompt_type = 2;
 	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(2);
 
     case PARSE_EOF:
+
 	DEBUGSCOPE_PRINT("Status EOF\n");
 	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(-1);
@@ -774,7 +776,7 @@ static void R_LoadProfile(FILE *fparg, SEXP env)
 {
     FILE * volatile fp = fparg; /* is this needed? */
     if (fp != NULL) {
-        int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
+	int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
 	if (jumpValue == 0) { // setup jump
 	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
 	} else {

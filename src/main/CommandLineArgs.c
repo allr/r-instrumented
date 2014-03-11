@@ -103,11 +103,6 @@ extern Rboolean R_LoadRconsole;
 void
 R_common_command_line(int *pac, char **argv, Rstart Rp)
 {
-    /*
-     *  note: this function is not necessarily run.
-     * See Rf_initialize_R for other points to parse
-     * the command line
-     */
     int ac = *pac, newac = 1;	/* argv[0] is process name */
     long lval; /* this is only used for ppval, so 32-bit long is fine */
     char *p, **av = argv, msg[1024];
