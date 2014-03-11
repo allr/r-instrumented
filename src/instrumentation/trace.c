@@ -28,6 +28,8 @@
 #include <stdarg.h>
 #include <zlib.h>
 
+#include <Rdebug.h>
+
 #ifdef TRACE_ZIPPED
   typedef gzFile TRACEFILE;
 #else

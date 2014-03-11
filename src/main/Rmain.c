@@ -21,15 +21,20 @@
 int Rf_initialize_R(int ac, char **av); /* in ../unix/system.c */
 
 #include <Rinterface.h>
+#include <Rdebug.h>
 
 
 extern int R_running_as_main_program;   /* in ../unix/system.c */
 
 int main(int ac, char **av)
 {
+    DEBUGSCOPE_ACTIVATE("debugScope_readFile");
+    DEBUGSCOPE_START("main");
     R_running_as_main_program = 1;
+    DEBUGSCOPE_PRINT("Number of Arguments: %d\n",ac);
     Rf_initialize_R(ac, av);
     Rf_mainloop(); /* does not return */
+    DEBUGSCOPE_END("main");
     return 0;
 }
 

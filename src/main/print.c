@@ -68,6 +68,8 @@
 #include "Rconnections.h"
 #include <S.h>
 
+#include "Rdebug.h"
+
 
 /* Global print parameter struct: */
 R_print_par_t R_print;
@@ -187,25 +189,36 @@ SEXP attribute_hidden do_printfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* PrintLanguage() or PrintClosure() : */
 static void PrintLanguageEtc(SEXP s, Rboolean useSource, Rboolean isClosure)
 {
+    DEBUGSCOPE_START("PrintLanguageEtc");
     int i;
     SEXP t = getAttrib(s, R_SrcrefSymbol);
-    if (!isInteger(t) || !useSource)
+    if (!isInteger(t) || !useSource) {
 	t = deparse1w(s, 0, useSource | DEFAULTDEPARSE);
-    else {
-        PROTECT(t = lang2(install("as.character"), t));
-        t = eval(t, R_BaseEnv);
-        UNPROTECT(1);
+	DEBUGSCOPE_PRINT("deparsed.. ");
+    } else {
+	PROTECT(t = lang2(install("as.character"), t));
+	t = eval(t, R_BaseEnv);
+	DEBUGSCOPE_PRINT("evaluated.. ");
+	UNPROTECT(1);
     }
     PROTECT(t);
-    for (i = 0; i < LENGTH(t); i++)
+    DEBUGSCOPE_PRINT("length of t=%d .. " , LENGTH(t));
+    for (i = 0; i < LENGTH(t); i++) {
 	Rprintf("%s\n", CHAR(STRING_ELT(t, i))); /* translated */
+	DEBUGSCOPE_PRINT(".. ");
+    }
     UNPROTECT(1);
     if (isClosure) {
+	DEBUGSCOPE_PRINT("isClosure.. ");
 	if (isByteCode(BODY(s))) Rprintf("<bytecode: %p>\n", BODY(s));
 	t = CLOENV(s);
-	if (t != R_GlobalEnv)
+	if (t != R_GlobalEnv) {
+	    DEBUGSCOPE_PRINT("R_GlobalEnv ");
 	    Rprintf("%s\n", EncodeEnvironment(t));
+	}
     }
+    DEBUGSCOPE_PRINT("\n");
+    DEBUGSCOPE_END("PrintLanguageEtc");
 }
 
 static
@@ -686,6 +699,7 @@ static void PrintSpecial(SEXP s)
  */
 void attribute_hidden PrintValueRec(SEXP s, SEXP env)
 {
+    DEBUGSCOPE_START("PrintValueRec");
     SEXP t;
 
 #ifdef Win32
@@ -735,6 +749,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
 	PrintExpression(s);
 	break;
     case LANGSXP:
+	DEBUGSCOPE_PRINT("LANGSXP.. ");
 	PrintLanguage(s, FALSE);
 	break;
     case CLOSXP:
@@ -751,6 +766,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
 	break;
     case VECSXP:
 	PrintGenericVector(s, env); /* handles attributes/slots */
+	DEBUGSCOPE_END("PrintValueRec");
 	return;
     case LISTSXP:
 	printList(s,env);
@@ -825,6 +841,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
 #ifdef Win32
     WinUTF8out = FALSE;
 #endif
+    DEBUGSCOPE_END("PrintValueRec");
 }
 
 /* 2000-12-30 PR#715: remove list tags from tagbuf here
