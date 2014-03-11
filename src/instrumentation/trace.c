@@ -162,32 +162,9 @@ static void write_arg_histogram(FILE *fd) {
 }
 
 
-//
-// Context Stack
-//
-#define UPROM_TAG 9999
-typedef enum {
-    PC_PAIR, //marks that prologue / call pair should occur in the stack
-    SPEC,
-    BUILTIN,
-    CLOSURE,
-    CNTXT,
-    PROM,
-    PROL
-} StackNodeType;
-
-typedef struct ContextStackNode_ {
-    StackNodeType type;
-    uintptr_t ID;
-    RCNTXT *cptr;
-    struct ContextStackNode_ *next;
-} ContextStackNode;
-
-static ContextStackNode *cstack_top, *cstack_bottom;
-
-char *StackNodeTypeName[] = {"PAIR", "SPEC", "BUIL", "CLOS", "CNTXT", "PROM", "PROL", "UNKN"};
-
-// utility functions
+/*
+ * utility functions
+ */
 void __attribute__((__format__(printf, 1, 2)))
   print_error_msg(const char *format, ...) {
     fprintf(stderr, "[Error] ");
