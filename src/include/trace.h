@@ -36,7 +36,6 @@ typedef enum {
     TR_BOOTSTRAP,
     TR_REPL,
     TR_ALL,
-    TR_SUMMARY
 } TR_TYPE;
 
 

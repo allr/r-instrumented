@@ -465,10 +465,6 @@ void traceR_start_repl(void) {
 void traceR_finish_clean(void) {
     if (traceR_is_active) {
 	terminate_tracing();
-    } else {
-	if (R_TraceLevel == TR_SUMMARY) {
-	    write_trace_summary(stderr);
-	}
     }
 
     if (traceR_TraceExternalCalls) {

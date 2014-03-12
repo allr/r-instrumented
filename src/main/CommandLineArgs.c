@@ -220,8 +220,6 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 			    Rp->TraceLevel = TR_REPL;
 			} else if (!strcmp(tok, "bootstrap")) {
 			    Rp->TraceLevel = TR_BOOTSTRAP;
-			} else if (!strcmp(tok, "summary")) {
-			    Rp->TraceLevel = TR_SUMMARY;
 			} else if (!strcmp(tok, "externalcalls")) {
 			    Rp->TraceExternalCalls = TRUE;
 			} else { /* unknown */
