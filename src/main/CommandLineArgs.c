@@ -204,7 +204,10 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 		} else {
 		    R_ShowMessage (_("WARNING: no tracedir supplied, using default\n"));
 		}
+		/* turn on full tracing if a tracedir is specified */
+		Rp->TraceLevel = TR_ALL;
 	    }
+#if 0
 	    else if (!strcmp (*av, "--trace")) {
 		if (ac > 1) {
 		    char *arg = *(av+1);
@@ -231,6 +234,7 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 		    Rp->TraceLevel = TR_REPL;
 		}
 	    }
+#endif
 	    else if (!strcmp(*av, "--trace-externalcalls")) {
 		Rp->TraceExternalCalls = TRUE;
 	    }
