@@ -46,10 +46,6 @@ typedef struct TraceInfo_ {
 static TraceInfo trace_info;
 
 // Trace counters
-static unsigned int func_decl_cnt, null_srcref_cnt;
-static unsigned int stack_err_cnt, stack_flush_cnt;
-static unsigned int stack_height, max_stack_height;
-
 extern unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
 
 extern unsigned long allocated_cell[];
@@ -264,12 +260,6 @@ static void init_externalcalls() {
 static void start_tracing() {
     if (!traceR_is_active) {
 	traceR_is_active = 1;
-
-	//init counters
-	stack_err_cnt = 0;
-	stack_flush_cnt = 0;
-	stack_height = 0;
-	max_stack_height = 0;
     }
 }
 
@@ -417,9 +407,6 @@ static void write_summary() {
 	return;
     }
     fprintf(summary_fp, "TraceDir\t%s\n", trace_info.directory);
-    fprintf(summary_fp, "TraceStackErrors\t%u\n", stack_err_cnt);
-    fprintf(summary_fp, "FuncsDecld\t%u\n", func_decl_cnt);
-    fprintf(summary_fp, "NullSrcrefs\t%u\n", null_srcref_cnt);
 
     write_trace_summary(summary_fp);
 
