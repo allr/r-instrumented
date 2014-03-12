@@ -220,8 +220,6 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 			    Rp->TraceLevel = TR_REPL;
 			} else if (!strcmp(tok, "bootstrap")) {
 			    Rp->TraceLevel = TR_BOOTSTRAP;
-			} else if (!strcmp(tok, "externalcalls")) {
-			    Rp->TraceExternalCalls = TRUE;
 			} else { /* unknown */
 			    Rp->TraceLevel = TR_REPL;
 			    R_ShowMessage (_("WARNING: unknown tracing type requested, using 'repl'\n"));
@@ -230,6 +228,9 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 		    }
 		} else /* default */
 		    Rp->TraceLevel = TR_REPL;
+	    }
+	    else if (!strcmp(*av, "--trace-externalcalls")) {
+		Rp->TraceExternalCalls = TRUE;
 	    }
 	    else if (!strncmp(*av, "--encoding", 10)) {
 		if(strlen(*av) < 12) {
