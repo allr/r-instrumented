@@ -210,21 +210,12 @@ static void create_tracedir() {
     if (!traceR_TraceExternalCalls && R_TraceLevel == TR_DISABLED)
 	return;
 
-    /* generate or copy the trace directory name */
+    /* copy the trace directory name */
     if (R_TraceDir) {
 	strcpy(trace_info.directory, R_TraceDir);
     } else {
-	int written;
-	time_t t = time (0);
-	struct tm *current_time = localtime(&t);
-	char *fname = R_InputFileName ? R_InputFileName : "stdin";
-	char *lst = strrchr(fname, '/');
-	lst = lst ? lst + 1 : fname;
-	strftime(str, 15, "%y%m%d_%H%M%S", current_time);
-	written = sprintf(trace_info.directory, "data_%s_%s",
-			  str, lst);
-	if (R_InputFileName)
-	    trace_info.directory[written - 2] = 0;
+	print_error_msg("No trace directory name given, aborting\n");
+	abort();
     }
 
     /* create the directory */
@@ -364,11 +355,9 @@ static void write_trace_summary(FILE *out) {
     time_t current_time = time(0);
     struct tm *local_time = localtime(&current_time);
     struct rusage my_rusage;
-    fprintf(out, "SourceName\t%s\n", R_InputFileName ? R_InputFileName : "stdin");
 
     getcwd(str, MAX_DNAME);
     fprintf(out, "Workdir\t%s\n", str);
-    fprintf(out, "File\t%s/%s\n", str, R_InputFileName ? R_InputFileName : "stdin");
     fprintf(out, "Args\t"); write_commandArgs(out);
     // TODO print trace_type all/repl/bootstrap
     fprintf(out, "PtrSize\t%lu\n", sizeof(void*));

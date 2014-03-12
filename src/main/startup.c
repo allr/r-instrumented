@@ -156,7 +156,6 @@ void R_DefParams(Rstart Rp)
     Rp->TraceLevel = TR_DISABLED;
     Rp->TraceExternalCalls = FALSE;
     Rp->TraceDir = NULL;
-    Rp->InputFileName = NULL;
     Rp->vsize = R_VSIZE;
     Rp->nsize = R_NSIZE;
     Rp->max_vsize = R_SIZE_T_MAX;
@@ -237,7 +236,6 @@ void R_SetParams(Rstart Rp)
     R_TraceDir = Rp->TraceDir;
     traceR_TraceExternalCalls = Rp->TraceExternalCalls;
     R_TraceLevel = Rp->TraceLevel;
-    R_InputFileName = Rp->InputFileName;
     SetSize(Rp->vsize, Rp->nsize);
     R_SetMaxNSize(Rp->max_nsize);
     R_SetMaxVSize(Rp->max_vsize);

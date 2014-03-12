@@ -216,8 +216,7 @@ typedef struct {
  *        be changed.
  */
 int
-Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
-                 R_ReplState *state, const char *sourcename)
+Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 {
     DEBUGSCOPE_START("Rf_ReplIteration");
     int c, browsevalue;
@@ -293,7 +292,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
     }
 
     R_PPStackTop = savestack;
-    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status, sourcename);
+    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status);
     
     switch(state->status) {
 
@@ -318,7 +317,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel,
 	DEBUGSCOPE_PRINT("Status OK, readreset\n");
 	R_IoBufferReadReset(&R_ConsoleIob);
 	DEBUGSCOPE_PRINT("ParselBuffer\n");
-	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status, sourcename);
+	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status);
 	if (browselevel) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
 	    if(browsevalue == 1) {
@@ -391,24 +390,12 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
     DEBUGSCOPE_PRINT("SaveStack %d, browselevel %d\n",savestack,browselevel);
     int status;
     R_ReplState state = { PARSE_NULL, 1, 0, "", NULL};
-    char *sourcename;
 
     R_IoBufferWriteReset(&R_ConsoleIob);
     state.buf[0] = '\0';
     state.buf[CONSOLE_BUFFER_SIZE] = '\0';
     /* stopgap measure if line > CONSOLE_BUFFER_SIZE chars */
     state.bufp = state.buf;
-
-    /* Trace instrumentation  */
-    if (R_Interactive) {
-        sourcename = "Console";
-    } else {
-        if (R_InputFileName != NULL) {
-            sourcename = R_InputFileName;
-        } else {
-            sourcename = "(stdin)";
-        }
-    }
 
     /* Trace Instrumentation */
     traceR_start_repl();
@@ -418,7 +405,7 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
     DEBUGSCOPE_PRINT("Starting forever-loop\n");
     for(;;) {
-	status = Rf_ReplIteration(rho, savestack, browselevel, &state, sourcename); /* Trace instrumentation */
+	status = Rf_ReplIteration(rho, savestack, browselevel, &state); /* Trace instrumentation */
 	if(status < 0) {
 	    DEBUGSCOPE_END("R_ReplConsole");
 	    return;
@@ -463,7 +450,7 @@ int R_ReplDLLdo1(void)
 	if(c == ';' || c == '\n') break;
     }
     R_PPStackTop = 0;
-    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &status, "(embedded)");
+    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &status);
 
     switch(status) {
     case PARSE_NULL:
@@ -472,7 +459,7 @@ int R_ReplDLLdo1(void)
 	break;
     case PARSE_OK:
 	R_IoBufferReadReset(&R_ConsoleIob);
-	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &status, "(embedded)");
+	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &status);
 	R_Visible = FALSE;
 	R_EvalDepth = 0;
 	resetTimeLimits();

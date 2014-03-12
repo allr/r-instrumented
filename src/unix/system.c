@@ -337,9 +337,6 @@ int Rf_initialize_R(int ac, char **av)
 				 path, strerror(errno));
 			R_Suicide(msg);
 		    }
-		    /* Trace instrumentation */
-		    Rp->InputFileName = (char*) malloc(strlen(*av)+1);
-		    strcpy(Rp->InputFileName, *av);
 		}
 	    } else if(!strncmp(*av, "--file=", 7)) {
 		Rp->R_Interactive = FALSE;
@@ -360,9 +357,6 @@ int Rf_initialize_R(int ac, char **av)
 				 path, strerror(errno));
 			R_Suicide(msg);
 		    }
-		    /* Trace instrumentation */
-		    Rp->InputFileName = (char*) malloc(strlen(*av)+1);
-		    strcpy(Rp->InputFileName, *av);
 		}
 	    } else if(!strcmp(*av, "-e")) {
 		ac--; av++;
