@@ -712,11 +712,11 @@ Rboolean R_ToplevelExec(void (*fun)(void *), void *data)
 
     begincontext(&thiscontext, CTXT_TOPLEVEL, R_NilValue, R_GlobalEnv,
 		 R_BaseEnv, R_NilValue, R_NilValue);
-    int jumpValue = SETJMP(thiscontext.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf, jumpValue);
-    if (jumpValue) {
+    if (SETJMP(thiscontext.cjmpbuf)) {
+        DEBUGSCOPE_LOADJUMP(thiscontext.cjmpbuf);            
 	result = FALSE;
     } else {
+        DEBUGSCOPE_SAVEJUMP(thiscontext.cjmpbuf);
 	R_GlobalContext = R_ToplevelContext = &thiscontext;
 	fun(data);
 	result = TRUE;
