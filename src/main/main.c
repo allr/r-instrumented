@@ -427,8 +427,11 @@ static unsigned char DLLbuf[CONSOLE_BUFFER_SIZE+1], *DLLbufp;
 
 void R_ReplDLLinit(void)
 {
-    int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf, jumpValue);
+    if (SETJMP(R_Toplevel.cjmpbuf)){ // != 0 - jump loaded
+	DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
+    }else{ // ==0 - jump was prepared
+	DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
+    }
     // value is not used for program flow differations.
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     R_IoBufferWriteReset(&R_ConsoleIob);
@@ -771,15 +774,12 @@ static void R_LoadProfile(FILE *fparg, SEXP env)
 {
     FILE * volatile fp = fparg; /* is this needed? */
     if (fp != NULL) {
-	int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-	if (jumpValue == 0) { // setup jump
+	if (!SETJMP(R_Toplevel.cjmpbuf)) { // == 0 - jump was prepared
 	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
-	} else {
-	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
-	}
-	if (! jumpValue) {
 	    R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
 	    R_ReplFile(fp, env, "Rprofile");
+	} else { // != 0 - return via jump
+	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
 	}
 	fclose(fp);
     }
@@ -960,8 +960,7 @@ void setup_Rmainloop(void)
 
     doneit = 0;
     { // save jump target for TopLevel
-	int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-	if (jumpValue == 0) {
+	if (SETJMP(R_Toplevel.cjmpbuf) == 0) {
 	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
 	} else {
 	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
@@ -1127,8 +1126,11 @@ void run_Rmainloop(void)
     DEBUGSCOPE_ENABLEOUTPUT();
     /* Here is the real R read-eval-loop. */
     /* We handle the console until end-of-file. */
-    int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf, jumpValue);
+    if (SETJMP(R_Toplevel.cjmpbuf)){ // != 0 - return via jump
+	DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
+    }else{
+	DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
+    }
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     R_ReplConsole(R_GlobalEnv, 0, 0);
     end_Rmainloop(); /* must go here */
@@ -1278,17 +1280,18 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&returncontext, CTXT_BROWSER, call, rho,
 		 R_BaseEnv, argList, R_NilValue);
-    int jumpValue = SETJMP(returncontext.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(returncontext.cjmpbuf, jumpValue);
-    if (! jumpValue) {
+    if (! SETJMP(returncontext.cjmpbuf)) { // jump is prepared
+	DEBUGSCOPE_SAVEJUMP(returncontext.cjmpbuf);
 	begincontext(&thiscontext, CTXT_RESTART, R_NilValue, rho,
 		     R_BaseEnv, R_NilValue, R_NilValue);
-	int jumpValue2 = SETJMP(thiscontext.cjmpbuf);
-	DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf, jumpValue2);
-	if (jumpValue2) {
+	if (SETJMP(thiscontext.cjmpbuf)) { // != 0 - return via longjump
+	    DEBUGSCOPE_LOADJUMP(thiscontext.cjmpbuf);
 	    SET_RESTART_BIT_ON(thiscontext.callflag);
 	    R_ReturnedValue = R_NilValue;
 	    R_Visible = FALSE;
+	}
+	else{ // == 0: Jump is prepared
+	    DEBUGSCOPE_SAVEJUMP(thiscontext.cjmpbuf);
 	}
 	R_GlobalContext = &thiscontext;
 	R_InsertRestartHandlers(&thiscontext, TRUE);
@@ -1301,6 +1304,9 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    R_ReplConsole(rho, savestack, browselevel+1);
 	}
 	endcontext(&thiscontext);
+    }
+    else{ // return via jump
+	DEBUGSCOPE_LOADJUMP(returncontext.cjmpbuf);
     }
     endcontext(&returncontext);
 
