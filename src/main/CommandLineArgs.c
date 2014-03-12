@@ -180,27 +180,11 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 	    }
 	    else if (!strcmp(*av, "--tracedir")) {
 		if (ac > 1) {
-		    // handle stdin
-		    if (!strcmp(*(av+1), "-")) {
-			ac--;
-			av++;
-			if (scanf("%s", tmp_name)) {
-			    Rp->TraceDir = (char *)malloc(sizeof(char)*(strlen(tmp_name)+1));
-			    strcpy(Rp->TraceDir, tmp_name);
-			} else { // nothing in stdin
-			    R_ShowMessage(_("WARNING: no tracedir supplied, using default\n"));
-			}
-		    } else { // handle name from command-line
-			char **tmp = av+1;
-			if (**tmp != '-') {
-			    ac--;
-			    av++;
-			    Rp->TraceDir = (char *)malloc(sizeof(char)*(strlen(*tmp)+1));
-			    strcpy(Rp->TraceDir, *tmp);
-			} else { // next item is another flag
-			    R_ShowMessage(_("WARNING: no tracedir supplied, using default\n"));
-			}
-		    }
+		    ac--;
+		    av++;
+
+		    Rp->TraceDir = (char *)malloc(sizeof(char)*(strlen(*av)+1));
+		    strcpy(Rp->TraceDir, *av);
 		} else {
 		    R_ShowMessage (_("WARNING: no tracedir supplied, using default\n"));
 		}
