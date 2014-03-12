@@ -1057,9 +1057,8 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
 
-    int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
-    if (jumpValue) {
+    if (SETJMP(cntxt.cjmpbuf)) { // returned from jump
+        DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
@@ -1069,7 +1068,8 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	    PROTECT(tmp = R_ReturnedValue);
 	}
     }
-    else {
+    else { // jump was setup
+	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);                
 	PROTECT(tmp = eval(body, newrho));
     }
 
@@ -1156,11 +1156,8 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
-
-    int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
-
-    if (jumpValue) {
+    if (SETJMP(cntxt.cjmpbuf)) { // returned to here via jump
+    	DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
@@ -1169,7 +1166,8 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	else
 	    PROTECT(tmp = R_ReturnedValue);
     }
-    else {
+    else { // jump was prepared
+	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
 	PROTECT(tmp = eval(body, newrho));
     }
 
@@ -1467,12 +1465,17 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
-    switch (jumpValue) {
-    case CTXT_BREAK: goto for_break;
-    case CTXT_NEXT: goto for_next;
-    }
+    switch (SETJMP(cntxt.cjmpbuf)) {  
+    case CTXT_BREAK:
+    	DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
+    	goto for_break;
+    case CTXT_NEXT:
+    	DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
+    	goto for_next;
+    case 0:
+    	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+    	break;
+    } // end switch
     for (i = 0; i < n; i++) {
 	DO_LOOP_RDEBUG(call, op, args, rho, bgn);
 
@@ -1561,14 +1564,30 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
-    if (jumpValue != CTXT_BREAK) {
+    /*
+     * Note: CTXT_BREAK is != 0 at the moment. (Defn.h)
+     * Originally, this was a check on SETJMP() != CTXT_BREAK
+     * As we also need to check on != 0 but are not allowed to store
+     * the setjmp return value, this was converted to switch-case
+     */
+    switch(SETJMP(cntxt.cjmpbuf)){
+    case CTXT_BREAK: // not zero
+	DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
+	break;
+    case 0: // stored jump, but != CTXTBREAK
+	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
 	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
 	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
 	    eval(body, rho);
 	}
-    }
+    	break;
+    default: // if (jumpValue != CTXT_BREAK) {
+    	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
+	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
+	    eval(body, rho);
+	}
+    } // switch
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
@@ -1595,14 +1614,31 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    int jumpValue = SETJMP(cntxt.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
-    if (jumpValue != CTXT_BREAK) {
+    /*
+     * used to be a simple "if (jumpValue != CTXT_BREAK)"
+     * CTXT_BREAK is != 0 at the moment (so loadjump)
+     *
+     * Unfortunately, for case 0 (which is != CTXT_BREAK but different from
+     * other != CTXT_BREAK) a block needed to be doubled
+     */
+    switch(SETJMP(cntxt.cjmpbuf)){
+    case CTXT_BREAK: // != 0
+	DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
+	break;
+    case 0: // prepared jump
+	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
 	for (;;) {
 	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
 	    eval(body, rho);
 	}
-    }
+	break;
+    default: // if (jumpValue != CTXT_BREAK) {
+    	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+	for (;;) {
+	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
+	    eval(body, rho);
+	}
+    } // switch
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
@@ -2358,11 +2394,11 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (TYPEOF(expr) == LANGSXP || TYPEOF(expr) == SYMSXP || isByteCode(expr)) {
 	PROTECT(expr);
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
-	int jumpValue = SETJMP(cntxt.cjmpbuf);
-	DEBUGSCOPE_SAVELOADJUMP(cntxt.cjmpbuf, jumpValue);
-	if (!jumpValue) {
+	if (!SETJMP(cntxt.cjmpbuf)) { // 0 = prepared jump
+	    DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
 	    expr = eval(expr, env);
 	} else {
+	    DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
 	    expr = R_ReturnedValue;
 	    if (expr == R_RestartToken) {
 		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
