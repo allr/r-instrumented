@@ -226,8 +226,10 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 			}
 			tok = strtok(NULL, ",");
 		    }
-		} else /* default */
+		} else {
+		    R_ShowMessage(_("WARNING: no trace level supplied, using repl\n"));
 		    Rp->TraceLevel = TR_REPL;
+		}
 	    }
 	    else if (!strcmp(*av, "--trace-externalcalls")) {
 		Rp->TraceExternalCalls = TRUE;
