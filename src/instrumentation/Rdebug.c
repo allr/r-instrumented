@@ -470,6 +470,19 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
  * using a stack as map structure.
  */
 
+ 
+/*
+ * This function should no longer be used. If it is used, a violation of 
+ * ISO 9899:1999 (chapter 7.13.1.1 at 4+5) is very likely
+ *
+ * According to this, the return value of setjmp has to be used directly and
+ * storing it is not allowed. However, as the return value would be used
+ * in the conditional *and* saveloadJump, it would need to be stored.
+ *
+ * The "cleaner" approach is to use saveJump and loadJump in the appropiate
+ * blocks.
+ */
+/*
 void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue) {
     if (jumpValue == 0) { // if setjmp returns 0, the jump was setup
 	debugScope_saveJump(givenJumpInfo);
@@ -477,6 +490,7 @@ void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue) {
 	debugScope_loadJump(givenJumpInfo);
     }
 }
+*/
 
 
 void debugScope_printStack() {
