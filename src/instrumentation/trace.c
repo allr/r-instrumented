@@ -558,7 +558,7 @@ static void write_vector_allocs(FILE *out) {
 
     unsigned int i;
 
-    fprintf(out, "VectorAllocExactLimit\t%d\n", (1 << (VECTOR_EXACT_LIMIT_LD - 1)) - 1);
+    fprintf(out, "VectorAllocExactLimit\t%d\n", (1 << (VECTOR_EXACT_LIMIT_LD)) - 1);
 
     fprintf(out, "#!LABEL\tbin_id\tlower_limit\tupper_limit\tallocs\telements\tsize\tasize\n");
     fprintf(out, "#!TABLE\tVectorAllocBin\tVectorAllocationHistogram\n");
