@@ -1950,50 +1950,14 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
   It is also called in arithmetic.c. for e.g. do_log
 */
 
-long nb_is_missing, rec_call[2];
-long nb_direct_missing, ldots_to_small_im, arg_missing_im, prseen_missing;
-long toplevel_no_missing, active_binding, not_missing_im;
-long was_not_is_missing_was_null, was_not_is_missing;
-
-long nb_do_missing, do_missing_is_missing, do_missing_is_missing_res[2];
-long ldots_to_small, arg_missing;
-long non_missing_val, non_missing_non_symbol;
-long invalid_use_missing, missing_non_arg;
-
-void write_missing_results(FILE *out){
-    fprintf(out, "isMissing\t%lu\n", nb_is_missing);
-    fprintf(out, "#!LABEL\tnb_direct_missing\tldots_to_small_im\targ_missing_im\tprseen_missing\trec_call_0\n");
-    fprintf(out, "isMissingMissing\t%lu\t%lu\t%lu\t%lu\t%lu\n", nb_direct_missing,
-	    ldots_to_small_im, arg_missing_im, prseen_missing, rec_call[0]);
-    fprintf(out, "#!LABEL\ttoplevel_no_missing\tactive_binding\tnot_missing_im\twas_not_is_missing\trec_call_1\twas_not_is_missing_was_null\n");
-    fprintf(out, "isMissingPresent\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", toplevel_no_missing,
-	    active_binding, not_missing_im, was_not_is_missing, rec_call[1],
-	    was_not_is_missing_was_null);
-
-    fprintf(out, "#!LABEL\tnb_do_missing\tdo_missing_is_missing\n");
-    fprintf(out, "do_IsMissing\t%lu\t%lu\n", nb_do_missing, do_missing_is_missing);
-    fprintf(out, "#!LABEL\tldot_to_small\targ_missing\tedo_missing_is_missing_res_0\n");
-    fprintf(out, "do_IsMissingMissing\t%lu\t%lu\t%lu\n", ldots_to_small, arg_missing,
-	    do_missing_is_missing_res[0]);
-    fprintf(out, "#!LABEL\tnon_missing_val\tnon_missing_non_symbol\tdo_missing_is_missing_res_1\n");
-    fprintf(out, "do_IsMissingPresent\t%lu\t%lu\t%lu\n", non_missing_val, non_missing_non_symbol,
-	    do_missing_is_missing_res[1]);
-    fprintf(out, "#!LABEL\tinvalid_use_missing\tmissing_non_arg\n");
-    fprintf(out, "do_IsMissingError\t%lu\t%lu\n", invalid_use_missing, missing_non_arg);
-}
-
 int attribute_hidden
 R_isMissing(SEXP symbol, SEXP rho)
 {
     int ddv=0;
     SEXP vl, s;
 
-    nb_is_missing++;
-
-    if (symbol == R_MissingArg) { /* Yes, this can happen */
-	nb_direct_missing++;
+    if (symbol == R_MissingArg) /* Yes, this can happen */
 	return 1;
-    }
 
     /* check for infinite recursion */
     R_CheckStack();
@@ -2005,30 +1969,22 @@ R_isMissing(SEXP symbol, SEXP rho)
     else
 	s = symbol;
 
-    if (rho == R_BaseEnv || rho == R_BaseNamespace) {
-	toplevel_no_missing++;
+    if (rho == R_BaseEnv || rho == R_BaseNamespace)
 	return 0;  /* is this really the right thing to do? LT */
-    }
 
     vl = findVarLocInFrame(rho, s, NULL);
     if (vl != R_NilValue) {
 	if (DDVAL(symbol)) {
-	    if (length(CAR(vl)) < ddv || CAR(vl) == R_MissingArg) {
-		ldots_to_small_im++;
+	    if (length(CAR(vl)) < ddv || CAR(vl) == R_MissingArg)
 		return 1;
-	    }
 	    /* defineVar(symbol, value, R_GlobalEnv); */
 	    else
 		vl = nthcdr(CAR(vl), ddv-1);
 	}
-	if (MISSING(vl) == 1 || CAR(vl) == R_MissingArg) {
-	    arg_missing_im++;
+	if (MISSING(vl) == 1 || CAR(vl) == R_MissingArg)
 	    return 1;
-	}
-	if (IS_ACTIVE_BINDING(vl)) {
-	    active_binding++;
+	if (IS_ACTIVE_BINDING(vl))
 	    return 0;
-	}
 	if (TYPEOF(CAR(vl)) == PROMSXP &&
 	    PRVALUE(CAR(vl)) == R_UnboundValue &&
 	    TYPEOF(PREXPR(CAR(vl))) == SYMSXP) {
@@ -2041,26 +1997,19 @@ R_isMissing(SEXP symbol, SEXP rho)
 	       checking for missingness.  Because of the test above
 	       for an active binding a longjmp should only happen if
 	       the stack check fails.  LT */
-	    if (PRSEEN(CAR(vl))) {
-		prseen_missing++;
+	    if (PRSEEN(CAR(vl)))
 		return 1;
-	    }
 	    else {
 		int val;
 		SET_PRSEEN(CAR(vl), 1);
 		val = R_isMissing(PREXPR(CAR(vl)), PRENV(CAR(vl)));
-		rec_call[val]++;
 		SET_PRSEEN(CAR(vl), 0);
 		return val;
 	    }
 	}
-	else {
-	    not_missing_im++;
+	else
 	    return 0;
-	}
-    } else
-	was_not_is_missing_was_null++;
-    was_not_is_missing++;
+    }
     return 0;
 }
 
@@ -2072,14 +2021,11 @@ SEXP attribute_hidden do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
     check1arg(args, call, "x");
-    nb_do_missing++;
     s = sym = CAR(args);
     if( isString(sym) && length(sym)==1 )
 	s = sym = installTrChar(STRING_ELT(CAR(args), 0));
-    if (!isSymbol(sym)) {
-	invalid_use_missing++;
+    if (!isSymbol(sym))
 	errorcall(call, _("invalid use of 'missing'"));
-    }
 
     if (DDVAL(sym)) {
 	ddv = ddVal(sym);
@@ -2092,40 +2038,30 @@ SEXP attribute_hidden do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (DDVAL(s)) {
 	    if (length(CAR(t)) < ddv  || CAR(t) == R_MissingArg) {
 		LOGICAL(rval)[0] = 1;
-		ldots_to_small++;
 		return rval;
 	    }
 	    else
 		t = nthcdr(CAR(t), ddv-1);
 	}
 	if (MISSING(t) || CAR(t) == R_MissingArg) {
-	    arg_missing++;
 	    LOGICAL(rval)[0] = 1;
 	    return rval;
 	}
+	else goto havebinding;
     }
-    else {  /* it wasn't an argument to the function */
-	missing_non_arg++;
+    else  /* it wasn't an argument to the function */
 	errorcall(call, _("'missing' can only be used for arguments"));
-    }
+
+ havebinding:
 
     t = CAR(t);
     if (TYPEOF(t) != PROMSXP) {
 	LOGICAL(rval)[0] = 0;
-	non_missing_val++;
 	return rval;
     }
 
-    if (!isSymbol(PREXPR(t))) {
-	non_missing_non_symbol++;
-	LOGICAL(rval)[0] = 0;
-    }
-    else {
-	do_missing_is_missing ++;
-	int is_missing = R_isMissing(PREXPR(t), PRENV(t));
-	do_missing_is_missing_res[ is_missing]++;
-	LOGICAL(rval)[0] = is_missing;
-    }
+    if (!isSymbol(PREXPR(t))) LOGICAL(rval)[0] = 0;
+    else LOGICAL(rval)[0] = R_isMissing(PREXPR(t), PRENV(t));
     return rval;
 }
 

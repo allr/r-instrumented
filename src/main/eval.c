@@ -48,7 +48,6 @@ static Rboolean bc_profiling = FALSE;
 static int R_Profiling = 0;
 
 unsigned long bcodeops_count = 0;
-unsigned long clos_call, spec_call, builtin_call;
 
 #ifdef R_PROFILING
 
@@ -624,7 +623,6 @@ SEXP eval(SEXP e, SEXP rho)
 	}
 	if (TYPEOF(op) == SPECIALSXP) {
 	    DEBUGSCOPE_START("eval::case_LANGSXP::SPECIALSXP");
-	    spec_call++;
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    PROTECT(CDR(e));
@@ -662,7 +660,6 @@ SEXP eval(SEXP e, SEXP rho)
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
 	    DEBUGSCOPE_START("eval::case_LANGSXP::BUILTINSXP");
-	    builtin_call++;
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    RCNTXT cntxt;
@@ -695,7 +692,6 @@ SEXP eval(SEXP e, SEXP rho)
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    DEBUGSCOPE_START("eval::case_LANGSXP::CLOSXP");
-	    clos_call++;
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
 	    tmp = applyClosure(e, op, tmp, rho, R_BaseEnv);
 	    UNPROTECT(1);
@@ -4736,7 +4732,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int flag;
 	switch (ftype) {
 	case BUILTINSXP:
-	  builtin_call++;
 	  checkForMissings(args, call);
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
@@ -4745,7 +4740,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:
-	  spec_call++;
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
 
@@ -4766,7 +4760,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
-	  clos_call++;
 	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
 	  break;
 	default: error(_("bad function"));

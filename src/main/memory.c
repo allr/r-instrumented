@@ -474,13 +474,6 @@ static int NodeClassSize[NUM_SMALL_NODE_CLASSES] = { 0, 1, 2, 4, 6, 8, 16 };
 #define SET_NODE_CLASS(s,v) (((s)->sxpinfo.gccls) = (v))
 
 
-unsigned long allocated_cell[NUM_NODE_CLASSES];
-unsigned int  allocated_cell_len = NUM_NODE_CLASSES;
-
-#define REPORT_ALLOCATED_CELL(cls, obj) do {				\
-	allocated_cell[cls] ++;						\
-    } while (0)
-
 // SEXP (*56) [not verified yet]
 unsigned long allocated_cons, allocated_prom, allocated_env;
 unsigned long allocated_cons_current, allocated_cons_peak;
@@ -747,7 +740,6 @@ static R_size_t R_NodesInUse = 0;
   } \
   R_GenHeap[c].Free = NEXT_NODE(__n__); \
   R_NodesInUse++; \
-  REPORT_ALLOCATED_CELL(c, __n__); \
   (s) = __n__; \
 } while (0)
 
@@ -879,6 +871,9 @@ static void GetNewPage(int node_class)
 	if (page == NULL)
 	    mem_err_malloc((R_size_t) R_PAGE_SIZE);
     }
+#ifdef R_MEMORY_PROFILING
+    R_ReportNewPage();
+#endif
     page->next = R_GenHeap[node_class].pages;
     R_GenHeap[node_class].pages = page;
     R_GenHeap[node_class].PageCount++;
@@ -2639,7 +2634,6 @@ static SEXP allocVectorInternal(SEXPTYPE type, R_xlen_t length, Rboolean count_a
 	    SET_NODE_CLASS(s, LARGE_NODE_CLASS);
 	    R_LargeVallocSize += size;
 	    R_GenHeap[LARGE_NODE_CLASS].AllocCount++;
-	    REPORT_ALLOCATED_CELL(LARGE_NODE_CLASS, s);
 	    R_NodesInUse++;
 	    SNAP_NODE(s, R_GenHeap[LARGE_NODE_CLASS].New);
 	}

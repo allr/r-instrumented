@@ -113,8 +113,6 @@
 
 #include "Rdebug.h"
 
-unsigned long context_opened;
-
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that
@@ -256,7 +254,6 @@ void begincontext(RCNTXT * cptr, int flags,
 	cptr->func_depth = R_GlobalContext->func_depth;
     }
     R_GlobalContext = cptr;
-    context_opened++;
 }
 
 

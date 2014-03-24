@@ -48,9 +48,6 @@ static TraceInfo trace_info;
 // Trace counters
 extern unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
 
-extern unsigned long allocated_cell[];
-extern unsigned int  allocated_cell_len;
-
 // SEXP (*56)
 extern unsigned long allocated_cons, allocated_prom, allocated_env; // bytes
 extern unsigned long allocated_external, allocated_sexp, allocated_noncons; // bytes
@@ -70,8 +67,6 @@ extern unsigned long err_count_assign;
 extern unsigned long allocated_list, allocated_list_elts;
 extern unsigned long dispatchs, dispatchFailed;
 extern int gc_count;
-extern unsigned long context_opened;
-unsigned long clos_call, spec_call, builtin_call;
 
 
 /*
@@ -265,16 +260,11 @@ static void write_vector_allocs(FILE *out);
 void traceR_count_all_promises(void);
 
 static void write_allocation_summary(FILE *out) {
+    fprintf(out, "PtrSize\t%lu\n", sizeof(void*));
     fprintf(out, "#!LABEL\tSEXPREC\tSEXPREC_ALIGN\n");
     fprintf(out, "StructSize\t%u\t%u\n",
 	    (unsigned int)sizeof(SEXPREC),
 	    (unsigned int)sizeof(SEXPREC_ALIGN));
-    fprintf(out, "Interp\t%lu\n", allocated_cons);
-    fprintf(out, "Context\t%lu\n", context_opened);
-    fprintf(out, "#!LABEL\tclos_call\tspec_call\tbuiltin_call\tsum\n");
-    fprintf(out, "Calls\t%lu\t%lu\t%lu\t%lu\n",
-            clos_call, spec_call, builtin_call,
-            clos_call + spec_call + builtin_call);
 
     /* memory allocations */
     fprintf(out, "AllocatedCons\t%lu\n", allocated_cons);
@@ -290,12 +280,8 @@ static void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedStringBuffer\t%lu\t%lu\t%lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
 
     write_vector_allocs(out);
-    /* allocation counts per node class */
-    for (unsigned int i = 0; i < allocated_cell_len; i++) {
-      fprintf(out, "Class%uAllocs\t%lu\n", i, allocated_cell[i]);
-    }
 
-    fprintf(out, "GC\t%d\n", gc_count);
+    fprintf(out, "GC_count\t%d\n", gc_count);
 
     /* promises */
     traceR_count_all_promises();
@@ -360,7 +346,6 @@ static void write_trace_summary(FILE *out) {
     fprintf(out, "Workdir\t%s\n", str);
     fprintf(out, "Args\t"); write_commandArgs(out);
     // TODO print trace_type all/repl/bootstrap
-    fprintf(out, "PtrSize\t%lu\n", sizeof(void*));
 
     strftime (str, TIME_BUFF, "%c", local_time);
     fprintf(out, "TraceDate\t%s\n", str);
@@ -381,7 +366,6 @@ static void write_trace_summary(FILE *out) {
 
     write_allocation_summary(out);
     write_arg_histogram(out);
-    write_missing_results(out);
 }
 
 static void write_summary() {
