@@ -28,6 +28,8 @@
 #include "Fileio.h"
 #include "Parse.h"
 #include <R_ext/Print.h>
+#include "Rdebug.h"
+
 
 #if !defined(__STDC_ISO_10646__) && (defined(__APPLE__) || defined(__FreeBSD__))
 /* This may not be 100% true (see the comment in rlocales.h),
@@ -3432,6 +3434,7 @@ static void finalizeData( ){
  * Grows the data
  */
 static void growData(){
+	DEBUGSCOPE_START("growData");
 	
 	SEXP bigger, biggertext ; 
 	int current_data_size = DATA_SIZE;
@@ -3453,7 +3456,7 @@ static void growData(){
 	REPROTECT( ParseState.data = bigger, ParseState.DATA_INDEX ) ;
 	REPROTECT( ParseState.text = biggertext, ParseState.TEXT_INDEX ) ;
 	UNPROTECT( 2 ) ;
-	
+	DEBUGSCOPE_END("growData");
 }
 
 /**
