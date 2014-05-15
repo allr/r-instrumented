@@ -22,6 +22,7 @@
 #include <ctype.h> // for isspace(int)
 #include <stdarg.h> // for va_start, va_end
 
+#define R_USE_SIGNALS 1 // or else RCNTXT will not be declared
 #include <Defn.h>
 
 #include <Rdebug.h>
@@ -199,6 +200,26 @@ void debugScope_readFile(char* fileName) {
 
 #ifndef JUSTJUMP_TEST
 
+
+void debugScope_stack_dump(){
+    RCNTXT *contextPointer;
+    printf("Stack: ");
+    for (
+        contextPointer = R_GlobalContext; // start at global
+        NULL != contextPointer; // still one left
+        contextPointer = contextPointer->nextcontext // iterate to next
+        )
+    { // for all contexts - from global to last one
+        SEXP fun = CAR(contextPointer->call);
+        printf("%s ",
+                TYPEOF(fun) == SYMSXP ? translateChar(PRINTNAME(fun)) :
+                "<Anonymous>");
+    } // iterate contexts
+    // terminate with a newline
+    printf("\n");
+}
+
+
 void debugScope_start(char* scopeName) {
     debugScope* newScope = malloc(sizeof(debugScope));
     if (newScope == NULL) { // malloc failed
@@ -221,8 +242,21 @@ void debugScope_start(char* scopeName) {
 
     if (currentScope->enabled) {
 	debugScope_print("[%u] -> ENTER: %s\n",newScope->depth, scopeName);
+	//printwhere();
+	//R_OutputStackTrace(FILE *file);
+	#define PRINT_STACKS_ON_DEBUGSSCOPESTART
+	//#undef PRINT_STACKS_ON_DEBUGSSCOPESTART
+	#ifdef PRINT_STACKS_ON_DEBUGSSCOPESTART
+	{
+            debugScope_stack_dump();
+            debugScope_flatStack();
+        }
+        #endif //  PRINT_STACKS_ON_DEBUGSSCOPESTART
+        debugScope_stack_dump();
+        debugScope_flatStack();
     }
 }
+
 
 //#define TERMINATE_ON_SCOPING_PROBLEM
 #undef TERMINATE_ON_SCOPING_PROBLEM
@@ -503,5 +537,14 @@ void debugScope_printStack() {
     printf("--- END Debug Scope Stack ---\n");
 }
 
+void debugScope_flatStack() {
+    printf("Debug Scope Stack: ");
+    debugScope* scopeIterator = currentScope;
+    while (scopeIterator != NULL) {
+	printf(" <-  %s",scopeIterator->scopeName);
+	scopeIterator = scopeIterator->parent;
+    }
+    printf("--- \n");
+}
 
 #endif // HAVE_DEBUGSCOPES

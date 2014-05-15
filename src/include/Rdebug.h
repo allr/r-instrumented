@@ -158,6 +158,8 @@
     void debugScope_print(char* output,...);
 
     void debugScope_printStack();
+    //! prints debugscopes stack in a single line
+    void debugScope_flatStack();
 
     void debugScope_loadJump(jmp_buf jumpInfo);
     void debugScope_saveJump(jmp_buf jumpInfo);
