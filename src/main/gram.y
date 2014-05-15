@@ -1286,9 +1286,11 @@ static void ParseInit(void)
 
 static void initData(void)
 {
+    DEBUGSCOPE_START("initData");
     ParseState.data_count = 0 ;
 
     growData( ) ;
+    DEBUGSCOPE_END("initData");
 }
 
 /* We need to be careful with our protections.  Objects protected with an
@@ -1354,6 +1356,7 @@ static int file_getc(void)
 attribute_hidden
 SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state)
 {
+    DEBUGSCOPE_START("R_Parse1File");
     if (state) {
 	PROTECT_WITH_INDEX(SrcRefs = NewList(), &srindex);
     }
@@ -1369,6 +1372,7 @@ SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state
     R_Parse1(status);
     R_PPStackTop = savestack;
     PutSrcRefState(state);
+    DEBUGSCOPE_END("R_Parse1File");
     return R_CurrentExpr;
 }
 
@@ -1436,6 +1440,7 @@ static int text_getc(void)
 
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 {
+    DEBUGSCOPE_START("R_Parse");
     int savestack;
     int i;
     SEXP t, rval;
@@ -1492,6 +1497,7 @@ finish:
     R_PPStackTop = savestack;    /* UNPROTECT lots! */
     R_FinalizeSrcRefState();
     *status = PARSE_OK;
+    DEBUGSCOPE_END("R_Parse");
     return rval;
 }
 
@@ -1562,6 +1568,7 @@ attribute_hidden
 SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt, 
 		   SEXP srcfile)
 {
+    DEBUGSCOPE_START("R_ParseBuffer");
     SEXP rval, t;
     char *bufp, buf[CONSOLE_BUFFER_SIZE];
     int c, i, prompt_type = 1;
@@ -1639,6 +1646,7 @@ finish:
     R_PPStackTop = savestack; /* UNPROTECT lots! */
     R_FinalizeSrcRefState();    
     *status = PARSE_OK;
+    DEBUGSCOPE_END("R_Parse1File");
     return rval;
 }
 
@@ -3187,6 +3195,7 @@ static int yylex(void)
  */
 static void record_( int first_parsed, int first_column, int last_parsed, int last_column,
 	int token, int id, char* text_in ){
+	DEBUGSCOPE_START("record_");
        
 	
 	if( token == LEFT_ASSIGN && colon == 1){
@@ -3194,10 +3203,16 @@ static void record_( int first_parsed, int first_column, int last_parsed, int la
 		colon = 0 ;
 	}
 	
-	if (!ParseState.keepSrcRefs || id == NA_INTEGER) return;
+	if (!ParseState.keepSrcRefs || id == NA_INTEGER){
+		DEBUGSCOPE_END("record_");     
+		return;
+        }
 	
 	// don't care about zero sized things
-	if( !yytext[0] ) return ;
+	if( !yytext[0] ){
+		DEBUGSCOPE_END("record_");
+		return ;
+ 	}
 	
 	_FIRST_COLUMN( ParseState.data_count ) = first_column; 
 	_FIRST_PARSED( ParseState.data_count ) = first_parsed;
@@ -3220,7 +3235,7 @@ static void record_( int first_parsed, int first_column, int last_parsed, int la
 	if( ParseState.data_count == DATA_SIZE ){
 		growData( ) ;
 	}
-	
+	DEBUGSCOPE_END("record_");
 }
 
 /**
