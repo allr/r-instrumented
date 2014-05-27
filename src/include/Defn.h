@@ -467,6 +467,7 @@ typedef struct RCNTXT {
     SEXP handlerstack;          /* condition handler stack */
     SEXP restartstack;          /* stack of available restarts */
     struct RPRSTACK *prstack;   /* stack of pending promises */
+    unsigned int prstackheight; /* current height of promise stack */
     SEXP *nodestack;
 #ifdef BC_INT_STACK
     IStackval *intstack;
@@ -617,6 +618,8 @@ extern0 int	R_CStackDir	INI_as(1);	/* C stack direction */
 
 #ifdef R_USE_SIGNALS
 extern0 struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stack */
+extern0 unsigned int R_PendingPromisesCount INI_as(0); /* current promise stack height */
+extern0 unsigned int R_PendingPromiseMaxHeight INI_as(0); /* maximum promise stack height */
 #endif
 
 /* File Input/Output */

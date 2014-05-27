@@ -177,6 +177,7 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 	SET_PRSEEN(R_PendingPromises->promise, 2);
 	R_PendingPromises = R_PendingPromises->next;
     }
+    R_PendingPromisesCount = cptr->prstackheight;
     /* Need to reset R_Expressions in case we are jumping after
        handling a stack overflow. */
     R_Expressions = R_Expressions_keep;
@@ -240,6 +241,7 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->handlerstack = R_HandlerStack;
     cptr->restartstack = R_RestartStack;
     cptr->prstack = R_PendingPromises;
+    cptr->prstackheight = R_PendingPromisesCount;
     cptr->nodestack = R_BCNodeStackTop;
 #ifdef BC_INT_STACK
     cptr->intstack = R_BCIntStackTop;

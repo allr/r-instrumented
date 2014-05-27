@@ -286,6 +286,8 @@ static void write_allocation_summary(FILE *out) {
     /* promises */
     traceR_count_all_promises();
 
+    fprintf(out, "HighestPromiseStack\t%ld\n", R_PendingPromiseMaxHeight);
+
     fprintf(out, "#!LABEL\tallocated\tcollected\tunevaled\n");
     fprintf(out, "Promises\t%lu\t%lu\t%lu\n",
 	    traceR_promise_stats.created,

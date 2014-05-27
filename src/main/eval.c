@@ -458,6 +458,9 @@ static SEXP forcePromise(SEXP e)
 	prstack.promise = e;
 	prstack.next = R_PendingPromises;
 	R_PendingPromises = &prstack;
+	R_PendingPromisesCount++;
+	if (R_PendingPromisesCount > R_PendingPromiseMaxHeight)
+	    R_PendingPromiseMaxHeight = R_PendingPromisesCount;
 
 	val = eval(PRCODE(e), PRENV(e));
 
@@ -466,6 +469,7 @@ static SEXP forcePromise(SEXP e)
 	   reclaim the promise environment; this is also useful for
 	   fancy games with delayedAssign() */
 	R_PendingPromises = prstack.next;
+	R_PendingPromisesCount--;
 	SET_PRSEEN(e, 0);
 	SET_PRVALUE(e, val);
 	SET_PRENV(e, R_NilValue);
