@@ -247,6 +247,13 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->intstack = R_BCIntStackTop;
 #endif
     cptr->srcref = R_Srcref;
+    { // debug-printing context call
+        SEXP fun1 = CAR(R_GlobalContext->call);
+        SEXP fun2 = CAR(cptr->call);
+        DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2);
+    }
+        
+    
     cptr->nextcontext = R_GlobalContext;
     /* update function call depth for promise tracing */
     if ((flags & CTXT_FUNCTION) ||
@@ -275,6 +282,12 @@ void endcontext(RCNTXT * cptr)
 	UNPROTECT(1);
 	R_Visible = savevis;
     }
+    { // debug-print return
+        SEXP fun2 = CAR(cptr->call);              // context we leave
+        SEXP fun1 = CAR(cptr->nextcontext->call); // context we return to
+        DEBUGSCOPE_PRINTENDCONTEXT(fun2,fun1);
+    }
+    
     R_GlobalContext = cptr->nextcontext;
 }
 
