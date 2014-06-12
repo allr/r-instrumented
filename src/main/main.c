@@ -284,6 +284,25 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	    DEBUGSCOPE_END("Rf_ReplIteration");
 	    return(0);
 	}
+	else if (strncmp(readCommand,"prefix(\"",8) == 0) { // prefix command found
+	    readCommand = readCommand+8;
+	    DEBUGSCOPE_PRINT(" -> prefixing ");
+	    char newPrefix[SCOPENAME_MAX_SIZE +1];
+	    strncpy(newPrefix,readCommand,SCOPENAME_MAX_SIZE);
+	    newPrefix[SCOPENAME_MAX_SIZE] = '\0'; // additional safety
+	    char* endOfNewPrefix = strchr(newPrefix, '\"'); // search for closing quotesign
+	    if (NULL == endOfNewPrefix){ // not found
+	        DEBUGSCOPE_PRINT(" no suitable prefix (quote missing)\n");
+	    }else{
+	        (*endOfNewPrefix) = '\0'; // terminate string
+	        DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix);
+	        DEBUGSCOPE_PRINT(" (should be %s )",newPrefix);
+	    }
+	    state->buf[0] = '\0'; // prevent further processing
+	    DEBUGSCOPE_END("Rf_ReplIteration");
+	    return(0);
+	}
+	    
     }
 
 #ifdef SHELL_ESCAPE /* not default */
@@ -412,6 +431,7 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
 
     DEBUGSCOPE_PRINT("Starting forever-loop\n");
+    DEBUGSCOPE_SETCONTEXTPREFIX("ReplCons::");
     for(;;) {
 	status = Rf_ReplIteration(rho, savestack, browselevel, &state); /* Trace instrumentation */
 	if(status < 0) {
@@ -1132,7 +1152,9 @@ void run_Rmainloop(void)
 	DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
     }
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
+    DEBUGSCOPE_SETCONTEXTPREFIX("init2::");
     R_ReplConsole(R_GlobalEnv, 0, 0);
+    DEBUGSCOPE_SETCONTEXTPREFIX("init3::");
     end_Rmainloop(); /* must go here */
     DEBUGSCOPE_END("run_Rmainloop");
 }

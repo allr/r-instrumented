@@ -163,6 +163,7 @@ static int num_initialized = 0;
 
 int Rf_initialize_R(int ac, char **av)
 {
+    DEBUGSCOPE_SETCONTEXTPREFIX("init::");
     DEBUGSCOPE_START("Rf_initialize_R");
     int i, ioff = 1, j;
     Rboolean useX11 = TRUE, useTk = FALSE;
@@ -398,7 +399,12 @@ int Rf_initialize_R(int ac, char **av)
 		}
 		if (param != NULL) {
 		    DEBUGSCOPE_READFILE(param);
+		    debugScope_setFile("debugscopeOut.txt");
+
 		}
+	    } else if (strncmp(*av, "--contextscopes",15)==0){ // 0 = match
+	        // no output filename at the moment - implement later
+	        debugScope_enableContextOut();
 #endif // HAVE_DEBUGSCOPES
 	    } else {
 #ifdef HAVE_AQUA
@@ -478,6 +484,7 @@ int Rf_initialize_R(int ac, char **av)
 	Rstd_read_history(R_HistoryFile);
     fpu_setup(1);
 
+    DEBUGSCOPE_SETCONTEXTPREFIX("init2::");
     DEBUGSCOPE_END("Rf_initialize_R");
     return(0);
 }
