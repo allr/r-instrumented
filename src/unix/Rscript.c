@@ -115,7 +115,6 @@ void usage(void)
 
 int main(int argc, char *argv[])
 {
-  printf("main in rscript\n");
 #ifdef HAVE_EXECV
     char cmd[PATH_MAX+1], buf[PATH_MAX+8], buf2[1100], *p;
     int i, i0 = 0, ac = 0, res = 0, e_mode = 0, set_dp = 0;
