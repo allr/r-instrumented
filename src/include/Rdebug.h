@@ -36,6 +36,10 @@
     #define DEBUGSCOPE_PRINTSTACK()                      do {} while (0)
     #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                do {} while (0)
     #define DEBUGSCOPE_LOADJUMP(jumpInfo)                do {} while (0)
+    #define DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2)      do {} while (0)
+    #define DEBUGSCOPE_PRINTENDCONTEXT(fun1,fun2)        do {} while (0)
+    #define DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix)       do {} while (0)
+    
 
     /* avoid "variable not used" warnings by using empty inline functions */
     static inline void DEBUGSCOPE_SAVELOADJUMP(jmp_buf jumpInfo, int jumpValue) { }
@@ -63,6 +67,9 @@
 	struct jumpInfos_linlist_t* next;
     } jumpInfos_linlist;
 
+    char currentContextPrefix[SCOPENAME_MAX_SIZE+1];
+    char oldContextPrefix[SCOPENAME_MAX_SIZE+1];
+    
     #define DEBUGSCOPE_ENABLEOUTPUT()        { debugScope_enableOutput(); }
     #define DEBUGSCOPE_DISABLEOUTPUT()       { debugScope_disableOutput(); }
     #define DEBUGSCOPE_ISACTIVE(scopeName)   ( debugScope_isActive(scopeName) )
@@ -85,6 +92,9 @@
     #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                { debugScope_saveJump(jumpInfo); }
     #define DEBUGSCOPE_LOADJUMP(jumpInfo)                { debugScope_loadJump(jumpInfo); }
     #define DEBUGSCOPE_SAVELOADJUMP(jumpInfo, jumpValue) { debugScope_saveloadJump(jumpInfo, jumpValue); }
+    #define DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2)      { debugScope_printBeginContext(fun1,fun2); }
+    #define DEBUGSCOPE_PRINTENDCONTEXT(fun1,fun2)        { debugScope_printEndContext(fun1,fun2); }
+    #define DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix)       { debugScope_setContextPrefix(newPrefix); }
 
     /*!
      * \brief enables output globally.
@@ -97,7 +107,11 @@
      * the analysis you are trying to do.
      */
     void debugScope_enableOutput();
-
+    
+    //! activate context output
+    void debugScope_enableContextOut();
+    
+    
     /*!
      * \brief disables output globally
      *
@@ -168,6 +182,12 @@
     void debugScope_saveloadJump(jmp_buf jumpInfo, int jumpValue);
 
     void extractFunctionName(char* extraction, SEXP environment);
+    
+    
+    void debugScope_printBeginContext(SEXP from, SEXP to);
+    void debugScope_printEndContext(SEXP from, SEXP to);
+    void debugScope_setContextPrefix(const char* newPrefix);
+    
 
 #endif
 

@@ -53,6 +53,8 @@ static debugScope* currentScope = (debugScope*)NULL;
 static activeScopesLinList* activeScopes = (activeScopesLinList*)NULL;
 static jumpInfos_linlist* jumpInfos = (jumpInfos_linlist*)NULL;
 static Rboolean globalEnable = FALSE;
+static FILE* outStream = NULL;
+static FILE* contextOutStream = NULL;
 
 void debugScope_activate(char* scopeName) {
     // standard linear list adding
@@ -64,9 +66,32 @@ void debugScope_activate(char* scopeName) {
     activeScopes = newScope;
 }
 
+void debugScope_setFile(char* outFile){
+    outStream = fopen(outFile,"w");
+    if (NULL == outStream){ // opening failed
+        fprintf(stderr,"Opening %s as debugscope-logfile failed\n",outFile);
+        // and reset to stdout
+        outStream = stdout;
+    }else{
+        printf("opened debugScope-outfile\n");
+    }
+    
+}
+
+
 void debugScope_enableOutput() {
   globalEnable = TRUE;
+  if (NULL == outStream){
+      outStream = stdout;
+  }
 }
+
+void debugScope_enableContextOut(){
+    if (NULL == contextOutStream){
+        contextOutStream = stdout;
+    }
+}
+        
 
 void debugScope_disableOutput() {
     DEBUGSCOPE_START("debugScope_disableOutput");
@@ -376,7 +401,7 @@ void debugScope_print(char* output,...) {
 	if (debugScope_isCurrentActive()) {
 	    va_list argumentpointer;
 	    va_start(argumentpointer,output);
-	    vprintf(output,argumentpointer);
+	    vfprintf(outStream,output,argumentpointer);
 	    va_end(argumentpointer);
 	} else {
 	    /* debug scope not enabled - do not print */
@@ -546,5 +571,70 @@ void debugScope_flatStack() {
     }
     printf("--- \n");
 }
+
+void debugScope_printBeginContext(SEXP from, SEXP to){
+    //if (SYMSXP != TYPEOF(fun2)){
+    if(0==1){
+        // do not print anonymous calls
+    }else{
+        char output[3*SCOPENAME_MAX_SIZE];
+        strncpy(output,oldContextPrefix,SCOPENAME_MAX_SIZE);
+        
+        if(TYPEOF(from) == SYMSXP){
+            strncat(output,translateChar(PRINTNAME(from)),SCOPENAME_MAX_SIZE);
+        }else{
+            strcat(output,"<Anonymous>");
+        }
+        if(NULL!=contextOutStream){
+            /*
+             * note: we still want to keep information
+             * about the last prefix - so we cannot cancel
+             * this function early.
+             */
+            fprintf(contextOutStream,"-> %s ",output);
+        }
+        
+        // to is always from current context
+        strncpy(output,currentContextPrefix,SCOPENAME_MAX_SIZE);
+        if(TYPEOF(to) == SYMSXP){
+            strncat(output,translateChar(PRINTNAME(to)),SCOPENAME_MAX_SIZE);
+        }else{
+            strcat(output,"<Anonymous>");
+        }
+        if(NULL!=contextOutStream){
+            fprintf(contextOutStream,"-> %s\n",output);
+        }
+        
+        // set current prefix to "last seen"
+        strncpy(oldContextPrefix,currentContextPrefix,SCOPENAME_MAX_SIZE);
+        
+    }
+     
+}
+void debugScope_printEndContext(SEXP from, SEXP to){
+    //#define PRINT_CONTEXT_RETURNS
+    #undef PRINT_CONTEXT_RETURNS
+    #ifdef PRINT_CONTEXT_RETURNS
+    // return is necessary for graph construction
+    // (at the moment. Could be improved in the future)
+    { // printing context call
+        printf("<- %s ",
+                TYPEOF(to) == SYMSXP ? translateChar(PRINTNAME(to)) :
+                "<Anonymous>");
+        
+        printf("<- %s\n",
+                TYPEOF(from) == SYMSXP ? translateChar(PRINTNAME(from)) :
+                "<Anonymous>");
+    }
+    #endif // PRINT_CONTEXT_RETURNS
+    
+}
+
+void debugScope_setContextPrefix(const char* newPrefix){
+    //strncpy(oldContextPrefix,currentContextPrefix,SCOPENAME_MAX_SIZE);
+    strncpy(currentContextPrefix,newPrefix,SCOPENAME_MAX_SIZE);
+}
+    
+    
 
 #endif // HAVE_DEBUGSCOPES
