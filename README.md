@@ -558,6 +558,41 @@ references to it.
     the error count for normal assignments, the second is the error
     count for superassignments.
 
+- MallocmeasureQuantum
+
+    This keyword specifies the time quantum used for the values
+    specified in the PeakMemory values. It should usually be 1, unless
+    the program you ran via r-instrumented took longer than a day to
+    complete. To get the actual time in seconds of a PeakMemory value,
+    multiply its time value with the value of MallocmeasureQuantum.
+
+    This keyword may be missing depending on the operating system that
+    r-instrumented is compiled for because it uses the non-standard
+    RTLD_NEXT parameter of dlsym().
+
+- PeakMemory
+
+    The PeakMemory keyword can appear multiple times in the
+    output. Taken together, all Peakmemory keywords provide a time
+    series of the peak memory allocation of the R interpreter.
+
+    The measurements are taken in regular intervals by calculating
+    the peak amount of memory that the interpreter had allocated
+    during this interval. Only allocations via the malloc() family of
+    library functions are considered, but ignoring the C stack this is
+    currently the only source of memory allocations in the core R
+    interpreter. Since the measurements are made by providing
+    alternative versions of the library functions, they should also
+    cover any native code loaded by packages.
+
+    Each PeakMemory keyword has two values. The first one is the time
+    index, the second one the peak memory (in bytes) seen in the
+    interval starting at this time index. Initially each time index
+    corresponds to one second, but if the runtime of the R program
+    exceeds 86400 time indices (one day at one-second resolution), the
+    interval per time index will be doubled. The final interval size
+    is given in the MallocmeasureQuantum keyword.
+
 - ArgCount
 
     The ArgCount keyword can appear multiple times in the
