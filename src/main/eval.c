@@ -920,6 +920,8 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     }
 
     /*  Set up a context with the call in it so error has access to it */
+    //printf("erroronly");
+    DEBUGSCOPE_IGNORENEXTCONTEXT();
 
     begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
 

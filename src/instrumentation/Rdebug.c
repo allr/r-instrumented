@@ -573,6 +573,10 @@ void debugScope_flatStack() {
 }
 
 void debugScope_printBeginContext(SEXP from, SEXP to){
+    if(0!=ignoreNextContext){
+        ignoreNextContext=0;
+        return;
+    }
     //if (SYMSXP != TYPEOF(fun2)){
     if(0==1){
         // do not print anonymous calls
@@ -609,8 +613,23 @@ void debugScope_printBeginContext(SEXP from, SEXP to){
         strncpy(oldContextPrefix,currentContextPrefix,SCOPENAME_MAX_SIZE);
         
     }
-     
 }
+void debugScope_ignoreNextContext(){
+  /*
+   * eval.c::applyClosure seems to call "begincontext" just to have something
+   * that error has access to. There is nothing evaluated and the context
+   * is ended shortly after - and then begun again.
+   *
+   * This can result in a "fake" context-begin showing up on logging
+   * so we need to cancel one. 
+   *
+   * This function is used to indicate that the next "begincontext" is to 
+   * be ignored.
+   */
+  ignoreNextContext=1;
+}
+
+
 void debugScope_printEndContext(SEXP from, SEXP to){
     //#define PRINT_CONTEXT_RETURNS
     #undef PRINT_CONTEXT_RETURNS

@@ -36,6 +36,7 @@
     #define DEBUGSCOPE_PRINTSTACK()                      do {} while (0)
     #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                do {} while (0)
     #define DEBUGSCOPE_LOADJUMP(jumpInfo)                do {} while (0)
+    #define DEBUGSCOPE_IGNORENEXTCONTEXT()               do {} while (0)
     #define DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2)      do {} while (0)
     #define DEBUGSCOPE_PRINTENDCONTEXT(fun1,fun2)        do {} while (0)
     #define DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix)       do {} while (0)
@@ -69,6 +70,7 @@
 
     char currentContextPrefix[SCOPENAME_MAX_SIZE+1];
     char oldContextPrefix[SCOPENAME_MAX_SIZE+1];
+    char ignoreNextContext;
     
     #define DEBUGSCOPE_ENABLEOUTPUT()        { debugScope_enableOutput(); }
     #define DEBUGSCOPE_DISABLEOUTPUT()       { debugScope_disableOutput(); }
@@ -92,6 +94,7 @@
     #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                { debugScope_saveJump(jumpInfo); }
     #define DEBUGSCOPE_LOADJUMP(jumpInfo)                { debugScope_loadJump(jumpInfo); }
     #define DEBUGSCOPE_SAVELOADJUMP(jumpInfo, jumpValue) { debugScope_saveloadJump(jumpInfo, jumpValue); }
+    #define DEBUGSCOPE_IGNORENEXTCONTEXT()               { debugScope_ignoreNextContext(); }
     #define DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2)      { debugScope_printBeginContext(fun1,fun2); }
     #define DEBUGSCOPE_PRINTENDCONTEXT(fun1,fun2)        { debugScope_printEndContext(fun1,fun2); }
     #define DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix)       { debugScope_setContextPrefix(newPrefix); }
@@ -187,6 +190,8 @@
     void debugScope_printBeginContext(SEXP from, SEXP to);
     void debugScope_printEndContext(SEXP from, SEXP to);
     void debugScope_setContextPrefix(const char* newPrefix);
+    // note that the next context is not real!
+    void debugScope_ignoreNextContext();
     
 
 #endif
