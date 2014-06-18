@@ -341,7 +341,7 @@ static void write_allocation_summary(FILE *out) {
     if (mallocmeasure_current_slot) {
 	fprintf(out, "MallocmeasureQuantum\t%u\n", mallocmeasure_quantum);
 	fprintf(out, "#!LABEL\ttime\tmemory\n");
-	fprintf(out, "#!TABLE\tpeakmemory\tMemoryOverTime\n");
+	fprintf(out, "#!TABLE\tPeakMemory\tMemoryOverTime\n");
 	for (unsigned int i = 0; i < mallocmeasure_current_slot; i++) {
 	    fprintf(out, "PeakMemory\t%u\t%lu\n", i, mallocmeasure_values[i]);
 	}
