@@ -35,9 +35,9 @@
 #include <unistd.h>
 #include "mallocmeasure.h"
 
-#ifndef RTLD_NEXT
+#ifndef __linux__
 
-/* dummy definitions if RTLD_NEXT is not available */
+/* the code needs RTLD_NEXT and malloc_usable_size */
 
 unsigned int mallocmeasure_quantum = 1;
 size_t mallocmeasure_values[1];

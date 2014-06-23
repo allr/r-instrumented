@@ -566,9 +566,10 @@ references to it.
     complete. To get the actual time in seconds of a PeakMemory value,
     multiply its time value with the value of MallocmeasureQuantum.
 
-    This keyword may be missing depending on the operating system that
-    r-instrumented is compiled for because it uses the non-standard
-    RTLD_NEXT parameter of dlsym().
+    This keyword is currently only present if r-instrumented is
+    compiled for Linux. In case you want to port it: The code needs
+    the RTLD_NEXT parameter for dlsym() and the malloc_usable_size()
+    function (GNU extension). Patches are welcome.
 
 - PeakMemory
 
