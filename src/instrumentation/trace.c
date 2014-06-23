@@ -224,7 +224,6 @@ static void initialize_trace_defaults(TR_TYPE mode) {
 	return;
 
     // initialize
-    R_KeepSource = TRUE;
     traceR_is_active = 0;
 }
 
