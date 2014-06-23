@@ -448,9 +448,8 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	CHAR(STRING_ELT(generic, 0))[0] == '\0')
 	errorcall(call, _("first argument must be a generic name"));
 
-    int tmp = usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
-			env, callenv, defenv, &ans);
-    if (tmp == 1) {
+    if (usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
+		  env, callenv, defenv, &ans) == 1) {
 	UNPROTECT(3); /* obj, ap, argList */
 	PROTECT(ans);
 	findcontext(CTXT_RETURN, env, ans); /* does not return */

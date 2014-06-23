@@ -199,10 +199,6 @@ typedef struct {
  The "cursor" for the input buffer is moved to the next starting
  point, i.e. the end of the first line or after the first ;.
  */
-/* FIXME: A comment above suggests that this function is meant to
- *        be an external API in which case the signature must not
- *        be changed.
- */
 int
 Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 {
