@@ -2431,9 +2431,7 @@ SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SETCAR(c, VECTOR_ELT(args, i));
 #else
 	SETCAR(c, mkPROMISE(VECTOR_ELT(args, i), rho));
-	trcR_emit_unbnd_promise(CAR(c)); /* Trace instrumentation */
 	SET_PRVALUE(CAR(c), VECTOR_ELT(args, i));
-	trcR_emit_unbnd_promise_return(CAR(c)); /* Trace instrumentation */
 #endif
 	if (ItemName(names, (int)i) != R_NilValue)
 	    SET_TAG(c, installTrChar(ItemName(names, i)));
