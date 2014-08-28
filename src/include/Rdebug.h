@@ -25,22 +25,23 @@
 
     #define SCOPENAME_MAX_SIZE 1
 
-    #define DEBUGSCOPE_ENABLEOUTPUT()                    do {} while (0)
-    #define DEBUGSCOPE_DISABLEOUTPUT()                   do {} while (0)
-    #define DEBUGSCOPE_ACTIVATE(scopeName)               do {} while (0)
-    #define DEBUGSCOPE_DEACTIVATE(scopeName)             do {} while (0)
-    #define DEBUGSCOPE_READFILE(fileName)                do {} while (0)
-    #define DEBUGSCOPE_START(scopeName)                  do {} while (0)
-    #define DEBUGSCOPE_END(scopeName)                    do {} while (0)
-    #define DEBUGSCOPE_PRINT(outText,...)                do {} while (0)
-    #define DEBUGSCOPE_PRINTSTACK()                      do {} while (0)
-    #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                do {} while (0)
-    #define DEBUGSCOPE_LOADJUMP(jumpInfo)                do {} while (0)
-    #define DEBUGSCOPE_IGNORENEXTCONTEXT()               do {} while (0)
-    #define DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2)      do {} while (0)
-    #define DEBUGSCOPE_PRINTENDCONTEXT(fun1,fun2)        do {} while (0)
-    #define DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix)       do {} while (0)
-    
+    #define DEBUGSCOPE_ENABLEOUTPUT()                        do {} while (0)
+    #define DEBUGSCOPE_DISABLEOUTPUT()                       do {} while (0)
+    #define DEBUGSCOPE_ACTIVATE(scopeName)                   do {} while (0)
+    #define DEBUGSCOPE_DEACTIVATE(scopeName)                 do {} while (0)
+    #define DEBUGSCOPE_READFILE(fileName)                    do {} while (0)
+    #define DEBUGSCOPE_START(scopeName)                      do {} while (0)
+    #define DEBUGSCOPE_END(scopeName)                        do {} while (0)
+    #define DEBUGSCOPE_PRINT(outText,...)                    do {} while (0)
+    #define DEBUGSCOPE_PRINTSTACK()                          do {} while (0)
+    #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                    do {} while (0)
+    #define DEBUGSCOPE_LOADJUMP(jumpInfo)                    do {} while (0)
+    #define DEBUGSCOPE_IGNORENEXTCONTEXT()                   do {} while (0)
+    #define DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2)          do {} while (0)
+    #define DEBUGSCOPE_PRINTBEGINPSEUDOCONTEXT(contextName)  do {} while (0)
+    #define DEBUGSCOPE_PRINTENDCONTEXT(fun1,fun2)            do {} while (0)
+    #define DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix)           do {} while (0)
+    #define DEBUGSCOPE_PRINTCONTEXTSTACK()                   do {} while (0)
 
     /* avoid "variable not used" warnings by using empty inline functions */
     static inline void DEBUGSCOPE_SAVELOADJUMP(jmp_buf jumpInfo, int jumpValue) { }
@@ -74,7 +75,7 @@
     
     #define DEBUGSCOPE_ENABLEOUTPUT()        { debugScope_enableOutput(); }
     #define DEBUGSCOPE_DISABLEOUTPUT()       { debugScope_disableOutput(); }
-    #define DEBUGSCOPE_ISACTIVE(scopeName)   ( debugScope_isActive(scopeName) )
+    #define DEBUGSCOPE_ISACTIVE(scopeName)   (debugScope_isActive(scopeName))
     #define DEBUGSCOPE_ACTIVATE(scopeName)   { debugScope_activate(scopeName); }
     #define DEBUGSCOPE_DEACTIVATE(scopeName) { debugScope_deactivate(scopeName); }
     #define DEBUGSCOPE_READFILE(fileName)    { debugScope_readFile(fileName); }
@@ -90,14 +91,17 @@
      * For additional information in this matter (at least for the gcc-cpp):
      * http://gcc.gnu.org/onlinedocs/cpp/Variadic-Macros.html
      */
-    #define DEBUGSCOPE_PRINTSTACK()                      { debugScope_printStack(); }
-    #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                { debugScope_saveJump(jumpInfo); }
-    #define DEBUGSCOPE_LOADJUMP(jumpInfo)                { debugScope_loadJump(jumpInfo); }
-    #define DEBUGSCOPE_SAVELOADJUMP(jumpInfo, jumpValue) { debugScope_saveloadJump(jumpInfo, jumpValue); }
-    #define DEBUGSCOPE_IGNORENEXTCONTEXT()               { debugScope_ignoreNextContext(); }
-    #define DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2)      { debugScope_printBeginContext(fun1,fun2); }
-    #define DEBUGSCOPE_PRINTENDCONTEXT(fun1,fun2)        { debugScope_printEndContext(fun1,fun2); }
-    #define DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix)       { debugScope_setContextPrefix(newPrefix); }
+    #define DEBUGSCOPE_PRINTSTACK()                         { debugScope_printStack(); }
+    #define DEBUGSCOPE_SAVEJUMP(jumpInfo)                   { debugScope_saveJump(jumpInfo); }
+    #define DEBUGSCOPE_LOADJUMP(jumpInfo)                   { debugScope_loadJump(jumpInfo); }
+    #define DEBUGSCOPE_SAVELOADJUMP(jumpInfo, jumpValue)    { debugScope_saveloadJump(jumpInfo, jumpValue); }
+    #define DEBUGSCOPE_IGNORENEXTCONTEXT()                  { debugScope_ignoreNextContext(); }
+    #define DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2)         { debugScope_printBeginContext(fun1,fun2); }
+    #define DEBUGSCOPE_PRINTENDCONTEXT(fun1,fun2)           { debugScope_printEndContext(fun1,fun2); }
+    #define DEBUGSCOPE_PRINTBEGINPSEUDOCONTEXT(contextName) { debugScope_printBeginPseudoContext(contextName); }
+    #define DEBUGSCOPE_SETCONTEXTPREFIX(newPrefix)          { debugScope_setContextPrefix(newPrefix); }
+    #define DEBUGSCOPE_PRINTCONTEXTSTACK()                  { debugScope_printContextStack(); }
+    #define DEBUGSCOPE_CONTEXTSCOPESISACTIVE()              (debugScope_contextScopesIsActive())
 
     /*!
      * \brief enables output globally.
@@ -192,6 +196,11 @@
     void debugScope_setContextPrefix(const char* newPrefix);
     // note that the next context is not real!
     void debugScope_ignoreNextContext();
+    void debugScope_printContextStack();
+    
+    //! returns whether contextscopes are to be printed
+    Rboolean debugScope_contextScopesIsActive();
+
     
 
 #endif

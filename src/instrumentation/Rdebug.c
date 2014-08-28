@@ -29,6 +29,34 @@
 
 #ifdef HAVE_DEBUGSCOPES
 
+//#define REPORT_END_OF_ROOT_SCOPE
+#undef REPORT_END_OF_ROOT_SCOPE
+/*
+ * About REPORT_END_OF_ROOT_SCOPE:
+ *
+ * Normally, the "this was root scope"-warning is helpful
+ * as most programs terminate the programs before ending the root scope
+ * -- exiting via return or exit without calling debugscope_end("main").
+ * Ending the root scope normally is a sign that something went wrong
+ * (e.g. ending scopes that never started).
+ *
+ * However, the debugscopes in the R interpreter do not form a tree with
+ * a single root so at some point at startup, the "last" scope will end
+ * with no parent remaining. Later on, a new "root" scope is started.
+ *
+ * This normally results in the warning printed - even several times as
+ * the interpreter itself is called for libraries. To prevent this, the
+ * warning can be (as it was) disabled.
+ * 
+ * Note that the debugscopes have another safeguard against begin/end-
+ * descrepancies: At each endScope the name of the scope is checked against
+ * the scopename that is expected to be open at that point. Normally,
+ * forgetting to close or open scopes (or to correct the stack after longjumps)
+ * should result in a lot of error messages thus alerting the programmer
+ * to the problem.
+ */
+
+
 void extractFunctionName(char* extraction, SEXP environment){
     int i;
     SEXP t = getAttrib(environment, R_SrcrefSymbol);
@@ -225,26 +253,6 @@ void debugScope_readFile(char* fileName) {
 
 #ifndef JUSTJUMP_TEST
 
-
-void debugScope_stack_dump(){
-    RCNTXT *contextPointer;
-    printf("Stack: ");
-    for (
-        contextPointer = R_GlobalContext; // start at global
-        NULL != contextPointer; // still one left
-        contextPointer = contextPointer->nextcontext // iterate to next
-        )
-    { // for all contexts - from global to last one
-        SEXP fun = CAR(contextPointer->call);
-        printf("%s ",
-                TYPEOF(fun) == SYMSXP ? translateChar(PRINTNAME(fun)) :
-                "<Anonymous>");
-    } // iterate contexts
-    // terminate with a newline
-    printf("\n");
-}
-
-
 void debugScope_start(char* scopeName) {
     debugScope* newScope = malloc(sizeof(debugScope));
     if (newScope == NULL) { // malloc failed
@@ -273,11 +281,9 @@ void debugScope_start(char* scopeName) {
 	//#undef PRINT_STACKS_ON_DEBUGSSCOPESTART
 	#ifdef PRINT_STACKS_ON_DEBUGSSCOPESTART
 	{
-            debugScope_stack_dump();
             debugScope_flatStack();
         }
         #endif //  PRINT_STACKS_ON_DEBUGSSCOPESTART
-        debugScope_stack_dump();
         debugScope_flatStack();
     }
 }
@@ -311,7 +317,9 @@ void debugScope_end(char* scopeName) {
 	    debugScope_print("[%u] <- EXIT: %s\n", currentScope->depth, scopeName);
 	    debugScope* endingScope = currentScope;
 	    if (endingScope->parent == NULL) {
+#ifdef REPORT_END_OF_ROOT_SCOPE
 		printf("This was root Scope!\n");
+#endif // REPORT_END_OF_ROOT_SCOPE		
 		currentScope = NULL;
 	    } else {
 		currentScope = endingScope->parent;
@@ -378,7 +386,9 @@ void debugScope_loadJump(jmp_buf givenJumpInfo) {
 	    if (currentScope != targetScope) {
 		debugScope* endingScope = currentScope;
 		if (endingScope->parent == NULL) {
+#ifdef REPORT_END_OF_ROOT_SCOPE
 		    printf("This was root Scope!\n");
+#endif // REPORT_END_OF_ROOT_SCOPE		    
 		    currentScope = NULL;
 		} else {
 		    currentScope = endingScope->parent;
@@ -551,6 +561,34 @@ void debugScope_saveloadJump(jmp_buf givenJumpInfo,int jumpValue) {
 }
 */
 
+void debugScope_printContextStack(){
+    RCNTXT *cptr;
+    if(NULL!=contextOutStream){
+        for (
+            cptr = R_GlobalContext; // start at global
+            NULL != cptr; // still one left
+            cptr = cptr->nextcontext // iterate to next
+            )
+        { // for all contexts - from global to last one
+            if (
+                (cptr->callflag & (CTXT_FUNCTION | CTXT_BUILTIN)) && 
+                (TYPEOF(cptr->call) == LANGSXP)
+                )
+            {
+                SEXP fun = CAR(cptr->call);
+                fprintf(contextOutStream,"<- ");
+                if(SYMSXP == TYPEOF(fun)){
+                    fprintf(contextOutStream,CHAR(PRINTNAME(fun)));
+                }else{
+                    fprintf(contextOutStream,"<Anonymous>");
+                }
+                fprintf(contextOutStream," ");
+            } // if 
+        } // for all contexts
+        fprintf(contextOutStream,"\n");
+    } // if contextOutStream != NULL
+}
+
 
 void debugScope_printStack() {
     printf("--- START Debug Scope Stack ---\n");
@@ -571,6 +609,28 @@ void debugScope_flatStack() {
     }
     printf("--- \n");
 }
+
+void debugScope_printBeginPseudoContext(char* contextName){
+    char output[3*SCOPENAME_MAX_SIZE];
+    strncpy(output,oldContextPrefix,SCOPENAME_MAX_SIZE);
+    SEXP from = CAR(R_GlobalContext->call);
+    if(TYPEOF(from) == SYMSXP){
+        strncat(output,translateChar(PRINTNAME(from)),SCOPENAME_MAX_SIZE);
+    }else{
+        strcat(output,"<Anonymous>");
+    }
+    if(NULL != contextOutStream){
+        fprintf(contextOutStream,"-> %s ",output);
+    }
+    strncpy(output,currentContextPrefix,SCOPENAME_MAX_SIZE);
+    strcat(output,contextName);
+    if(NULL != contextOutStream){
+        fprintf(contextOutStream,"-> %s\n ",output);
+    }
+    // set current prefix to "last seen"
+    strncpy(oldContextPrefix,currentContextPrefix,SCOPENAME_MAX_SIZE);
+}
+        
 
 void debugScope_printBeginContext(SEXP from, SEXP to){
     if(0!=ignoreNextContext){
@@ -612,6 +672,14 @@ void debugScope_printBeginContext(SEXP from, SEXP to){
         // set current prefix to "last seen"
         strncpy(oldContextPrefix,currentContextPrefix,SCOPENAME_MAX_SIZE);
         
+    }
+}
+
+Rboolean debugScope_contextScopesIsActive(){
+    if(NULL!=contextOutStream){
+        return TRUE;
+    }else{
+        return FALSE;
     }
 }
 void debugScope_ignoreNextContext(){
