@@ -252,6 +252,9 @@ void begincontext(RCNTXT * cptr, int flags,
         SEXP fun2 = CAR(cptr->call);
         DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2);
     }
+    {// alternative: print complete context stack on every begincontext
+        //debugScope_printContextStack();
+    }
         
     
     cptr->nextcontext = R_GlobalContext;
