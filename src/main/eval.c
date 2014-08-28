@@ -670,7 +670,12 @@ SEXP eval(SEXP e, SEXP rho)
 	    if (flag < 2) R_Visible = flag != 1;
 	    /* We used to insert a context only if profiling,
 	       but helps for tracebacks on .C etc. */
-	    if (R_Profiling || (PPINFO(op).kind == PP_FOREIGN)) {
+	    if (
+	        (R_Profiling) ||
+	        (PPINFO(op).kind == PP_FOREIGN) ||
+	        (DEBUGSCOPE_CONTEXTSCOPESISACTIVE())
+	        )
+	    {
 		SEXP oldref = R_Srcref;
 		begincontext(&cntxt, CTXT_BUILTIN, e,
 			     R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
