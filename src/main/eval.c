@@ -525,6 +525,7 @@ SEXP eval(SEXP e, SEXP rho)
 	   to replacement functions won't modify constants in
 	   expressions.  */
 	if (NAMED(e) <= 1) SET_NAMED(e, 2);
+	DEBUGSCOPE_END("eval");
 	return e;
     default: break;
     }
@@ -1641,12 +1642,8 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	}
     	break;
-    default: // if (jumpValue != CTXT_BREAK) {
-    	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
-	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
-	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
-	    eval(body, rho);
-	}
+    default: // if (jumpValue != CTXT_BREAK) but also != 0 -> return via longjump{
+    	DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
     } // switch
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
@@ -1689,10 +1686,9 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    eval(body, rho);
 	}
 	break;
-    default: // if (jumpValue != CTXT_BREAK) {
-    	DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
+    default: // if (jumpValue != CTXT_BREAK) but also != 0 -> loaded jump{
+    	DEBUGSCOPE_LOADJUMP(cntxt.cjmpbuf);
 	for (;;) {
-	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
 	    eval(body, rho);
 	}
     } // switch
