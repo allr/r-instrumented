@@ -30,6 +30,8 @@
 
 #include <Rdebug.h>
 
+#include "mallocmeasure.h"
+
 #ifdef TRACE_ZIPPED
   typedef gzFile TRACEFILE;
 #else
@@ -47,9 +49,6 @@ static TraceInfo trace_info;
 
 // Trace counters
 extern unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
-
-extern unsigned long allocated_cell[];
-extern unsigned int  allocated_cell_len;
 
 // SEXP (*56)
 extern unsigned long allocated_cons, allocated_prom, allocated_env; // bytes
@@ -70,8 +69,6 @@ extern unsigned long err_count_assign;
 extern unsigned long allocated_list, allocated_list_elts;
 extern unsigned long dispatchs, dispatchFailed;
 extern int gc_count;
-extern unsigned long context_opened;
-unsigned long clos_call, spec_call, builtin_call;
 
 
 /*
@@ -205,8 +202,6 @@ static int __attribute__((format(printf, 2, 3)))
  * tracing directory init/cleanup
  */
 static void create_tracedir() {
-    char str[MAX_DNAME];
-
     if (!traceR_TraceExternalCalls && R_TraceLevel == TR_DISABLED)
 	return;
 
@@ -229,7 +224,6 @@ static void initialize_trace_defaults(TR_TYPE mode) {
 	return;
 
     // initialize
-    R_KeepSource = TRUE;
     traceR_is_active = 0;
 }
 
@@ -265,16 +259,11 @@ static void write_vector_allocs(FILE *out);
 void traceR_count_all_promises(void);
 
 static void write_allocation_summary(FILE *out) {
+    fprintf(out, "PtrSize\t%lu\n", sizeof(void*));
     fprintf(out, "#!LABEL\tSEXPREC\tSEXPREC_ALIGN\n");
     fprintf(out, "StructSize\t%u\t%u\n",
 	    (unsigned int)sizeof(SEXPREC),
 	    (unsigned int)sizeof(SEXPREC_ALIGN));
-    fprintf(out, "Interp\t%lu\n", allocated_cons);
-    fprintf(out, "Context\t%lu\n", context_opened);
-    fprintf(out, "#!LABEL\tclos_call\tspec_call\tbuiltin_call\tsum\n");
-    fprintf(out, "Calls\t%lu\t%lu\t%lu\t%lu\n",
-            clos_call, spec_call, builtin_call,
-            clos_call + spec_call + builtin_call);
 
     /* memory allocations */
     fprintf(out, "AllocatedCons\t%lu\n", allocated_cons);
@@ -290,15 +279,13 @@ static void write_allocation_summary(FILE *out) {
     fprintf(out, "AllocatedStringBuffer\t%lu\t%lu\t%lu\n", allocated_sb, allocated_sb_elts, allocated_sb_size);
 
     write_vector_allocs(out);
-    /* allocation counts per node class */
-    for (unsigned int i = 0; i < allocated_cell_len; i++) {
-      fprintf(out, "Class%uAllocs\t%lu\n", i, allocated_cell[i]);
-    }
 
-    fprintf(out, "GC\t%d\n", gc_count);
+    fprintf(out, "GC_count\t%d\n", gc_count);
 
     /* promises */
     traceR_count_all_promises();
+
+    fprintf(out, "HighestPromiseStack\t%u\n", R_PendingPromiseMaxHeight);
 
     fprintf(out, "#!LABEL\tallocated\tcollected\tunevaled\n");
     fprintf(out, "Promises\t%lu\t%lu\t%lu\n",
@@ -347,6 +334,17 @@ static void write_allocation_summary(FILE *out) {
     fprintf(out, "ErrCountAssign\t%lu\n", err_count_assign);
     fprintf(out, "#!LABEL\tnormal\tsuper\n");
     fprintf(out, "ErrorEvalSet\t%lu\t%lu\n", do_set_allways - do_set_unique, do_super_set_allways - do_super_set_unique );
+
+    /* memory over time */
+    mallocmeasure_finalize();
+    if (mallocmeasure_current_slot) {
+	fprintf(out, "MallocmeasureQuantum\t%u\n", mallocmeasure_quantum);
+	fprintf(out, "#!LABEL\ttime\tmemory\n");
+	fprintf(out, "#!TABLE\tPeakMemory\tMemoryOverTime\n");
+	for (unsigned int i = 0; i < mallocmeasure_current_slot; i++) {
+	    fprintf(out, "PeakMemory\t%u\t%lu\n", i, mallocmeasure_values[i]);
+	}
+    }
 }
 
 static void write_trace_summary(FILE *out) {
@@ -360,7 +358,6 @@ static void write_trace_summary(FILE *out) {
     fprintf(out, "Workdir\t%s\n", str);
     fprintf(out, "Args\t"); write_commandArgs(out);
     // TODO print trace_type all/repl/bootstrap
-    fprintf(out, "PtrSize\t%lu\n", sizeof(void*));
 
     strftime (str, TIME_BUFF, "%c", local_time);
     fprintf(out, "TraceDate\t%s\n", str);
@@ -381,7 +378,6 @@ static void write_trace_summary(FILE *out) {
 
     write_allocation_summary(out);
     write_arg_histogram(out);
-    write_missing_results(out);
 }
 
 static void write_summary() {
@@ -558,7 +554,7 @@ static void write_vector_allocs(FILE *out) {
 
     unsigned int i;
 
-    fprintf(out, "VectorAllocExactLimit\t%d\n", (1 << (VECTOR_EXACT_LIMIT_LD - 1)) - 1);
+    fprintf(out, "VectorAllocExactLimit\t%d\n", (1 << (VECTOR_EXACT_LIMIT_LD)) - 1);
 
     fprintf(out, "#!LABEL\tbin_id\tlower_limit\tupper_limit\tallocs\telements\tsize\tasize\n");
     fprintf(out, "#!TABLE\tVectorAllocBin\tVectorAllocationHistogram\n");

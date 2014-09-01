@@ -113,8 +113,6 @@
 
 #include "Rdebug.h"
 
-unsigned long context_opened;
-
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that
@@ -179,6 +177,7 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 	SET_PRSEEN(R_PendingPromises->promise, 2);
 	R_PendingPromises = R_PendingPromises->next;
     }
+    R_PendingPromisesCount = cptr->prstackheight;
     /* Need to reset R_Expressions in case we are jumping after
        handling a stack overflow. */
     R_Expressions = R_Expressions_keep;
@@ -242,11 +241,13 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->handlerstack = R_HandlerStack;
     cptr->restartstack = R_RestartStack;
     cptr->prstack = R_PendingPromises;
+    cptr->prstackheight = R_PendingPromisesCount;
     cptr->nodestack = R_BCNodeStackTop;
 #ifdef BC_INT_STACK
     cptr->intstack = R_BCIntStackTop;
 #endif
-    cptr->srcref = R_Srcref;
+    cptr->srcref = R_Srcref;    
+    cptr->browserfinish = R_GlobalContext->browserfinish;
     { // debug-printing context call
         SEXP fun1 = CAR(R_GlobalContext->call);
         SEXP fun2 = CAR(cptr->call);
@@ -255,9 +256,8 @@ void begincontext(RCNTXT * cptr, int flags,
     {// alternative: print complete context stack on every begincontext
         //debugScope_printContextStack();
     }
-        
-    
     cptr->nextcontext = R_GlobalContext;
+
     /* update function call depth for promise tracing */
     if ((flags & CTXT_FUNCTION) ||
 	(flags & CTXT_BUILTIN)) {
@@ -265,8 +265,8 @@ void begincontext(RCNTXT * cptr, int flags,
     } else {
 	cptr->func_depth = R_GlobalContext->func_depth;
     }
+
     R_GlobalContext = cptr;
-    context_opened++;
 }
 
 
@@ -438,7 +438,7 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
     while (cptr->nextcontext != NULL) {
 	if (cptr->callflag & CTXT_FUNCTION ) {
 	    if (n == 0) {
-	    	PROTECT(result = duplicate(cptr->call));
+	    	PROTECT(result = shallow_duplicate(cptr->call));
 	    	if (cptr->srcref && !isNull(cptr->srcref))
 	    	    setAttrib(result, R_SrcrefSymbol, duplicate(cptr->srcref));
 	    	UNPROTECT(1);
@@ -449,7 +449,7 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
 	cptr = cptr->nextcontext;
     }
     if (n == 0 && cptr->nextcontext == NULL) {
-	PROTECT(result = duplicate(cptr->call));
+	PROTECT(result = shallow_duplicate(cptr->call));
 	if (cptr->srcref && !isNull(cptr->srcref))
 	    setAttrib(result, R_SrcrefSymbol, duplicate(cptr->srcref));
 	UNPROTECT(1);
@@ -819,4 +819,22 @@ SEXP R_tryEvalSilent(SEXP e, SEXP env, int *ErrorOccurred)
     val = R_tryEval(e, env, ErrorOccurred);
     R_ShowErrorMessages = oldshow;
     return val;
+}
+
+SEXP R_ExecWithCleanup(SEXP (*fun)(void *), void *data,
+		       void (*cleanfun)(void *), void *cleandata)
+{
+    RCNTXT cntxt;
+    SEXP result;
+
+    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+		 R_NilValue, R_NilValue);
+    cntxt.cend = cleanfun;
+    cntxt.cenddata = cleandata;
+
+    result = fun(data);
+    cleanfun(cleandata);
+
+    endcontext(&cntxt);
+    return result;
 }

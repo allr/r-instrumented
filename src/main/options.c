@@ -283,7 +283,7 @@ void attribute_hidden InitOptions(void)
     v = CDR(v);
 
     p = getenv("R_KEEP_PKG_SOURCE");
-    R_KeepSource = 1; //(p && (strcmp(p, "yes") == 0)) ? 1 : 0;
+    R_KeepSource = (p && (strcmp(p, "yes") == 0)) ? 1 : 0;
 
     SET_TAG(v, install("keep.source")); /* overridden in common.R */
     SETCAR(v, ScalarLogical(R_KeepSource));
@@ -339,6 +339,13 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
        */
 
     options = SYMVALUE(Options());
+
+    /* This code is not re-entrant and people have used it in
+       finalizers.
+
+       If a re-entrancy lock needs to be added, note that it
+       would apply to R_SetOption* too.
+    */
 
     if (args == R_NilValue) {
 	/* This is the zero argument case.
@@ -443,13 +450,9 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
 	    }
 	    else if (streql(CHAR(namei), "keep.source")) {
-		/*
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		int k = asLogical(argi);
-		R_KeepSource = k;
-		*/
-		int k = 1;
 		R_KeepSource = k;
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }
