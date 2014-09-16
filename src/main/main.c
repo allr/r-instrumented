@@ -416,6 +416,13 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
     DEBUGSCOPE_PRINT("Starting forever-loop\n");
     DEBUGSCOPE_SETCONTEXTPREFIX("ReplCons::");
+    
+    debugScope_enableContextOut();
+    /*
+     * This will be ignored if it has not been prepared during cmdline-parsing.
+     * It will also result in no change if full activation has already been done
+     * during init/cmdline-parsing
+     */
     for(;;) {
 	status = Rf_ReplIteration(rho, savestack, browselevel, &state); /* Trace instrumentation */
 	if(status < 0) {

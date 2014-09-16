@@ -403,7 +403,19 @@ int Rf_initialize_R(int ac, char **av)
 		}
 	    } else if (strncmp(*av, "--contextscopes",15)==0){ // 0 = match
 	        // no output filename at the moment - implement later
-	        debugScope_enableContextOut();
+	        debugScope_prepareContextOutEnable();
+	        if (strncmp(*av, "--contextscopesearly",20)==0){ // 0 = match
+	            // enable at once - do not wait for end of init
+	            debugScope_enableContextOut();
+	        } // early?
+	        /*
+	         * Note: --contextscopes is a prefix of --contextscopesearly
+	         * so the usual "else if"-approach would fail - or would depend
+	         * strongly on the order of checks.
+	         *
+	         * changing --contextscopes to --contextscopeslate would change
+	         * previously implemented behaviour.
+	         */
 #endif // HAVE_DEBUGSCOPES
 	    } else {
 #ifdef HAVE_AQUA
