@@ -81,6 +81,7 @@ static debugScope* currentScope = (debugScope*)NULL;
 static activeScopesLinList* activeScopes = (activeScopesLinList*)NULL;
 static jumpInfos_linlist* jumpInfos = (jumpInfos_linlist*)NULL;
 static Rboolean globalEnable = FALSE;
+static Rboolean contextOutPrepared = FALSE;
 static FILE* outStream = NULL;
 static FILE* contextOutStream = NULL;
 
@@ -106,6 +107,20 @@ void debugScope_setFile(char* outFile){
     
 }
 
+void debugScope_prepareContextOutEnable(){
+    contextOutPrepared=TRUE;
+}
+
+void debugScope_enableContextOut(){
+    if(
+        (TRUE==contextOutPrepared) &&
+        (NULL == contextOutStream)
+        )
+    {
+        contextOutStream = stdout;
+    }
+}
+
 
 void debugScope_enableOutput() {
   globalEnable = TRUE;
@@ -114,11 +129,16 @@ void debugScope_enableOutput() {
   }
 }
 
-void debugScope_enableContextOut(){
-    if (NULL == contextOutStream){
-        contextOutStream = stdout;
+void debugScope_setContextFile(char* outFile){
+    contextOutStream = fopen(outFile,"w");
+    if (NULL == contextOutStream){ // opening failed
+        fprintf(stderr,"Opening %s as contextscope-logfile failed\n",outFile);
+        // and set to null
+        contextOutStream = NULL;
+    }else{
+        // everything is fine
     }
-}
+} // debugScope_setContextFile
         
 
 void debugScope_disableOutput() {
@@ -576,13 +596,14 @@ void debugScope_printContextStack(){
                 )
             {
                 SEXP fun = CAR(cptr->call);
-                fprintf(contextOutStream,"<- ");
+                fprintf(contextOutStream,"\"");
                 if(SYMSXP == TYPEOF(fun)){
                     fprintf(contextOutStream,CHAR(PRINTNAME(fun)));
                 }else{
-                    fprintf(contextOutStream,"<Anonymous>");
+                    fprintf(contextOutStream,"%p",fun);
+                    //fprintf(contextOutStream,"<Anonymous>");
                 }
-                fprintf(contextOutStream," ");
+                fprintf(contextOutStream,"\" ");
             } // if 
         } // for all contexts
         fprintf(contextOutStream,"\n");
@@ -631,6 +652,30 @@ void debugScope_printBeginPseudoContext(char* contextName){
     strncpy(oldContextPrefix,currentContextPrefix,SCOPENAME_MAX_SIZE);
 }
         
+/*
+ * Grouping functions/contexts may be useful in two ways: 
+ * - grouping functions from the same namespace. 
+ *   That way, a programmer can see that a lot of calls (and maybe a lot of time) is spent in "his"
+ *   functions (his own namespace) and decide to improve his code. It may also show
+ *   that another namespace/package is responsible for most of the cycles
+ *   and he can only improve overall performance by choosing another library/package/namespace
+ *   or by reducing the number of calls to this
+ * - grouping functions by program "phases".
+ *   This time, the programmer has to specify points in the program in which
+ *   the "phase" is changed (e.g. initialisation, calculation 1, calculation2, etc.)
+ *   Instrumented R already uses "init::", "init2::", "ReplCons", "init3::" but
+ *   as it turns out, there were no contexts opened in "init" or "init3" and
+ *   the only main difference was between "init2::" (before starting user program)
+ *   and "ReplCons::" (after starting user program). At least, this allowed to
+ *   simply hide/delete all contexts in "init2::" and get a diagrom for the user program.
+ *
+ * We still have to decide on how to group by both criteria (priorizing phases?)
+ * and how to split timeR-data onto different phases (As of now, timeR does not 
+ * use phases-prefixes)
+ * The later problem is also the reason for deactivating context prefixes (at the moment): 
+ * They hinder when trying to merge context-scope data with timer-data.
+ */
+#undef PRINT_CONTEXT_PREFIX
 
 void debugScope_printBeginContext(SEXP from, SEXP to){
     if(0!=ignoreNextContext){
@@ -642,12 +687,19 @@ void debugScope_printBeginContext(SEXP from, SEXP to){
         // do not print anonymous calls
     }else{
         char output[3*SCOPENAME_MAX_SIZE];
+
+        output[0]='\0'; // have a valid cstring even without prefix!
+#ifdef PRINT_CONTEXT_PREFIX        
         strncpy(output,oldContextPrefix,SCOPENAME_MAX_SIZE);
+#endif // PRINT_CONTEXT_PREFIX
         
         if(TYPEOF(from) == SYMSXP){
             strncat(output,translateChar(PRINTNAME(from)),SCOPENAME_MAX_SIZE);
-        }else{
-            strcat(output,"<Anonymous>");
+        }else{// anonymous - maybe try to lookup
+            char buffer[SCOPENAME_MAX_SIZE];
+            sprintf(buffer,"%p",from);
+            strcat(output,buffer);
+            //strcat(output,"<Anonymous>");
         }
         if(NULL!=contextOutStream){
             /*
@@ -659,11 +711,18 @@ void debugScope_printBeginContext(SEXP from, SEXP to){
         }
         
         // to is always from current context
+        output[0]='\0'; // have a valid cstring even without prefix!
+#ifdef PRINT_CONTEXT_PREFIX        
         strncpy(output,currentContextPrefix,SCOPENAME_MAX_SIZE);
+#endif // PRINT_CONTEXT_PREFIX
         if(TYPEOF(to) == SYMSXP){
             strncat(output,translateChar(PRINTNAME(to)),SCOPENAME_MAX_SIZE);
-        }else{
-            strcat(output,"<Anonymous>");
+        }else{ // anonymous - maybe try to lookup
+            char buffer[SCOPENAME_MAX_SIZE];
+            sprintf(buffer,"%p",from);
+            strcat(output,buffer);
+            
+            //strcat(output,"<Anonymous>");
         }
         if(NULL!=contextOutStream){
             fprintf(contextOutStream,"-> %s\n",output);

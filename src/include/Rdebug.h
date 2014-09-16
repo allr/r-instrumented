@@ -115,9 +115,13 @@
      */
     void debugScope_enableOutput();
     
-    //! activate context output
+    //! prepare context output - for later activation
+    void debugScope_prepareContextOutEnable();
+    //! activate context output - if prepared
     void debugScope_enableContextOut();
     
+
+    //void debugScope_setContextFile(char* outFile);
     
     /*!
      * \brief disables output globally
