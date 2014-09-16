@@ -78,6 +78,10 @@ Options:
   --verbose             Print more information about progress
   -d, --debugger=NAME   Run R through debugger NAME
   --debugger-args=ARGS  Pass ARGS as arguments to the debugger
+  --debugscope-file=FILE
+                        Read debugscope-activation from given FILE
+  --contextscopes       Activate contextscopes after init
+  --contextscopesearly  Activate contextscopes on start
   -g TYPE, --gui=TYPE	Use TYPE as GUI; possible values are 'X11' (default)
 			and 'Tk'.
   --arch=NAME		Specify a sub-architecture
