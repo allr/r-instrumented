@@ -248,13 +248,15 @@ void begincontext(RCNTXT * cptr, int flags,
 #endif
     cptr->srcref = R_Srcref;    
     cptr->browserfinish = R_GlobalContext->browserfinish;
+    if(1==1)
     { // debug-printing context call
         SEXP fun1 = CAR(R_GlobalContext->call);
         SEXP fun2 = CAR(cptr->call);
         DEBUGSCOPE_PRINTBEGINCONTEXT(fun1,fun2);
     }
+    if(0!=0)
     {// alternative: print complete context stack on every begincontext
-        //debugScope_printContextStack();
+        debugScope_printContextStack();
     }
     cptr->nextcontext = R_GlobalContext;
 
