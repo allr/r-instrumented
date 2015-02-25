@@ -32,9 +32,6 @@
 
 #include <R_ext/RS.h> /* for Memzero */
 
-extern int need_count_assign;
-extern unsigned long err_count_assign;
-
 attribute_hidden
 R_xlen_t asVecSize(SEXP x)
 {
@@ -99,12 +96,7 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isEnvironment(aenv))
 	errorcall(call, _("invalid '%s' argument"), "assign.env");
 
-    need_count_assign = 1;
     defineVar(name, mkPROMISE(expr, eenv), aenv);
-    if (need_count_assign) {
-	err_count_assign ++;
-	need_count_assign = 0;
-    }
     return R_NilValue;
 }
 

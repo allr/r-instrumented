@@ -290,20 +290,7 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define LEVELS(x)	((x)->sxpinfo.gp)
 #define SET_OBJECT(x,v)	(((x)->sxpinfo.obj)=(v))
 #define SET_TYPEOF(x,v)	(((x)->sxpinfo.type)=(v))
-// FIXME: Hack to ensure that these vars are always declared, even in Rinlinedfuns.h
-extern  unsigned long named_elts, named_promoted, named_downgraded, named_keeped;
-#define SET_NAMED(x,v)				\
-    do {					\
-	if (((x)->sxpinfo.named) != v) {	\
-	    named_elts++;			\
-	    if ((x)->sxpinfo.named < v)		\
-		named_promoted++;		\
-	    else if ((x)->sxpinfo.named > v)	\
-		named_downgraded++;		\
-	} else					\
-	    named_keeped ++;			\
-	(((x)->sxpinfo.named) = (v));		\
-    } while (0)
+#define SET_NAMED(x,v)	(((x)->sxpinfo.named)=(v))
 #define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
 #define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=((unsigned short)v))
 

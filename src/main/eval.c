@@ -47,8 +47,6 @@ static Rboolean bc_profiling = FALSE;
 
 static int R_Profiling = 0;
 
-unsigned long bcodeops_count = 0;
-
 #ifdef R_PROFILING
 
 /* BDR 2000-07-15
@@ -636,21 +634,6 @@ SEXP eval(SEXP e, SEXP rho)
 	    const void *vmax = vmaxget();
 	    PROTECT(CDR(e));
 	    R_Visible = flag != 1;
-
-            if (traceR_is_active) {
-		DEBUGSCOPE_PRINT("TraceR is active\n");
-		/* Trace Instrumentation */
-		unsigned int sparam = 0, sparam_ldots = 0;
-		SEXP targs = CDR(e);
-		while (targs != R_NilValue) {
-		    if(CAR(targs) == R_DotsSymbol)
-			sparam_ldots++;
-		    else
-			sparam++;
-		    targs = CDR(targs);
-		}
-	    }
-
 	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
@@ -2067,15 +2050,6 @@ SEXP attribute_hidden do_alias(SEXP call, SEXP op, SEXP args, SEXP rho)
 */
 
 /*  Assignment in its various forms  */
-unsigned long apply_define, super_apply_define;
-unsigned long do_set_unique, do_set_allways;
-unsigned long do_super_set_unique, do_super_set_allways;
-extern int need_count_assign; /* bool, assignments are counted only if true,
-                                 appears to be set whenever the assignment actually
-                                 came from the R script */
-unsigned long err_count_assign; /* counted assignments that failed to complete */
-unsigned long dispatchFailed;
-unsigned long dispatchs;
 
 SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2093,38 +2067,18 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 	lhs = installTrChar(STRING_ELT(lhs, 0));
 	/* fall through */
     case SYMSXP:
-	if (PRIMVAL(op) == 2) {
-	    do_super_set_allways++;
-	} else {
-	    do_set_allways++;
-	}
 	rhs = eval(CADR(args), rho);
-	if (PRIMVAL(op) == 2) {
-	    do_super_set_unique++;
-	} else {
-	    do_set_unique++;
-	}
 	INCREMENT_NAMED(rhs);
-	need_count_assign = 1;
 	if (PRIMVAL(op) == 2)                       /* <<- */
 	    setVar(lhs, rhs, ENCLOS(rho));
 	else                                        /* <-, = */
 	    defineVar(lhs, rhs, rho);
-	if (need_count_assign) {
-	    err_count_assign++;
-	    need_count_assign = 0;
-	}
 	R_Visible = FALSE;
 	return rhs;
     case LANGSXP:
 	R_Visible = FALSE;
-	if (PRIMVAL(op) == 2)
-	    super_apply_define++;
-	else
-	    apply_define++;
 	return applydefine(call, op, args, rho);
     default:
-	err_count_assign++;
 	errorcall(call, _("invalid (do_set) left-hand side to assignment"));
     }
 
@@ -2480,7 +2434,6 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	tmp = R_NilValue;
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
 	if (!SETJMP(cntxt.cjmpbuf)){
-	    // return 0 - this setup the jump
 	    DEBUGSCOPE_SAVEJUMP(cntxt.cjmpbuf);
 	    for(i = 0 ; i < n ; i++) {
 		R_Srcref = getSrcref(srcrefs, i);
@@ -2636,7 +2589,6 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
    be evaluated.  The complicating factor is that the first argument
    might come in with a "..." and that there might be other arguments
    in the "..." as well.  LT */
-    dispatchs ++;
 
     SEXP x = R_NilValue;
     int dots = FALSE, nprotect = 0;;
@@ -2764,7 +2716,6 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     }
     else *ans = args;
     UNPROTECT(nprotect);
-    dispatchFailed++;
     return 0;
 }
 
@@ -3575,7 +3526,7 @@ static struct { void *addr; int argc; } opinfo[OPCOUNT];
     goto loop; \
     op_##name
 
-#define BEGIN_MACHINE  NEXT(); init: { loop: bcodeops_count++; switch(which++)
+#define BEGIN_MACHINE  NEXT(); init: { loop: switch(which++)
 #define LASTOP } value = R_NilValue; goto done
 #define INITIALIZE_MACHINE() if (body == NULL) goto init
 
@@ -4647,12 +4598,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (! SET_BINDING_VALUE(loc, value)) {
 	    SEXP symbol = VECTOR_ELT(constants, sidx);
 	    PROTECT(value);
-	    need_count_assign = 1;
 	    defineVar(symbol, value, rho);
-	    if (need_count_assign) {
-		err_count_assign++;
-		need_count_assign = 0;
-	    }
 	    UNPROTECT(1);
 	}
 	NEXT();
@@ -4841,27 +4787,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  checkForMissings(args, call);
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
-
 	  value = PRIMFUN(fun) (call, fun, args, rho);
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
-
-	  if (traceR_is_active) {
-	      /* Trace Instrumentation */
-	      unsigned int sparam = 0, sparam_ldots = 0;
-	      SEXP targs = CDR(call);
-	      while (targs != R_NilValue) {
-		  if(CAR(targs) == R_DotsSymbol)
-		      sparam_ldots++;
-		  else
-		      sparam++;
-		  targs = CDR(targs);
-	      }
-	  }
-
 	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
@@ -4918,20 +4849,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	BCNPUSH(fun);  /* for GC protection */
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
-
-	if (traceR_is_active) {
-	    /* Trace Instrumentation */
-	    unsigned int sparam = 0, sparam_ldots = 0;
-	    SEXP targs = CDR(call);
-	    while (targs != R_NilValue) {
-		if(CAR(targs) == R_DotsSymbol)
-		    sparam_ldots++;
-		else
-		    sparam++;
-		targs = CDR(targs);
-	    }
-	}
-
 	value = PRIMFUN(fun) (call, fun, CDR(call), rho);
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
@@ -4995,14 +4912,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = GETSTACK(-1); /* leave on stack for GC protection */
 	INCREMENT_NAMED(value);
-	if (! SET_BINDING_VALUE(cell, value)) {
-	    need_count_assign = 1;
+	if (! SET_BINDING_VALUE(cell, value))
 	    defineVar(symbol, value, rho);
-	    if (need_count_assign) {
-		err_count_assign++;
-		need_count_assign = 0;
-	    }
-	}
 	R_BCNodeStackTop--; /* now pop LHS value off the stack */
 	/* original right-hand side value is now on top of stack again */
 #ifdef OLD_RHS_NAMED
@@ -5148,12 +5059,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    value = duplicate(value);
 	    SETSTACK(-1, value);
 	}
-	need_count_assign = 1;
 	setVar(symbol, value, ENCLOS(rho));
-	if (need_count_assign) {
-	    err_count_assign++;
-	    need_count_assign = 0;
-	}
 	NEXT();
       }
     OP(STARTASSIGN2, 1):
@@ -5172,12 +5078,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = BCNPOP();
 	INCREMENT_NAMED(value);
-	need_count_assign = 1;
 	setVar(symbol, value, ENCLOS(rho));
-	if (need_count_assign) {
-	    err_count_assign++;
-	    need_count_assign = 0;
-	}
 	/* original right-hand side value is now on top of stack again */
 #ifdef OLD_RHS_NAMED
 	/* we do not duplicate the right-hand side value, so to be

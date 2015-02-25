@@ -94,8 +94,6 @@ static SEXP GetObject(RCNTXT *cptr)
     return(s);
 }
 
-extern unsigned long dispatchFailed;
-
 static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 {
     SEXP ans;
@@ -471,7 +469,6 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	    strcat(cl, "')");
 	}
-	dispatchFailed++;
 	errorcall(call, _("no applicable method for '%s' applied to an object of class \"%s\""),
 		  translateChar(STRING_ELT(generic, 0)), cl);
     }

@@ -155,17 +155,6 @@ static SEXP getActiveValue(SEXP fun)
     return expr;
 }
 
-#define COUNT_ASSIGN(x)				\
-    do {					\
-	if (need_count_assign)			\
-	    x++;				\
-	need_count_assign = 0;			\
-    } while (0)
-
-unsigned long set_var, define_var, define_user_db, super_set_var, super_define_var;
-int need_count_assign;
-extern unsigned long err_count_assign;
-
 /* Macro version of isNull for only the test against R_NilValue */
 #define ISNULL(x) ((x) == R_NilValue)
 
@@ -243,8 +232,8 @@ int attribute_hidden R_Newhashpjw(const char *s)
 
 */
 
-static int R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
-		     Rboolean frame_locked)
+static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
+		      Rboolean frame_locked)
 {
     SEXP chain;
 
@@ -256,7 +245,7 @@ static int R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
 	if (TAG(chain) == symbol) {
 	    SET_BINDING_VALUE(chain, value);
 	    SET_MISSING(chain, 0);	/* Over-ride for new value */
-	    return 0;
+	    return;
 	}
     if (frame_locked)
 	error(_("cannot add bindings to a locked environment"));
@@ -265,7 +254,7 @@ static int R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
     /* Add the value into the chain */
     SET_VECTOR_ELT(table, hashcode, CONS(value, VECTOR_ELT(table, hashcode)));
     SET_TAG(VECTOR_ELT(table, hashcode), symbol);
-    return 1;
+    return;
 }
 
 
@@ -1437,15 +1426,10 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 #ifdef USE_GLOBAL_CACHE
 	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
 #endif
-	COUNT_ASSIGN(define_user_db);
 	return;
     }
 
     if (rho == R_BaseNamespace || rho == R_BaseEnv) {
-	if (SYMVALUE(symbol) == R_UnboundValue)
-	    COUNT_ASSIGN(define_var);
-	else
-	    COUNT_ASSIGN(set_var);
 	gsetVar(symbol, value, rho);
     } else {
 #ifdef USE_GLOBAL_CACHE
@@ -1462,7 +1446,6 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 		if (TAG(frame) == symbol) {
 		    SET_BINDING_VALUE(frame, value);
 		    SET_MISSING(frame, 0);	/* Over-ride */
-		    COUNT_ASSIGN(set_var);
 		    return;
 		}
 		frame = CDR(frame);
@@ -1471,7 +1454,6 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 		error(_("cannot add bindings to a locked environment"));
 	    SET_FRAME(rho, CONS(value, FRAME(rho)));
 	    SET_TAG(FRAME(rho), symbol);
-	    COUNT_ASSIGN(define_var);
 	}
 	else {
 	    c = PRINTNAME(symbol);
@@ -1480,11 +1462,8 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 		SET_HASHASH(c, 1);
 	    }
 	    hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
-	    if (R_HashSet(hashcode, symbol, HASHTAB(rho), value,
-			  FRAME_IS_LOCKED(rho)))
-		COUNT_ASSIGN(define_var);
-	    else
-		COUNT_ASSIGN(set_var);
+	    R_HashSet(hashcode, symbol, HASHTAB(rho), value,
+		      FRAME_IS_LOCKED(rho));
 	    if (R_HashSizeCheck(HASHTAB(rho)))
 		SET_HASHTAB(rho, R_HashResize(HASHTAB(rho)));
 	}
@@ -1577,13 +1556,9 @@ void setVar(SEXP symbol, SEXP value, SEXP rho)
     SEXP vl;
     while (rho != R_EmptyEnv) {
 	vl = setVarInFrame(rho, symbol, value);
-	if (vl != R_NilValue) {
-	    COUNT_ASSIGN(super_set_var);
-	    return;
-	}
+	if (vl != R_NilValue) return;
 	rho = ENCLOS(rho);
     }
-    COUNT_ASSIGN(super_define_var);
     defineVar(symbol, value, R_GlobalEnv);
 }
 
@@ -1644,15 +1619,10 @@ SEXP attribute_hidden do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
     ginherits = asLogical(CADDDR(args));
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
-    need_count_assign = 1;
     if (ginherits)
 	setVar(name, val, aenv);
     else
 	defineVar(name, val, aenv);
-    if (need_count_assign) {
-	err_count_assign++;
-	need_count_assign = 0;
-    }
     UNPROTECT(1);
     return val;
 }

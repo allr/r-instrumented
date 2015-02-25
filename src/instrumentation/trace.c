@@ -61,13 +61,7 @@ extern unsigned long allocated_sb, allocated_sb_size, allocated_sb_elts;
 
 extern unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
 
-extern unsigned long set_var, define_var, define_user_db, super_set_var, super_define_var;
-extern unsigned long apply_define, super_apply_define;
-extern unsigned long do_set_unique, do_set_allways;
-extern unsigned long do_super_set_unique, do_super_set_allways;
-extern unsigned long err_count_assign;
 extern unsigned long allocated_list, allocated_list_elts;
-extern unsigned long dispatchs, dispatchFailed;
 extern int gc_count;
 
 
@@ -318,22 +312,8 @@ static void write_allocation_summary(FILE *out) {
     }
 
     /* misc */
-    fprintf(out, "#!LABEL\tdispatchs\tdispatchFailed\n");
-    fprintf(out, "Dispatch\t%lu\t%lu\n", dispatchs, dispatchFailed);
     fprintf(out, "#!LABEL\tobject\telements\t1elements\n");
     fprintf(out, "Duplicate\t%lu\t%lu\t%lu\n", duplicate_object, duplicate_elts, duplicate1_elts);
-    fprintf(out, "#!LABEL\telements\tpromoted\tdowngraded\tkeeped\n");
-    fprintf(out, "Named\t%lu\t%lu\t%lu\t%lu\n", named_elts, named_promoted, named_downgraded, named_keeped);
-    fprintf(out, "#!LABEL\tnormal\tsuper\n");
-    fprintf(out, "ApplyDefine\t%lu\t%lu\n", apply_define, super_apply_define);
-    fprintf(out, "#!LABEL\tnormal\tsuper\n");
-    fprintf(out, "DefineVar\t%lu\t%lu\n", define_var, super_define_var);
-    fprintf(out, "#!LABEL\tnormal\tsuper\n");
-    fprintf(out, "SetVar\t%lu\t%lu\n", set_var, super_set_var);
-    fprintf(out, "DefineUserDb\t%lu\n", define_user_db);
-    fprintf(out, "ErrCountAssign\t%lu\n", err_count_assign);
-    fprintf(out, "#!LABEL\tnormal\tsuper\n");
-    fprintf(out, "ErrorEvalSet\t%lu\t%lu\n", do_set_allways - do_set_unique, do_super_set_allways - do_super_set_unique );
 
     /* memory over time */
     mallocmeasure_finalize();
@@ -354,27 +334,18 @@ static void write_trace_summary(FILE *out) {
     struct tm *local_time = localtime(&current_time);
     struct rusage my_rusage;
 
-    getcwd(str, MAX_DNAME);
+    if (getcwd(str, MAX_DNAME) == NULL)
+      abort();
     fprintf(out, "Workdir\t%s\n", str);
     fprintf(out, "Args\t"); write_commandArgs(out);
     // TODO print trace_type all/repl/bootstrap
 
     strftime (str, TIME_BUFF, "%c", local_time);
     fprintf(out, "TraceDate\t%s\n", str);
+    /*
     getrusage(RUSAGE_SELF, &my_rusage);
     fprintf(out, "RusageMaxResidentMemorySet\t%ld\n", my_rusage.ru_maxrss);
-    fprintf(out, "RusageSharedMemSize\t%ld\n", my_rusage.ru_ixrss);
-    fprintf(out, "RusageUnsharedDataSize\t%ld\n", my_rusage.ru_idrss);
-    fprintf(out, "RusagePageReclaims\t%ld\n", my_rusage.ru_minflt);
-    fprintf(out, "RusagePageFaults\t%ld\n", my_rusage.ru_majflt);
-    fprintf(out, "RusageSwaps\t%ld\n", my_rusage.ru_nswap);
-    fprintf(out, "RusageBlockInputOps\t%ld\n", my_rusage.ru_inblock);
-    fprintf(out, "RusageBlockOutputOps\t%ld\n", my_rusage.ru_oublock);
-    fprintf(out, "RusageIPCSends\t%ld\n", my_rusage.ru_msgsnd);
-    fprintf(out, "RusageIPCRecv\t%ld\n", my_rusage.ru_msgrcv);
-    fprintf(out, "RusageSignalsRcvd\t%ld\n", my_rusage.ru_nsignals);
-    fprintf(out, "RusageVolnContextSwitches\t%ld\n", my_rusage.ru_nvcsw);
-    fprintf(out, "RusageInvolnContextSwitches\t%ld\n", my_rusage.ru_nivcsw);
+    */
 
     write_allocation_summary(out);
     write_arg_histogram(out);
