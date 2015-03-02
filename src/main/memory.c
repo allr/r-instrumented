@@ -2690,9 +2690,8 @@ static SEXP allocVector3Internal(SEXPTYPE type, R_xlen_t length,
 	    SET_NODE_CLASS(s, node_class);
 	    R_SmallVallocSize += alloc_size;
             if (count_allocation)
-		traceR_count_vector_alloc(TR_VECCLASS_SMALL, length,
-					  size * sizeof(VECREC),
-					  actual_size);
+		traceR_count_vector_alloc(length == 1 ? TR_VECCLASS_ONE : TR_VECCLASS_SMALL,
+					  length, size * sizeof(VECREC), actual_size);
 	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
 	}
 	else {
