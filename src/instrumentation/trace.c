@@ -40,12 +40,16 @@
 
 typedef struct TraceInfo_ {
     char directory[MAX_DNAME];
-    char trace_file_name[MAX_FNAME];
 
     TRACEFILE extcalls_fd;
 } TraceInfo;
 
 static TraceInfo trace_info;
+
+// fork support
+static long *childpids;
+static unsigned int childpid_count;
+static unsigned int childpid_max;
 
 // Trace counters
 extern unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
@@ -261,7 +265,10 @@ static void write_allocation_summary(FILE *out) {
 
     /* memory allocations */
     fprintf(out, "AllocatedCons\t%lu\n", allocated_cons);
-    fprintf(out, "AllocatedConsPeak\t%lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
+    if (!R_isForkedChild) {
+      /* measuring just the child peak is annoying, so this is left out */
+      fprintf(out, "AllocatedConsPeak\t%lu\n", allocated_cons_peak * sizeof(SEXPREC)); // convert to bytes too
+    }
     fprintf(out, "AllocatedNonCons\t%lu\n", allocated_noncons);
     fprintf(out, "AllocatedEnv\t%lu\n", allocated_env);
     fprintf(out, "AllocatedPromises\t%lu\n", allocated_prom);
@@ -364,7 +371,12 @@ static void write_trace_summary(FILE *out) {
 static void write_summary() {
     FILE *summary_fp;
     char str[MAX_DNAME];
-    sprintf(str, "%s/%s", trace_info.directory, SUMMARY_NAME);
+
+    if (R_isForkedChild) {
+      sprintf(str, "%s/%s-%d", trace_info.directory, SUMMARY_NAME, getpid());
+    } else {
+      sprintf(str, "%s/%s", trace_info.directory, SUMMARY_NAME);
+    }
 
     // Write a summary file
     summary_fp = fopen(str, "w");
@@ -375,6 +387,30 @@ static void write_summary() {
     fprintf(summary_fp, "TraceDir\t%s\n", trace_info.directory);
 
     write_trace_summary(summary_fp);
+
+    /* if on parent: combine all child summary files */
+    if (childpid_count) {
+      fprintf(summary_fp, "childcount\t%d\n", childpid_count);
+      for (unsigned int i = 0; i < childpid_count; i++) {
+        sprintf(str, "%s/%s-%ld", trace_info.directory, SUMMARY_NAME, childpids[i]);
+
+        FILE *childfd = fopen(str, "r");
+        if (!childfd) {
+          fprintf(stderr, "ERROR: Unable to open %s: %s\n", str, strerror(errno));
+          abort();
+        }
+
+        unlink(str);
+
+        fprintf(summary_fp, "#!CHILD\t%d\n", i+1);
+
+        while (fgets(str, sizeof(str), childfd)) {
+          fprintf(summary_fp, "%s", str);
+        }
+
+        fclose(childfd);
+      }
+    }
 
     fclose(summary_fp);
 }
@@ -544,4 +580,80 @@ static void write_vector_allocs(FILE *out) {
 		vector_bin_lower(i), vector_bin_upper(i));
 	report_vectorstats(out, "", &vectors_byelements[i]);
     }
+}
+
+static void traceR_reset(void) {
+  // FIXME: Extcalls not reset, would require close+reopen of the log file
+
+  allocated_cons        = 0;
+  allocated_prom        = 0;
+  allocated_env         = 0;
+  allocated_external    = 0;
+  allocated_sexp        = 0;
+  allocated_noncons     = 0;
+  allocated_sb          = 0;
+  allocated_sb_size     = 0;
+  allocated_sb_elts     = 0;
+  duplicate_object      = 0;
+  duplicate_elts        = 0;
+  duplicate1_elts       = 0;
+  allocated_list        = 0;
+  allocated_list_elts   = 0;
+  gc_count              = 0;
+
+  memset(&traceR_promise_stats, 0, sizeof(traceR_promise_stats));
+
+  free(arg_histogram);
+  arg_histogram = NULL;
+  max_hist_args = -1;
+
+  memset(vectors_byclass,    0, sizeof(vectors_byclass));
+  memset(vectors_byelements, 0, sizeof(vectors_byelements));
+  vecalloc_max_bin = 0;
+
+  mallocmeasure_reset();
+}
+
+void traceR_forked(long childpid) {
+  if (childpid == 0) {
+    /* in child */
+    if (R_isForkedChild) {
+      fprintf(stderr, "*** ERROR: Forking from child processes is currently not supported!\n");
+      abort();
+    }
+
+    traceR_reset();
+    free(childpids);
+    childpids      = NULL;
+    childpid_max   = 0;
+    childpid_count = 0;
+    return;
+  }
+
+  /* in parent, add child to list of known PIDs */
+  if (trace_info.extcalls_fd) {
+    fprintf(stderr, "*** ERROR: Cannot handle parallel operation while external call logging is active!\n");
+    abort();
+  }
+
+  if (childpids == NULL) {
+    childpid_max = 100;
+    childpids = malloc(childpid_max * sizeof(long));
+    if (childpids == NULL) {
+      perror("malloc childpids");
+      abort();
+    }
+  }
+
+  if (childpid_count >= childpid_max) {
+    long *newpids = realloc(childpids, 2*childpid_max*sizeof(long));
+    if (newpids == NULL) {
+      perror("realloc childpids");
+      abort();
+    }
+    childpids = newpids;
+    childpid_max *= 2;
+  }
+
+  childpids[childpid_count++] = childpid;
 }

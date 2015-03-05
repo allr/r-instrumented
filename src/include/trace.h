@@ -105,6 +105,7 @@ extern unsigned int trcR_by_position, trcR_by_keyword, trcR_by_dots;
 void traceR_initialize(void);
 void traceR_start_repl(void);
 void traceR_finish_clean(void);
+void traceR_forked(long childpid);
 
 /* Note: The arg counters are implicitly passed via globals: */
 /*   trcR_by_position, trcR_by_keyword, trcR_by_dots         */

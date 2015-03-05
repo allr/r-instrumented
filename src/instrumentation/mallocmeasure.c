@@ -107,6 +107,10 @@ static void update_memstats(void) {
     current_peak = current_alloc;
 }
 
+void mallocmeasure_reset(void) {
+  mallocmeasure_current_slot = 0;
+}
+
 void mallocmeasure_finalize(void) {
   /* write the final memory peak into the list */
   mallocmeasure_values[mallocmeasure_current_slot++] = current_peak;

@@ -27,5 +27,6 @@ extern size_t mallocmeasure_values[];
 extern size_t mallocmeasure_current_slot;
 
 void mallocmeasure_finalize(void);
+void mallocmeasure_reset(void);
 
 #endif
