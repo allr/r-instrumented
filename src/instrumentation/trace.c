@@ -342,10 +342,20 @@ static void write_trace_summary(FILE *out) {
 
     strftime (str, TIME_BUFF, "%c", local_time);
     fprintf(out, "TraceDate\t%s\n", str);
-    /*
     getrusage(RUSAGE_SELF, &my_rusage);
     fprintf(out, "RusageMaxResidentMemorySet\t%ld\n", my_rusage.ru_maxrss);
-    */
+    fprintf(out, "RusageSharedMemSize\t%ld\n", my_rusage.ru_ixrss);
+    fprintf(out, "RusageUnsharedDataSize\t%ld\n", my_rusage.ru_idrss);
+    fprintf(out, "RusagePageReclaims\t%ld\n", my_rusage.ru_minflt);
+    fprintf(out, "RusagePageFaults\t%ld\n", my_rusage.ru_majflt);
+    fprintf(out, "RusageSwaps\t%ld\n", my_rusage.ru_nswap);
+    fprintf(out, "RusageBlockInputOps\t%ld\n", my_rusage.ru_inblock);
+    fprintf(out, "RusageBlockOutputOps\t%ld\n", my_rusage.ru_oublock);
+    fprintf(out, "RusageIPCSends\t%ld\n", my_rusage.ru_msgsnd);
+    fprintf(out, "RusageIPCRecv\t%ld\n", my_rusage.ru_msgrcv);
+    fprintf(out, "RusageSignalsRcvd\t%ld\n", my_rusage.ru_nsignals);
+    fprintf(out, "RusageVolnContextSwitches\t%ld\n", my_rusage.ru_nvcsw);
+    fprintf(out, "RusageInvolnContextSwitches\t%ld\n", my_rusage.ru_nivcsw);
 
     write_allocation_summary(out);
     write_arg_histogram(out);

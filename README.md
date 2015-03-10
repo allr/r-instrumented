@@ -92,6 +92,96 @@ If in doubt, check the source code too.
     defined by the asctime C library function and is a string of the
     form "Wed Jun 30 21:49:08 1993".
 
+- Rusage*
+
+    The keywords starting with "Rusage" keywords show results from a
+    call to the getrusage C function at the time the output file is
+    written, which gives a record of some resource usage values of the
+    R interpreter recorded by the operating system. Not every value is
+    available on every operating system, for example Linux just
+    returns zero for some of these values. Since r-instrumented is
+    developed on Linux, the following descriptions are based on its
+    usage of the rusage values. If you don't use Linux, check the
+    documentation of your operating system (e.g. "man getrusage") for
+    more details of values that are not explained here. Unused values
+    are shown as 0.
+
+- RusageMaxResidentMemorySet
+
+    Value of ru_maxrss, the maximum resident set size in KiBytes. This
+    is basically the maximum amount of RAM given to the interpreter by
+    the operating system while it was running.
+
+- RusageSharedMemSize
+
+    Value of ru_ixrss, the integral shared memory size. This value is
+    not used on Linux.
+
+- RusageUnsharedDataSize
+
+    Value of ru_idrss, the integral unshared data size. This value is
+    not used on Linux.
+
+- RusagePageReclaims
+
+    Value of ru_minflt, the number of page faults in the R interpreter
+    that could be serviced without requiring any I/O activity.
+    (also known as "minor faults", the current keyword is kept for
+    historical reasons)
+
+- RusagePageFaults
+
+    Value of ru_majflt, the number of page faults in the R interpreter
+    that required I/O activity to service, e.g. reading from a
+    memory-mapped file.
+    (also known as "major faults", the current keyword is kept for
+    historical reasons)
+
+- RusageSwaps
+
+    Value of ru_nswap, a field commented just as "swaps" in the Linux
+    getrusage man page. This value is not used on Linux.
+
+- RusageBlockInputOps
+
+    Value of ru_inblock, the number of times the file system had to
+    perform input, e.g. when a file is read.
+
+- RusageBlockOutputOps
+
+    Value of ru_outblock, the number of times the file system had to
+    perform output, e.g. when a file is written.
+
+- RusageIPCSends
+
+    Value of ru_msgsnd, the number of IPC messages sent. This value is
+    not used on Linux.
+
+- RusageIPCRecv
+
+    Value of ru_msgrcv, the number of IPC messages received. This
+    value is not used on Linux.
+
+- RusageSignalsRcvd
+
+    Value of ru_nsignals, the number of signals received by the R
+    interpreter process. This value is not used on Linux.
+
+- RusageVolnContextSwitches
+
+    Value of ru_nvcsw, the number of voluntary context switches. This
+    value counts the number of times the R interpreter voluntarily
+    gave up the CPU before its time slice ended, e.g. to wait for an
+    I/O operation.
+
+- RusageInvolnContextSwitches
+
+    Value of ru_nivcsw, the number of involuntary context
+    switches. This value counts the number of times the R interpreter
+    was forced to give up the CPU by the operating system,
+    e.g. because its time slice was exceeded or a higher-priority
+    process became runnable.
+
 - PtrSize
 
     This keyword shows the size of a void * pointer used by the R
