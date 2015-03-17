@@ -610,6 +610,7 @@ static Rboolean file_open(Rconnection con)
 	unlink(name);
 #ifdef Win32
 	strncpy(this->name, name, PATH_MAX);
+        this->name[PATH_MAX - 1] = '\0';
 #endif
 	free((char *) name); /* only free if allocated by R_tmpnam */
     }
@@ -1242,6 +1243,7 @@ SEXP attribute_hidden do_fifo(SEXP call, SEXP op, SEXP args, SEXP env)
     con = Connections[ncon] = newfifo(file, strlen(open) ? open : "r");
     con->blocking = block;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
+    con->encname[100 - 1] = '\0';
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
@@ -1406,6 +1408,7 @@ SEXP attribute_hidden do_pipe(SEXP call, SEXP op, SEXP args, SEXP env)
 	con = newpipe(file, ienc, strlen(open) ? open : "r");
     Connections[ncon] = con;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
+    con->encname[100 - 1] = '\0';
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
@@ -2052,6 +2055,7 @@ SEXP attribute_hidden do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
     ncon = NextConnection();
     Connections[ncon] = con;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
+    con->encname[100 - 1] = '\0';
 
     /* see the comment in do_url */
     if (con->encname[0] && !streql(con->encname, "native.enc"))
@@ -3171,6 +3175,7 @@ SEXP attribute_hidden do_sockconn(SEXP call, SEXP op, SEXP args, SEXP env)
     Connections[ncon] = con;
     con->blocking = blocking;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
+    con->encname[100 - 1] = '\0';
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
@@ -3224,6 +3229,7 @@ SEXP attribute_hidden do_unz(SEXP call, SEXP op, SEXP args, SEXP env)
     ncon = NextConnection();
     con = Connections[ncon] = R_newunz(file, strlen(open) ? open : "r");
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
+    con->encname[100 - 1] = '\0';
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
@@ -5091,6 +5097,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     Connections[ncon] = con;
     con->blocking = block;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
+    con->encname[100 - 1] = '\0';
 
     /* only text-mode connections are affected, but we can't tell that
        until the connection is opened, and why set an encoding on a
@@ -5471,6 +5478,7 @@ SEXP attribute_hidden do_gzcon(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     Connections[icon] = new;
     strncpy(new->encname, incon->encname, 100);
+    new->encname[100 - 1] = '\0';
     new->ex_ptr = PROTECT(R_MakeExternalPtr((void *)new->id, install("connection"),
 					    R_NilValue));
     if(incon->isopen) new->open(new);
