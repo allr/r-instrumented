@@ -50,6 +50,7 @@ static TraceInfo trace_info;
 static long *childpids;
 static unsigned int childpid_count;
 static unsigned int childpid_max;
+static struct timeval start_time_us, end_time_us;
 
 // Trace counters
 extern unsigned long duplicate_object, duplicate_elts, duplicate1_elts;
@@ -386,6 +387,9 @@ static void write_summary() {
     }
     fprintf(summary_fp, "TraceDir\t%s\n", trace_info.directory);
 
+    fprintf(summary_fp, "StartTimeUsec\t%ld\n", start_time_us.tv_sec * 1000000UL + start_time_us.tv_usec);
+    fprintf(summary_fp, "EndTimeUsec\t%ld\n", end_time_us.tv_sec * 1000000UL + end_time_us.tv_usec);
+
     write_trace_summary(summary_fp);
 
     /* if on parent: combine all child summary files */
@@ -420,6 +424,7 @@ static void write_summary() {
  */
 static void terminate_tracing() {
     // Stop tracing
+    gettimeofday(&end_time_us, NULL);
     if (traceR_is_active) {
 	traceR_is_active = 0;
 	write_summary();
@@ -440,6 +445,8 @@ void traceR_initialize(void) {
 
     if (R_TraceLevel == TR_ALL || R_TraceLevel == TR_BOOTSTRAP)
 	start_tracing();
+
+    gettimeofday(&start_time_us, NULL);
 }
 
 /* called just before the first entry in the REPL */
@@ -627,6 +634,7 @@ void traceR_forked(long childpid) {
     childpids      = NULL;
     childpid_max   = 0;
     childpid_count = 0;
+    gettimeofday(&start_time_us, NULL);
     return;
   }
 
