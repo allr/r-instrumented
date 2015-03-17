@@ -163,3 +163,5 @@ aclocal.m4
 /src/extra/xz/stamp
 /src/scripts/javareconf
 /src/scripts/rtags
+doc/NEWS.pdf
+doc/NEWS
