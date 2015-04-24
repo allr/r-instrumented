@@ -183,42 +183,36 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 		    ac--;
 		    av++;
 
-		    Rp->TraceDir = (char *)malloc(sizeof(char)*(strlen(*av)+1));
-		    strcpy(Rp->TraceDir, *av);
+		    if (Rp->TraceFile) {
+			R_ShowMessage(_("WARNING: Both --tracedir and --tracefile specified, ignoring --tracedir"));
+		    } else {
+			Rp->TraceDir = (char *)malloc(sizeof(char)*(strlen(*av)+1));
+			strcpy(Rp->TraceDir, *av);
+		    }
 		} else {
 		    R_ShowMessage (_("WARNING: no tracedir supplied, using default\n"));
 		}
 		/* turn on full tracing if a tracedir is specified */
 		Rp->TraceLevel = TR_ALL;
 	    }
-#if 0
-	    else if (!strcmp (*av, "--trace")) {
-		if (ac > 1) {
-		    char *arg = *(av+1);
-		    char *tok = strtok(arg, ",");
-
-		    ac--;
-		    av++;
-
-		    while (tok != NULL) {
-			if (!strcmp(tok, "all")){
-			    Rp->TraceLevel = TR_ALL;
-			} else if (!strcmp(tok, "repl")) {
-			    Rp->TraceLevel = TR_REPL;
-			} else if (!strcmp(tok, "bootstrap")) {
-			    Rp->TraceLevel = TR_BOOTSTRAP;
-			} else { /* unknown */
-			    Rp->TraceLevel = TR_REPL;
-			    R_ShowMessage (_("WARNING: unknown tracing type requested, using 'repl'\n"));
-			}
-			tok = strtok(NULL, ",");
-		    }
+	    else if (!strncmp(*av, "--tracefile", 11)) {
+		if(strlen(*av) < 13) {
+		    if(ac > 1) {ac--; av++; p = *av;} else p = NULL;
+		} else p = &(*av)[12];
+		if (p == NULL) {
+		    R_ShowMessage(_("WARNING: no value given for --tracefile"));
 		} else {
-		    R_ShowMessage(_("WARNING: no trace level supplied, using repl\n"));
-		    Rp->TraceLevel = TR_REPL;
+		    Rp->TraceFile = strdup(p);
+
+		    if (Rp->TraceDir) {
+			R_ShowMessage(_("WARNING: Both --tracedir and --tracefile specified, ignoring --tracedir"));
+			free(Rp->TraceDir);
+			Rp->TraceDir = NULL;
+		    }
 		}
+		/* turn on full tracing if a tracefile is specified */
+		Rp->TraceLevel = TR_ALL;
 	    }
-#endif
 	    else if (!strcmp(*av, "--trace-externalcalls")) {
 		Rp->TraceExternalCalls = TRUE;
 	    }

@@ -508,6 +508,8 @@ SEXP do_getNSRegistry(SEXP call, SEXP op, SEXP args, SEXP rho);
 SEXP do_importIntoEnv(SEXP call, SEXP op, SEXP args, SEXP rho);
 SEXP do_envprofile(SEXP call, SEXP op, SEXP args, SEXP rho);
 
+SEXP do_getchildfile(SEXP call, SEXP op, SEXP args, SEXP rho);
+
 SEXP do_tracemem(SEXP, SEXP, SEXP, SEXP);
 SEXP do_retracemem(SEXP, SEXP, SEXP, SEXP);
 SEXP do_untracemem(SEXP, SEXP, SEXP, SEXP);

@@ -128,4 +128,6 @@ static inline void traceR_report_external(int /*NativeSymbolType*/ type,
 void traceR_count_vector_alloc(traceR_vector_class_t type, size_t elements,
 			       size_t size, size_t asize);
 
+void traceR_getchildfile(char *buffer);
+
 #endif /* TRACE_H_ */

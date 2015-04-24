@@ -19,6 +19,7 @@
 #include <time.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/times.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -39,7 +40,7 @@
 #endif
 
 typedef struct TraceInfo_ {
-    char directory[MAX_DNAME];
+    char filename[MAX_DNAME];
 
     TRACEFILE extcalls_fd;
 } TraceInfo;
@@ -47,9 +48,9 @@ typedef struct TraceInfo_ {
 static TraceInfo trace_info;
 
 // fork support
-static long *childpids;
-static unsigned int childpid_count;
-static unsigned int childpid_max;
+static char **childfiles;
+static unsigned int childfiles_count;
+static unsigned int childfiles_max;
 static struct timeval start_time_us, end_time_us;
 
 // Trace counters
@@ -159,7 +160,36 @@ static void write_arg_histogram(FILE *fd) {
 /*
  * utility functions
  */
-void __attribute__((__format__(printf, 1, 2)))
+
+static void add_childfile(char *orig_name) {
+  char *name = strdup(orig_name);
+  if (!name)
+    abort();
+
+  if (childfiles == NULL) {
+    childfiles_max = 100;
+    childfiles = malloc(childfiles_max * sizeof(long));
+    if (childfiles == NULL) {
+      perror("malloc childfiles");
+      abort();
+    }
+  }
+
+  if (childfiles_count >= childfiles_max) {
+    char **newfiles = realloc(childfiles, 2*childfiles_max*sizeof(long));
+    if (newfiles == NULL) {
+      perror("realloc childfiles");
+      abort();
+    }
+    childfiles = newfiles;
+    childfiles_max *= 2;
+  }
+
+  childfiles[childfiles_count++] = name;
+}
+
+
+static void __attribute__((__format__(printf, 1, 2)))
   print_error_msg(const char *format, ...) {
     fprintf(stderr, "[Error] ");
     va_list args;
@@ -206,16 +236,15 @@ static void create_tracedir() {
 
     /* copy the trace directory name */
     if (R_TraceDir) {
-	strcpy(trace_info.directory, R_TraceDir);
-    } else {
-	print_error_msg("No trace directory name given, aborting\n");
-	abort();
-    }
+        /* create the directory */
+        if (mkdir(R_TraceDir, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
+            && errno != EEXIST)
+          print_error_msg("Can't create directory: %s\n", R_TraceDir);
 
-    /* create the directory */
-    if (mkdir(trace_info.directory, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
-	&& errno != EEXIST)
-	print_error_msg("Can't create directory: %s\n", trace_info.directory);
+        snprintf(trace_info.filename, sizeof(trace_info.filename), "%s/%s", R_TraceDir, SUMMARY_NAME);
+    } else {
+      strncpy(trace_info.filename, R_TraceFile, sizeof(trace_info.filename)-1);
+    }
 }
 
 static void initialize_trace_defaults(TR_TYPE mode) {
@@ -233,7 +262,11 @@ static void init_externalcalls() {
 	return;
 
     /* open the externalcalls file for writing */
-    sprintf(str, "%s/%s", trace_info.directory, EXTCALLS_NAME);
+    if (R_TraceDir) {
+      sprintf(str, "%s/%s", R_TraceDir, EXTCALLS_NAME);
+    } else {
+      strcpy(str, EXTCALLS_NAME);
+    }
     trace_info.extcalls_fd = FOPEN(str);
     if (trace_info.extcalls_fd == NULL) {
 	print_error_msg("Could not open file '%s' for writing", str);
@@ -374,9 +407,10 @@ static void write_summary() {
     char str[MAX_DNAME];
 
     if (R_isForkedChild) {
-      sprintf(str, "%s/%s-%d", trace_info.directory, SUMMARY_NAME, getpid());
+      sprintf(str, "%s_%d", trace_info.filename, getpid());
     } else {
-      sprintf(str, "%s/%s", trace_info.directory, SUMMARY_NAME);
+      str[MAX_DNAME-1] = 0;
+      strncpy(str, trace_info.filename, MAX_DNAME-1);
     }
 
     // Write a summary file
@@ -385,26 +419,28 @@ static void write_summary() {
 	print_error_msg ("Couldn't open file '%s' for writing", str);
 	return;
     }
-    fprintf(summary_fp, "TraceDir\t%s\n", trace_info.directory);
 
     fprintf(summary_fp, "StartTimeUsec\t%ld\n", start_time_us.tv_sec * 1000000UL + start_time_us.tv_usec);
     fprintf(summary_fp, "EndTimeUsec\t%ld\n", end_time_us.tv_sec * 1000000UL + end_time_us.tv_usec);
+    struct tms ustimes;
+    long ticks_per_sec = sysconf(_SC_CLK_TCK);
+    times(&ustimes);
+    fprintf(summary_fp, "UserTime\t%f\n", ustimes.tms_utime / (double)ticks_per_sec);
+    fprintf(summary_fp, "SystemTime\t%f\n", ustimes.tms_stime / (double)ticks_per_sec);
 
     write_trace_summary(summary_fp);
 
     /* if on parent: combine all child summary files */
-    if (childpid_count) {
-      fprintf(summary_fp, "childcount\t%d\n", childpid_count);
-      for (unsigned int i = 0; i < childpid_count; i++) {
-        sprintf(str, "%s/%s-%ld", trace_info.directory, SUMMARY_NAME, childpids[i]);
-
-        FILE *childfd = fopen(str, "r");
+    if (childfiles_count) {
+      fprintf(summary_fp, "childcount\t%d\n", childfiles_count);
+      for (unsigned int i = 0; i < childfiles_count; i++) {
+        FILE *childfd = fopen(childfiles[i], "r");
         if (!childfd) {
-          fprintf(stderr, "ERROR: Unable to open %s: %s\n", str, strerror(errno));
-          abort();
+          fprintf(stderr, "WARNING: Unable to open %s: %s\n", childfiles[i], strerror(errno));
+          continue;
         }
 
-        unlink(str);
+        unlink(childfiles[i]);
 
         fprintf(summary_fp, "#!CHILD\t%d\n", i+1);
 
@@ -630,38 +666,53 @@ void traceR_forked(long childpid) {
     }
 
     traceR_reset();
-    free(childpids);
-    childpids      = NULL;
-    childpid_max   = 0;
-    childpid_count = 0;
+    for (unsigned int i = 0; i < childfiles_count; i++)
+      free(childfiles[i]);
+    free(childfiles);
+    childfiles       = NULL;
+    childfiles_max   = 0;
+    childfiles_count = 0;
     gettimeofday(&start_time_us, NULL);
     return;
   }
 
-  /* in parent, add child to list of known PIDs */
+  /* in parent, add child data file name */
   if (trace_info.extcalls_fd) {
     fprintf(stderr, "*** ERROR: Cannot handle parallel operation while external call logging is active!\n");
     abort();
   }
 
-  if (childpids == NULL) {
-    childpid_max = 100;
-    childpids = malloc(childpid_max * sizeof(long));
-    if (childpids == NULL) {
-      perror("malloc childpids");
-      abort();
-    }
-  }
+  char childfn[1024];
+  childfn[sizeof(childfn)-1] = 0;
+  snprintf(childfn, sizeof(childfn)-1, "%s-%ld", trace_info.filename, childpid);
+  add_childfile(childfn);
+}
 
-  if (childpid_count >= childpid_max) {
-    long *newpids = realloc(childpids, 2*childpid_max*sizeof(long));
-    if (newpids == NULL) {
-      perror("realloc childpids");
-      abort();
-    }
-    childpids = newpids;
-    childpid_max *= 2;
-  }
+static unsigned int childcounter = 0;
 
-  childpids[childpid_count++] = childpid;
+void traceR_getchildfile(char *buffer) {
+  FILE *fd;
+
+  childcounter++;
+
+  // FIXME: Alternatively check for / at start of path and just prefix getcwd()?
+  /* first create an empty file from our side with the given prefix */
+  sprintf(buffer, "%s_%d", trace_info.filename, childcounter);
+  fd = fopen(buffer, "wb");
+  if (fd == NULL) {
+    perror("create statfile");
+    abort();
+  }
+  fclose(fd);
+
+  /* now we can use realpath to get an absolute path for it */
+  char *rp = realpath(buffer, NULL);
+  if (rp == NULL) {
+    perror("realpath statsfile");
+    abort();
+  }
+  strcpy(buffer, rp);
+  free(rp);
+
+  add_childfile(buffer);
 }

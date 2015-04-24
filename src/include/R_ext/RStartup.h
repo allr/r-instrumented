@@ -69,6 +69,7 @@ typedef struct
     TR_TYPE TraceLevel;
     Rboolean TraceExternalCalls;
     char *TraceDir;
+    char *TraceFile;
     SA_TYPE RestoreAction;
     SA_TYPE SaveAction;
     size_t vsize;
