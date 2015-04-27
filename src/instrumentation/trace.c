@@ -684,7 +684,7 @@ void traceR_forked(long childpid) {
 
   char childfn[1024];
   childfn[sizeof(childfn)-1] = 0;
-  snprintf(childfn, sizeof(childfn)-1, "%s-%ld", trace_info.filename, childpid);
+  snprintf(childfn, sizeof(childfn)-1, "%s_%ld", trace_info.filename, childpid);
   add_childfile(childfn);
 }
 
