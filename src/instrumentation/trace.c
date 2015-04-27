@@ -375,6 +375,13 @@ static void write_trace_summary(FILE *out) {
     struct tm *local_time = localtime(&current_time);
     struct rusage my_rusage;
 
+    if (gethostname(str, sizeof(str))) {
+      perror("gethostname");
+      abort();
+    }
+
+    fprintf(out, "Hostname\t%s\n", str);
+
     if (getcwd(str, MAX_DNAME) == NULL)
       abort();
     fprintf(out, "Workdir\t%s\n", str);
