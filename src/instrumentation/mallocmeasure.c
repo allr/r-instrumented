@@ -44,6 +44,8 @@ size_t mallocmeasure_values[1];
 size_t mallocmeasure_current_slot = 0; // if this is 0, the output is omitted
 
 void mallocmeasure_finalize(void) {}
+void mallocmeasure_reset(void) {}
+void mallocmeasure_kill(void) {}
 
 #else
 
@@ -53,7 +55,8 @@ static void *(*real_calloc)(size_t nmemb, size_t size);
 static void *(*real_malloc)(size_t size);
 static void *(*real_realloc)(void *ptr, size_t size);
 static void (*real_free)(void *ptr);
-static volatile bool in_init   = false;
+static bool stop_measurements = false;
+static volatile bool in_init  = false;
 static char init_mem[1024];
 static char *cur_init = init_mem;
 static size_t current_alloc = 0;
@@ -65,6 +68,9 @@ size_t mallocmeasure_values[PEAKSLOTS + 1];
 size_t mallocmeasure_current_slot;
 
 static void update_memstats(void) {
+  if (stop_measurements)
+    return;
+
   /* check if more than mallocmeasure_quantum seconds have elapsed */
   struct timespec now, diff;
   clock_gettime(CLOCK_REALTIME_COARSE, &now);
@@ -105,6 +111,10 @@ static void update_memstats(void) {
 
   if (current_peak < current_alloc)
     current_peak = current_alloc;
+}
+
+void mallocmeasure_kill(void) {
+  stop_measurements = true;
 }
 
 void mallocmeasure_reset(void) {

@@ -28,5 +28,6 @@ extern size_t mallocmeasure_current_slot;
 
 void mallocmeasure_finalize(void);
 void mallocmeasure_reset(void);
+void mallocmeasure_kill(void);
 
 #endif

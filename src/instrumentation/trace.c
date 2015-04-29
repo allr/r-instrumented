@@ -32,6 +32,7 @@
 #include <Rdebug.h>
 
 #include "mallocmeasure.h"
+#include "tracer_freemem.h"
 
 #ifdef TRACE_ZIPPED
   typedef gzFile TRACEFILE;
@@ -277,6 +278,7 @@ static void init_externalcalls() {
 static void start_tracing() {
     if (!traceR_is_active) {
 	traceR_is_active = 1;
+	freemem_spawn(trace_info.filename);
     }
 }
 
@@ -421,7 +423,7 @@ static void write_summary() {
     }
 
     // Write a summary file
-    summary_fp = fopen(str, "w");
+    summary_fp = fopen(str, "a");
     if (!summary_fp) {
 	print_error_msg ("Couldn't open file '%s' for writing", str);
 	return;
@@ -503,6 +505,7 @@ void traceR_start_repl(void) {
 /* normal exit of the R interpreter */
 void traceR_finish_clean(void) {
     if (traceR_is_active) {
+	freemem_stop();
 	terminate_tracing();
     }
 
@@ -672,6 +675,7 @@ void traceR_forked(long childpid) {
       abort();
     }
 
+    freemem_fork();
     traceR_reset();
     for (unsigned int i = 0; i < childfiles_count; i++)
       free(childfiles[i]);
