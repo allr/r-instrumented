@@ -9,11 +9,15 @@
 #include <unistd.h>
 #include "tracer_freemem.h"
 
+//#define FREEMEM_SLOTS 86400  // enough for one day at one-second resolution
+#define FREEMEM_SLOTS 3600    // reduced default resolution because the plot takes too long
+
 static pid_t child_pid;
 static volatile int terminate_query;
 static struct sigaction usr1_act;
 
-static uint64_t freemem_values[86400];
+static uint64_t freemem_values[FREEMEM_SLOTS];
+static unsigned int slot_quantum = 1;
 static unsigned int current_slot;
 
 static void usr1_handler(int signal) {
@@ -83,10 +87,23 @@ void freemem_spawn(const char *statsfile) {
     if (res >= 0)
       freemem_values[current_slot] = res;
 
-    current_slot++; // FIXME: Handle overflow
+    current_slot++;
+    if (current_slot > FREEMEM_SLOTS) {
+      /* overflow, reduce resolution by half */
+      for (unsigned int i=0; i < FREEMEM_SLOTS/2; i++) {
+        if (freemem_values[2*i] < freemem_values[2*i+1]) {
+          freemem_values[i] = freemem_values[2*i];
+        } else {
+          freemem_values[i] = freemem_values[2*i+1];
+        }
+      }
 
-    // FIXME: Handle the case where query_memory needs more than one second
-    next_query.tv_sec += 1;
+      slot_quantum *= 2;
+      current_slot /= 2;
+    }
+
+    // FIXME: Handle the case where query_memory needs more than one quantum
+    next_query.tv_sec += slot_quantum;
   }
 
   FILE *fd = fopen(statsfile, "w");
@@ -96,6 +113,7 @@ void freemem_spawn(const char *statsfile) {
   }
 
   fprintf(fd, "freeslots\t%u\n", current_slot);
+  fprintf(fd, "FreememQuantum\t%u\n", slot_quantum);
   fprintf(fd, "#!LABEL\ttime\tmemory\n");
   fprintf(fd, "#!TABLE\tfreeslot\tFreeMemoryOverTime\n");
 

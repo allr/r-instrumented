@@ -49,7 +49,8 @@ void mallocmeasure_kill(void) {}
 
 #else
 
-#define PEAKSLOTS 86400  // enough for one day at one-second resolution
+//#define PEAKSLOTS 86400  // enough for one day at one-second resolution
+#define PEAKSLOTS 3600    // reduced default resolution because the plot takes too long
 
 static void *(*real_calloc)(size_t nmemb, size_t size);
 static void *(*real_malloc)(size_t size);
