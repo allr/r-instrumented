@@ -48,8 +48,6 @@
 
 #include <errno.h>
 
-#include <Rdebug.h>
-
 #include "Fileio.h"
 
 // This creates the interface pointers in this file
@@ -160,7 +158,6 @@ static int num_initialized = 0;
 
 int Rf_initialize_R(int ac, char **av)
 {
-    DEBUGSCOPE_START("Rf_initialize_R");
     int i, ioff = 1, j;
     Rboolean useX11 = TRUE, useTk = FALSE;
     char *p, msg[1024], cmdlines[10000], **avv;
@@ -216,7 +213,6 @@ int Rf_initialize_R(int ac, char **av)
 }
 #endif
 
-    DEBUGSCOPE_PRINT("setting function pointers\n");
     ptr_R_Suicide = Rstd_Suicide;
     ptr_R_ShowMessage = Rstd_ShowMessage;
     ptr_R_ReadConsole = Rstd_ReadConsole;
@@ -255,7 +251,6 @@ int Rf_initialize_R(int ac, char **av)
        If run from the shell script, only Tk|tk|X11|x11 are allowed.
      */
     for(i = 0, avv = av; i < ac; i++, avv++) {
-	DEBUGSCOPE_PRINT("Command line: %s\n", *avv);
 	if(!strncmp(*avv, "--gui", 5) || !strncmp(*avv, "-g", 2)) {
 	    if(!strncmp(*avv, "--gui", 5) && strlen(*avv) >= 7)
 		p = &(*avv)[6];
@@ -377,26 +372,6 @@ int Rf_initialize_R(int ac, char **av)
 	    } else if(!strcmp(*av, "--interactive")) {
 		force_interactive = TRUE;
 		break;
-#ifdef HAVE_DEBUGSCOPES
-	    } else if (strncmp(*av, "--debugscope-file", 17) == 0) { // 0 = match
-		char *param = NULL;
-		if (strlen(*av) < 19) { // there is no "=bla" behind this
-		    // so filename should be next parameter
-		    if (ac > 1) {
-			ac--; // reduce remaining number of parameters
-			av++; // switch to next parameter
-			param = *av; // and let param be the complete one
-		    } else {
-			/* param stays NULL - no file given */
-		    }
-		} else { // strlen >= 19
-		    // move forward and check part after the (assumed) '='
-		    param = ((*av) + 18);
-		}
-		if (param != NULL) {
-		    DEBUGSCOPE_READFILE(param);
-		}
-#endif // HAVE_DEBUGSCOPES
 	    } else {
 #ifdef HAVE_AQUA
 		// r27492: in 2003 launching from 'Finder OSX' passed this
@@ -410,7 +385,6 @@ int Rf_initialize_R(int ac, char **av)
 	    R_ShowMessage(msg);
 	}
     }
-    DEBUGSCOPE_PRINT("Finished commandline reading\n");
 
     if(strlen(cmdlines)) { /* had at least one -e option */
 	size_t res;
@@ -475,7 +449,6 @@ int Rf_initialize_R(int ac, char **av)
 	Rstd_read_history(R_HistoryFile);
     fpu_setup(1);
 
-    DEBUGSCOPE_END("Rf_initialize_R");
     return(0);
 }
 

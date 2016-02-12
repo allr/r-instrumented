@@ -32,8 +32,6 @@
 #include <config.h>
 #endif
 
-#include <Rdebug.h>
-
 #include "IOStuff.h"
 
 
@@ -75,18 +73,14 @@ static int NextReadBufferListItem(IoBuffer *iob)
 
 int attribute_hidden R_IoBufferWriteReset(IoBuffer *iob)
 {
-    DEBUGSCOPE_START("R_IoBufferWriteReset");
-    if (iob == NULL || iob->start_buf == NULL) {
-	DEBUGSCOPE_END("R_IoBufferWriteReset");
+    if (iob == NULL || iob->start_buf == NULL)
 	return 0;
-    }
     iob->write_buf = iob->start_buf;
     iob->write_ptr = iob->write_buf->buf;
     iob->write_offset = 0;
     iob->read_buf = iob->start_buf;
     iob->read_ptr = iob->read_buf->buf;
     iob->read_offset = 0;
-    DEBUGSCOPE_END("R_IoBufferWriteReset");
     return 1;
 }
 

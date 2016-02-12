@@ -95,8 +95,6 @@
 #include <R_ext/Rallocators.h> /* for R_allocator_t structure */
 #include <Rmath.h> // R_pow_di
 
-#include <Rdebug.h>
-
 #define ADD_ALLOC(type) allocated_##type += sizeof(SEXPREC)
 #define ADD_ALLOC_BY(type, val) allocated_##type += val
 

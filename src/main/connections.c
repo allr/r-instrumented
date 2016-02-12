@@ -83,9 +83,6 @@
 #include <R_ext/RS.h>		/* R_chk_calloc and Free */
 #include <R_ext/Riconv.h>
 #include <R_ext/Print.h> // REprintf, REvprintf
-#include <Rdebug.h>
-
-
 #undef ERROR			/* for compilation on Windows */
 
 #ifdef Win32
@@ -4852,7 +4849,6 @@ void WinCheckUTF8(void)
 void attribute_hidden InitConnections()
 {
     int i;
-    DEBUGSCOPE_START("InitConnections");
     Connections[0] = newterminal("stdin", "r");
     Connections[0]->fgetc = stdin_fgetc;
     Connections[1] = newterminal("stdout", "w");
@@ -4865,7 +4861,6 @@ void attribute_hidden InitConnections()
     R_OutputCon = 1;
     R_SinkNumber = 0;
     SinkCons[0] = 1; R_ErrorCon = 2;
-    DEBUGSCOPE_END("InitConnections");
 }
 
 SEXP attribute_hidden

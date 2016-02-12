@@ -4,7 +4,6 @@ r-instrumented is a modified R interpreter measuring a variety of
 values during the execution of an R program. It is based on a
 modification of the same name for R 2.12.1 from the Reactor project at
 Purdue university: http://r.cs.purdue.edu/hg/r-instrumented/
-FIXME: Mention debug scopes
 
 
 Compiling r-instrumented
@@ -15,7 +14,6 @@ x86 Linux has not been tested.
 
 Compiling r-instrumented works the same way as compiling an unmodified
 R interpreter (see the file INSTALL for details).
-FIXME: Mention debug scopes
 
 
 Using r-instrumented
@@ -43,8 +41,6 @@ information see below.
 Sample command line:
 
     ./bin/Rscript --tracedir trace --trace all -f ../something.R
-
-FIXME: Debug scopes
 
 
 Format of trace_summary

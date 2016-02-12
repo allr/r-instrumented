@@ -27,8 +27,6 @@
 
 #include <R_ext/RS.h> /* S4 bit */
 
-#include "Rdebug.h"
-
 /*  duplicate  -  object duplication  */
 
 /*  Because we try to maintain the illusion of call by
@@ -130,7 +128,6 @@ void attribute_hidden reset_duplicate_counter(void)
 #endif
 
 SEXP duplicate(SEXP s){
-    DEBUGSCOPE_START("duplicate");
     SEXP t;
 
     duplicate_object++;
@@ -146,7 +143,6 @@ SEXP duplicate(SEXP s){
 	    SET_RTRACE(t,1);
     }
 #endif
-    DEBUGSCOPE_END("duplicate");
     return t;
 }
 
@@ -277,7 +273,6 @@ static R_INLINE SEXP duplicate_list(SEXP s, Rboolean deep)
 
 static SEXP duplicate1(SEXP s, Rboolean deep)
 {
-    DEBUGSCOPE_START("duplicate1");
     SEXP t;
     R_xlen_t i, n;
 
@@ -293,11 +288,8 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
     case EXTPTRSXP:
     case BCODESXP:
     case WEAKREFSXP:
-	DEBUGSCOPE_PRINT("Just s\n");
-	DEBUGSCOPE_END("duplicate1");
 	return s;
     case CLOSXP:
-	DEBUGSCOPE_PRINT("CLOSXP\n");
 	PROTECT(s);
 	if (R_jit_enabled > 1 && TYPEOF(BODY(s)) != BCODESXP) {
 	    int old_enabled = R_jit_enabled;
@@ -315,13 +307,11 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	UNPROTECT(2);
 	break;
     case LISTSXP:
-	DEBUGSCOPE_PRINT("LISTSXP\n");
 	PROTECT(s);
 	t = duplicate_list(s, deep);
 	UNPROTECT(1);
 	break;
     case LANGSXP:
-	DEBUGSCOPE_PRINT("LANGSXP\n");
 	PROTECT(s);
 	PROTECT(t = duplicate_list(s, deep));
 	SET_TYPEOF(t, LANGSXP);
@@ -329,7 +319,6 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	UNPROTECT(2);
 	break;
     case DOTSXP:
-	DEBUGSCOPE_PRINT("DOTSXP\n");
 	PROTECT(s);
 	PROTECT(t = duplicate_list(s, deep));
 	SET_TYPEOF(t, DOTSXP);
@@ -337,13 +326,10 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	UNPROTECT(2);
 	break;
     case CHARSXP:
-	DEBUGSCOPE_PRINT("CHARSXP\n");
-	DEBUGSCOPE_END("duplicate1");
 	return s;
 	break;
     case EXPRSXP:
     case VECSXP:
-	DEBUGSCOPE_PRINT("EXPRSXP or VECSXP\n");
 	n = XLENGTH(s);
 	PROTECT(s);
 	PROTECT(t = allocVector(TYPEOF(s), n));
@@ -365,7 +351,6 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	DUPLICATE_ATOMIC_VECTOR(SEXP, STRING_PTR, t, s, deep);
 	break;
     case PROMSXP:
-	DEBUGSCOPE_END("duplicate1");
 	return s;
 	break;
     case S4SXP:
@@ -382,13 +367,11 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	SET_OBJECT(t, OBJECT(s));
 	(IS_S4_OBJECT(s) ? SET_S4_OBJECT(t) : UNSET_S4_OBJECT(t));
     }
-    DEBUGSCOPE_END("duplicate1");
     return t;
 }
 
 void copyVector(SEXP s, SEXP t)
 {
-    DEBUGSCOPE_START("copyVector");
     R_xlen_t i, ns, nt;
     SEXPTYPE sT = TYPEOF(s), tT = TYPEOF(t);
     if (sT != tT)
@@ -431,7 +414,6 @@ void copyVector(SEXP s, SEXP t)
     default:
 	UNIMPLEMENTED_TYPE("copyVector", s);
     }
-    DEBUGSCOPE_END("copyVector");
 }
 
 void copyListMatrix(SEXP s, SEXP t, Rboolean byrow)

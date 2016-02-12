@@ -46,7 +46,6 @@
 #include "Startup.h"
 #include <R_ext/Riconv.h>
 #include <R_ext/Print.h> // for REprintf
-#include <Rdebug.h>
 
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>		/* for unlink */
@@ -835,7 +834,6 @@ int attribute_hidden
 Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 		 int addtohistory)
 {
-    DEBUGSCOPE_START("Rstd_ReadConsole");
     if(!R_Interactive) {
 	size_t ll;
 	int err = 0;
@@ -843,11 +841,8 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 	    fputs(prompt, stdout);
 	    fflush(stdout); /* make sure prompt is output */
 	}
-	if (fgets((char *)buf, len, ifp ? ifp: stdin) == NULL) {
-	    DEBUGSCOPE_PRINT("From Console: %s\n", buf);
-	    DEBUGSCOPE_END("Rstd_ReadConsole");
+	if (fgets((char *)buf, len, ifp ? ifp: stdin) == NULL)
 	    return 0;
-	}
 	ll = strlen((char *)buf);
 	/* remove CR in CRLF ending */
 	if (ll >= 2 && buf[ll - 1] == '\n' && buf[ll - 2] == '\r') {
@@ -885,8 +880,6 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 	    fputs((char *)buf, stdout);
 	    fflush(stdout);
 	}
-	DEBUGSCOPE_PRINT("return code 1\n");
-	DEBUGSCOPE_END("Rstd_ReadConsole");
 	return 1;
     }
     else {
@@ -941,22 +934,16 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 		    rl_callback_read_char();
 		    if(rl_data.readline_eof || rl_data.readline_gotaline) {
 			rl_top = rl_data.prev;
-			DEBUGSCOPE_PRINT("Via readline: %s\n",buf);
-			DEBUGSCOPE_END("Rstd_ReadConsole");
 			return(rl_data.readline_eof ? 0 : 1);
 		    }
 		}
 		else
 #endif /* HAVE_LIBREADLINE */
 		{
-		    if(fgets((char *)buf, len, stdin) == NULL) {
-			DEBUGSCOPE_PRINT("Read: %s\n", buf);
-			DEBUGSCOPE_END("Rstd_ReadConsole");
+		    if(fgets((char *)buf, len, stdin) == NULL)
 			return 0;
-		    } else {
-			DEBUGSCOPE_END("Rstd_ReadConsole");
+		    else
 			return 1;
-		    }
 		}
 	    }
 	}
@@ -1048,7 +1035,6 @@ void R_CleanTempDir(void)
 
 void attribute_hidden NORET Rstd_CleanUp(SA_TYPE saveact, int status, int runLast)
 {
-    DEBUGSCOPE_START("Rstd_CleanUp");
     if(saveact == SA_DEFAULT) /* The normal case apart from R_Suicide */
 	saveact = SaveAction;
 
@@ -1115,8 +1101,7 @@ void attribute_hidden NORET Rstd_CleanUp(SA_TYPE saveact, int status, int runLas
     if(ifp) fclose(ifp);        /* input file from -f or --file= */
     fpu_setup(FALSE);
 
-    DEBUGSCOPE_START("Rstd_CleanUp");
-    //exit(status);
+    exit(status);
 }
 
 /*

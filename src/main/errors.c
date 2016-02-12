@@ -32,8 +32,6 @@
 #include <Rmath.h> /* for imax2 */
 #include <R_ext/Print.h>
 
-#include <Rdebug.h>
-
 #ifndef min
 #define min(a, b) (a<b?a:b)
 #endif
@@ -592,13 +590,11 @@ static void restore_inError(void *data)
 static void NORET
 verrorcall_dflt(SEXP call, const char *format, va_list ap)
 {
-    DEBUGSCOPE_START("verrorcall_dflt");
     RCNTXT cntxt;
     char *p, *tr;
     int oldInError;
 
     if (inError) {
-	DEBUGSCOPE_PRINT("inError...");
 	/* fail-safe handler for recursive errors */
 	if(inError == 3) {
 	     /* Can REprintf generate an error? If so we should guard for it */
@@ -620,7 +616,6 @@ verrorcall_dflt(SEXP call, const char *format, va_list ap)
     /* set up a context to restore inError value on exit */
     begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
 		 R_NilValue, R_NilValue);
-    DEBUGSCOPE_PRINT("began a new context...");
     cntxt.cend = &restore_inError;
     cntxt.cenddata = &oldInError;
     oldInError = inError;
@@ -710,14 +705,11 @@ verrorcall_dflt(SEXP call, const char *format, va_list ap)
 	PrintWarnings();
     }
 
-    DEBUGSCOPE_PRINT("now, jump to top ex..");
     jump_to_top_ex(TRUE, TRUE, TRUE, TRUE, FALSE);
-    DEBUGSCOPE_PRINT("endcontext..");
 
     /* not reached */
     endcontext(&cntxt);
     inError = oldInError;
-    DEBUGSCOPE_END("verrorcall_dflt");
 }
 
 static void NORET errorcall_dflt(SEXP call, const char *format,...)
@@ -807,7 +799,6 @@ static void jump_to_top_ex(Rboolean traceback,
 			   Rboolean resetConsole,
 			   Rboolean ignoreRestartContexts)
 {
-    DEBUGSCOPE_START("jump_to_top_ex");
     RCNTXT cntxt;
     SEXP s;
     int haveHandler, oldInError;
@@ -924,19 +915,15 @@ static void jump_to_top_ex(Rboolean traceback,
     endcontext(&cntxt);
     inError = oldInError;
     */
-    DEBUGSCOPE_END("jump_to_top_ex");
-
 }
 
 void NORET jump_to_toplevel()
 {
-    DEBUGSCOPE_START("jump_to_toplevel");
     /* no traceback, no user error option; for now, warnings are
        printed here and console is reset -- eventually these should be
        done after arriving at the jump target.  Now ignores
        try/browser frames--it really is a jump to toplevel */
     jump_to_top_ex(FALSE, FALSE, TRUE, TRUE, TRUE);
-    DEBUGSCOPE_END("jump_to_toplevel");
 }
 
 /* #define DEBUG_GETTEXT 1 */

@@ -42,8 +42,6 @@
 #include <locale.h>
 #include <R_ext/Print.h>
 
-#include <Rdebug.h> // debug scopes
-
 #ifdef ENABLE_NLS
 void attribute_hidden nl_Rdummy(void)
 {
@@ -84,7 +82,6 @@ static void R_ReplFile(FILE *fp, SEXP rho, const char* filename)
     int savestack;
     
     R_InitSrcRefState();
-
     savestack = R_PPStackTop;    
     for(;;) {
 	R_PPStackTop = savestack;
@@ -200,7 +197,6 @@ typedef struct {
 int
 Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 {
-    DEBUGSCOPE_START("Rf_ReplIteration");
     int c, browsevalue;
     SEXP value, thisExpr;
     Rboolean wasDisplayed = FALSE;
@@ -208,63 +204,14 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
     if(!*state->bufp) {
 	    R_Busy(0);
 	    if (R_ReadConsole(R_PromptString(browselevel, state->prompt_type),
-			      state->buf, CONSOLE_BUFFER_SIZE, 1) == 0) {
-		DEBUGSCOPE_END("Rf_ReplIteration");
+			      state->buf, CONSOLE_BUFFER_SIZE, 1) == 0)
 		return(-1);
-	    }
 	    state->bufp = state->buf;
     }
-
-    // FIXME: To be removed
-    char* readCommand = (char *)state->buf;
-    DEBUGSCOPE_PRINT("given from console: %s\n", state->buf);
-    if (strncmp(readCommand,"debugscope_", 11) == 0) { // found debug command
-	DEBUGSCOPE_PRINT("debug command: ");
-	readCommand = readCommand + 11;
-	DEBUGSCOPE_PRINT("%s ",readCommand);
-	if (strncmp(readCommand, "activate(\"", 10) == 0) { // activate command found
-	    readCommand = readCommand + 10;
-	    DEBUGSCOPE_PRINT(" -> activating ");
-	    char scopeName[SCOPENAME_MAX_SIZE + 1];
-	    strncpy(scopeName, readCommand, SCOPENAME_MAX_SIZE);
-	    scopeName[SCOPENAME_MAX_SIZE] = '\0'; // safety, again
-	    char* endOfScopeName = strchr(scopeName,'\"'); // search for quote sign
-	    if (endOfScopeName == NULL) {
-		DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
-	    } else {
-		(*endOfScopeName) = '\0'; // terminate string at quote
-		DEBUGSCOPE_ACTIVATE(scopeName);
-		DEBUGSCOPE_PRINT(" (should be %s )", scopeName);
-	    }
-	    state->buf[0] = '\0'; // prevent further processing
-	    DEBUGSCOPE_END("Rf_ReplIteration");
-	    return(0);
-	}
-	else if (strncmp(readCommand, "deactivate(\"", 12) == 0) { // deactivate command found
-	    readCommand = readCommand + 12;
-	    DEBUGSCOPE_PRINT(" -> deactivating ");
-	    char scopeName[SCOPENAME_MAX_SIZE + 1];
-	    strncpy(scopeName, readCommand, SCOPENAME_MAX_SIZE);
-	    scopeName[SCOPENAME_MAX_SIZE] = '\0'; // safety, again
-	    char* endOfScopeName = strchr(scopeName, '\"'); // search for quote sign
-	    if (endOfScopeName == NULL) {
-		DEBUGSCOPE_PRINT("debugScopeActivate - but no suitable scopename\n");
-	    } else {
-		(*endOfScopeName) = '\0'; // terminate string at quote
-		DEBUGSCOPE_DEACTIVATE(scopeName);
-		DEBUGSCOPE_PRINT(" (should be %s )", scopeName);
-	    }
-	    state->buf[0] = '\0'; // prevent further processing
-	    DEBUGSCOPE_END("Rf_ReplIteration");
-	    return(0);
-	}
-    }
-
 #ifdef SHELL_ESCAPE /* not default */
     if (*state->bufp == '!') {
 	    R_system(&(state->buf[1]));
 	    state->buf[0] = '\0';
-	    DEBUGSCOPE_END("Rf_ReplIteration");
 	    return(0);
     }
 #endif /* SHELL_ESCAPE */
@@ -280,35 +227,23 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 
     case PARSE_NULL:
 
-	DEBUGSCOPE_PRINT("Status NULL\n");
 	/* The intention here is to break on CR but not on other
 	   null statements: see PR#9063 */
 	if (browselevel && !R_DisableNLinBrowser
-	    && !strcmp((char *) state->buf, "\n"))
-	{
-	    DEBUGSCOPE_END("Rf_ReplIteration");
-	    return -1;
-	}
+	    && !strcmp((char *) state->buf, "\n")) return -1;
 	R_IoBufferWriteReset(&R_ConsoleIob);
 	state->prompt_type = 1;
-	DEBUGSCOPE_END("Rf_ReplIteration");
 	return 1;
 
     case PARSE_OK:
 
-	DEBUGSCOPE_PRINT("Status OK, readreset\n");
 	R_IoBufferReadReset(&R_ConsoleIob);
-	DEBUGSCOPE_PRINT("ParselBuffer\n");
 	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status);
 	if (browselevel) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
-	    if(browsevalue == 1) {
-		DEBUGSCOPE_END("Rf_ReplIteration");
-	        return -1;
-	    }
+	    if(browsevalue == 1) return -1;
 	    if(browsevalue == 2) {
 		R_IoBufferWriteReset(&R_ConsoleIob);
-		DEBUGSCOPE_END("Rf_ReplIteration");
 		return 0;
 	    }
 	    /* PR#15770 We don't want to step into expressions entered at the debug prompt. 
@@ -317,11 +252,9 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	}
 	R_Visible = FALSE;
 	R_EvalDepth = 0;
-	DEBUGSCOPE_PRINT("Reset Time Limits\n");
 	resetTimeLimits();
 	PROTECT(thisExpr = R_CurrentExpr);
 	R_Busy(1);
-	DEBUGSCOPE_PRINT("eval thisExpr\n");
 	value = eval(thisExpr, rho);
 	SET_SYMVALUE(R_LastvalueSymbol, value);
 	wasDisplayed = R_Visible;
@@ -329,51 +262,38 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	    PrintValueEnv(value, rho);
 	if (R_CollectWarnings)
 	    PrintWarnings();
-	DEBUGSCOPE_PRINT("calling Top level handler\n");
 	Rf_callToplevelHandlers(thisExpr, value, TRUE, wasDisplayed);
 	R_CurrentExpr = value; /* Necessary? Doubt it. */
 	UNPROTECT(1);
-	DEBUGSCOPE_PRINT("Buffer Write Reset\n");
 	if (R_BrowserLastCommand == 'S') R_BrowserLastCommand = 's';  
 	R_IoBufferWriteReset(&R_ConsoleIob);
 	state->prompt_type = 1;
-	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(1);
 
     case PARSE_ERROR:
 
-	DEBUGSCOPE_PRINT("Status ERROR\n");
 	state->prompt_type = 1;
 	parseError(R_NilValue, 0);
 	R_IoBufferWriteReset(&R_ConsoleIob);
-	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(1);
 
     case PARSE_INCOMPLETE:
 
-	DEBUGSCOPE_PRINT("Status INCOMPLETE\n");
 	R_IoBufferReadReset(&R_ConsoleIob);
 	state->prompt_type = 2;
-	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(2);
 
     case PARSE_EOF:
 
-	DEBUGSCOPE_PRINT("Status EOF\n");
-	DEBUGSCOPE_END("Rf_ReplIteration");
 	return(-1);
 	break;
     }
 
-    DEBUGSCOPE_PRINT("Uncaught Status\n");
-    DEBUGSCOPE_END("Rf_ReplIteration");
     return(0);
 }
 
 static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 {
-    DEBUGSCOPE_START("R_ReplConsole");
-    DEBUGSCOPE_PRINT("SaveStack %d, browselevel %d\n",savestack,browselevel);
     int status;
     R_ReplState state = { PARSE_NULL, 1, 0, "", NULL};
 
@@ -388,16 +308,11 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
     if(R_Verbose)
 	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
-
-    DEBUGSCOPE_PRINT("Starting forever-loop\n");
     for(;;) {
-	status = Rf_ReplIteration(rho, savestack, browselevel, &state); /* Trace instrumentation */
-	if(status < 0) {
-	    DEBUGSCOPE_END("R_ReplConsole");
-	    return;
-	}
+       status = Rf_ReplIteration(rho, savestack, browselevel, &state);
+       if(status < 0)
+         return;
     }
-    DEBUGSCOPE_END("R_ReplConsole");
 }
 
 
@@ -405,9 +320,7 @@ static unsigned char DLLbuf[CONSOLE_BUFFER_SIZE+1], *DLLbufp;
 
 void R_ReplDLLinit(void)
 {
-    int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf, jumpValue);
-    // value is not used for program flow differations.
+    SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     R_IoBufferWriteReset(&R_ConsoleIob);
     prompt_type = 1;
@@ -749,13 +662,7 @@ static void R_LoadProfile(FILE *fparg, SEXP env)
 {
     FILE * volatile fp = fparg; /* is this needed? */
     if (fp != NULL) {
-	int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-	if (jumpValue == 0) { // setup jump
-	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
-	} else {
-	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
-	}
-	if (! jumpValue) {
+	if (! SETJMP(R_Toplevel.cjmpbuf)) {
 	    R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
 	    R_ReplFile(fp, env, "Rprofile");
 	}
@@ -794,8 +701,6 @@ void setup_Rmainloop(void)
     volatile int ndeferred_warnings = 0;
     char path[PATH_MAX + 1];
     char base_path[PATH_MAX + 1];
-
-    DEBUGSCOPE_START("setup_Rmainloop");
 
     /* In case this is a silly limit: 2^32 -3 has been seen and
      * casting to intptr_r relies on this being smaller than 2^31 on a
@@ -883,8 +788,6 @@ void setup_Rmainloop(void)
     /* make sure srand is called before R_tmpnam, PR#14381 */
     srand(TimeToSeed());
 
-    DEBUGSCOPE_DISABLEOUTPUT();
-
     InitArithmetic();
     InitParser();
     InitTempDir(); /* must be before InitEd */
@@ -953,14 +856,7 @@ void setup_Rmainloop(void)
 	R_Suicide(_("unable to open the base package\n"));
 
     doneit = 0;
-    { // save jump target for TopLevel
-	int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-	if (jumpValue == 0) {
-	    DEBUGSCOPE_SAVEJUMP(R_Toplevel.cjmpbuf);
-	} else {
-	    DEBUGSCOPE_LOADJUMP(R_Toplevel.cjmpbuf);
-	}
-    }
+    SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     if (R_SignalHandlers) init_signal_handlers();
     if (!doneit) {
@@ -1090,7 +986,6 @@ void setup_Rmainloop(void)
     /* trying to do this earlier seems to run into bootstrapping issues. */
     R_init_jit_enabled();
     R_Is_Running = 2;
-    DEBUGSCOPE_END("setup_Rmainloop");
 }
 
 extern SA_TYPE SaveAction; /* from src/main/startup.c */
@@ -1107,35 +1002,18 @@ static void end_Rmainloop(void)
 
 void run_Rmainloop(void)
 {
-    DEBUGSCOPE_START("run_Rmainloop");
-
-    /*
-     * As the initialisation runs a lot of evals and stuff, it
-     * is useful to disable all output before the first "real" R
-     * command is run. Of course, at that point (here) it should be
-     * reactivated.
-     *
-     * it would be really, really nice if we were able to enable
-     * and disable debugscope-output via commands in R - but
-     * let's not get ahead of ourselves..
-     */
-    DEBUGSCOPE_ENABLEOUTPUT();
     /* Here is the real R read-eval-loop. */
     /* We handle the console until end-of-file. */
-    int jumpValue = SETJMP(R_Toplevel.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(R_Toplevel.cjmpbuf, jumpValue);
+    SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     R_ReplConsole(R_GlobalEnv, 0, 0);
     end_Rmainloop(); /* must go here */
-    DEBUGSCOPE_END("run_Rmainloop");
 }
 
 void mainloop(void)
 {
-    DEBUGSCOPE_START("mainloop");
     setup_Rmainloop();
     run_Rmainloop();
-    DEBUGSCOPE_END("mainloop");
 }
 
 /*this functionality now appears in 3
@@ -1294,14 +1172,10 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&returncontext, CTXT_BROWSER, call, rho,
 		 R_BaseEnv, argList, R_NilValue);
-    int jumpValue = SETJMP(returncontext.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(returncontext.cjmpbuf, jumpValue);
-    if (! jumpValue) {
+    if (!SETJMP(returncontext.cjmpbuf)) {
 	begincontext(&thiscontext, CTXT_RESTART, R_NilValue, rho,
 		     R_BaseEnv, R_NilValue, R_NilValue);
-	int jumpValue2 = SETJMP(thiscontext.cjmpbuf);
-	DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf, jumpValue2);
-	if (jumpValue2) {
+	if (SETJMP(thiscontext.cjmpbuf)) {
 	    SET_RESTART_BIT_ON(thiscontext.callflag);
 	    R_ReturnedValue = R_NilValue;
 	    R_Visible = FALSE;

@@ -163,9 +163,6 @@
    */
 #undef HAVE_DCGETTEXT
 
-/* Define this to enable debug scopes. */
-#undef HAVE_DEBUGSCOPES
-
 /* Define to 1 if you have the declaration of `alloca', and to 0 if you don't.
    */
 #undef HAVE_DECL_ALLOCA

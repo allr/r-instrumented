@@ -29,8 +29,6 @@
 #include <stdarg.h>
 #include <zlib.h>
 
-#include <Rdebug.h>
-
 #include "mallocmeasure.h"
 #include "tracer_freemem.h"
 

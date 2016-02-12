@@ -111,8 +111,6 @@
 #include <Defn.h>
 #include <Internal.h>
 
-#include "Rdebug.h"
-
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that
@@ -198,7 +196,6 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 
 static void NORET jumpfun(RCNTXT * cptr, int mask, SEXP val)
 {
-    DEBUGSCOPE_START("jumpfun");
     Rboolean savevis = R_Visible;
 
     /* run onexit/cend code for all contexts down to but not including
@@ -221,7 +218,6 @@ static void NORET jumpfun(RCNTXT * cptr, int mask, SEXP val)
     R_restore_globals(R_GlobalContext);
 
     LONGJMP(cptr->cjmpbuf, mask);
-    DEBUGSCOPE_END("jumpfun");
 }
 
 
@@ -297,7 +293,6 @@ void endcontext(RCNTXT * cptr)
 
 void attribute_hidden NORET findcontext(int mask, SEXP env, SEXP val)
 {
-    DEBUGSCOPE_START("findcontext");
     RCNTXT *cptr;
     cptr = R_GlobalContext;
     if (mask & CTXT_LOOP) {		/* break/next */
@@ -316,7 +311,6 @@ void attribute_hidden NORET findcontext(int mask, SEXP env, SEXP val)
 		jumpfun(cptr, mask, val);
 	error(_("no function to return from, jumping to top level"));
     }
-    DEBUGSCOPE_END("findcontext");
 }
 
 void attribute_hidden NORET R_JumpToContext(RCNTXT *target, int mask, SEXP val)
@@ -729,11 +723,9 @@ Rboolean R_ToplevelExec(void (*fun)(void *), void *data)
 
     begincontext(&thiscontext, CTXT_TOPLEVEL, R_NilValue, R_GlobalEnv,
 		 R_BaseEnv, R_NilValue, R_NilValue);
-    int jumpValue = SETJMP(thiscontext.cjmpbuf);
-    DEBUGSCOPE_SAVELOADJUMP(thiscontext.cjmpbuf, jumpValue);
-    if (jumpValue) {
+    if (SETJMP(thiscontext.cjmpbuf))
 	result = FALSE;
-    } else {
+    else {
 	R_GlobalContext = R_ToplevelContext = &thiscontext;
 	fun(data);
 	result = TRUE;
