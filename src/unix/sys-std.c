@@ -1107,6 +1107,7 @@ void attribute_hidden NORET Rstd_CleanUp(SA_TYPE saveact, int status, int runLas
     }
     fpu_setup(FALSE);
 
+    traceR_finish_clean();
     exit(status);
 }
 
