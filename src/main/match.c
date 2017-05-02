@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998-2014   The R Core Team.
+ *  Copyright (C) 1998-2017   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -222,20 +222,29 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
     arg_i = 0;
     trcR_by_keyword = 0;
     while (f != R_NilValue) {
-	if (TAG(f) != R_DotsSymbol) {
+      SEXP ftag = TAG(f);
+      const char *ftag_name = CHAR(PRINTNAME(ftag));
+      if (ftag != R_DotsSymbol && ftag != R_NilValue) {
 	    for (b = supplied, i = 1; b != R_NilValue; b = CDR(b), i++) {
-		if (TAG(b) != R_NilValue && pmatch(TAG(f), TAG(b), /*exact*/ TRUE)) {
-		    if (fargused[arg_i] == 2)
-			error(_("formal argument \"%s\" matched by multiple actual arguments"),
-			      CHAR(PRINTNAME(TAG(f))));
-		    if (ARGUSED(b) == 2)
-			error(_("argument %d matches multiple formal arguments"), i);
-		    SETCAR(a, CAR(b));
-		    if(CAR(b) != R_MissingArg) SET_MISSING(a, 0);
-		    SET_ARGUSED(b, 2);
-		    fargused[arg_i] = 2;
-                    trcR_by_keyword++;
-		}
+	      SEXP btag = TAG(b);
+	      if (btag != R_NilValue) {
+		  const char *btag_name = CHAR(PRINTNAME(btag));
+		  if (streql( ftag_name, btag_name )) {
+		      if (fargused[arg_i] == 2)
+			  errorcall(call,
+	                      _("formal argument \"%s\" matched by multiple actual arguments"),
+	                      CHAR(PRINTNAME(TAG(f))));
+		      if (ARGUSED(b) == 2)
+			  errorcall(call,
+	                      _("argument %d matches multiple formal arguments"),
+                              i);
+		      SETCAR(a, CAR(b));
+		      if(CAR(b) != R_MissingArg) SET_MISSING(a, 0);
+		      SET_ARGUSED(b, 2);
+		      fargused[arg_i] = 2;
+                      trcR_by_keyword++;
+		  }
+	      }
 	    }
 	}
 	f = CDR(f);
@@ -263,10 +272,12 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 		    if (ARGUSED(b) != 2 && TAG(b) != R_NilValue &&
 			pmatch(TAG(f), TAG(b), seendots)) {
 			if (ARGUSED(b))
-			    error(_("argument %d matches multiple formal arguments"), i);
+			    errorcall(call,
+				_("argument %d matches multiple formal arguments"), i);
 			if (fargused[arg_i] == 1)
-			    error(_("formal argument \"%s\" matched by multiple actual arguments"),
-				  CHAR(PRINTNAME(TAG(f))));
+			    errorcall(call,
+				_("formal argument \"%s\" matched by multiple actual arguments"),
+				CHAR(PRINTNAME(TAG(f))));
 			if (R_warn_partial_match_args) {
 			    warningcall(call,
 					_("partial argument match of '%s' to '%s'"),
